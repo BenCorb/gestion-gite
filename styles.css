@@ -84,6 +84,14 @@ textarea {
   box-shadow: var(--shadow);
 }
 
+.hero-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
 .eyebrow {
   margin: 0 0 4px;
   text-transform: uppercase;
@@ -864,7 +872,6 @@ textarea {
     margin: 10px auto 16px;
   }
 
-  .hero,
   .panel-heading,
   .panel-heading.compact {
     flex-direction: column;
@@ -877,8 +884,21 @@ textarea {
   }
 
   .hero {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: nowrap;
     gap: 8px;
     border-radius: 18px;
+  }
+
+  .hero > div:first-child {
+    flex: 1 1 auto;
+  }
+
+  .hero-actions {
+    justify-content: flex-end;
+    align-self: flex-start;
   }
 
   h1 {
