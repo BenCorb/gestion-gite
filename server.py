@@ -16,7 +16,7 @@ from urllib.parse import urlparse
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
-DB_FILE = DATA_DIR / "maison_des_erables.sqlite3"
+DB_FILE = DATA_DIR / "reservations.sqlite3"
 SETTINGS_FILE = DATA_DIR / "settings.json"
 RESERVATIONS_FILE = DATA_DIR / "reservations.json"
 HOST = "0.0.0.0"
