@@ -33,7 +33,7 @@ export function createActions(ctx) {
     renderApp({ ...ctx, actions });
   }
 
-  async function loadState(showSyncedMessage = false) {
+  async function loadState(syncFeedbackMode = "silent") {
     try {
       const previousReservationsVersion = state.versions.reservationsVersion;
       const previousSettingsVersion = state.versions.settingsVersion;
@@ -47,7 +47,12 @@ export function createActions(ctx) {
       setApiVersions(payload.versions);
       rerender();
       setActiveTab(state.activeTab);
-      if (showSyncedMessage && changed) {
+      if (syncFeedbackMode === "manual") {
+        showToast(
+          elements,
+          changed ? "Les données ont été synchronisées avec un autre appareil." : "Les données sont déjà à jour.",
+        );
+      } else if (syncFeedbackMode === "auto" && changed) {
         showToast(elements, "Les données ont été synchronisées avec un autre appareil.");
       }
     } catch (error) {
@@ -67,7 +72,7 @@ export function createActions(ctx) {
       });
     });
 
-    elements.refreshButton.addEventListener("click", () => loadState(true));
+    elements.refreshButton.addEventListener("click", () => loadState("manual"));
     elements.bookingType.addEventListener("change", handleBookingTypeChange);
     elements.reservationForm.addEventListener("submit", handleReservationSubmit);
     elements.resetFormButton.addEventListener("click", resetReservationForm);
@@ -383,7 +388,7 @@ export function createActions(ctx) {
       return false;
     }
     showToast(elements, "Les données ont changé sur un autre appareil. Rechargement...", true);
-    await loadState(true);
+    await loadState("auto");
     return true;
   }
 
@@ -492,7 +497,7 @@ export function createActions(ctx) {
   function startAutoRefresh() {
     window.clearInterval(autoRefreshIntervalId);
     autoRefreshIntervalId = window.setInterval(() => {
-      loadState(true);
+      loadState("auto");
     }, 30000);
   }
 

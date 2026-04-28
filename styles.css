@@ -798,6 +798,7 @@ textarea {
 .panel-heading > div,
 .reservation-card header > div,
 .reservation-footer > div,
+.panel-heading label,
 .filters label,
 .calendar-controls,
 .section-header,
@@ -1039,8 +1040,29 @@ textarea {
   }
 
   .filters label,
-  .calendar-controls label {
+  .calendar-controls label,
+  .panel-heading label {
     flex: 1 1 100%;
+  }
+
+  .panel-heading input,
+  .panel-heading select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #report-month,
+  #report-year {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  #tab-reports .panel-heading.compact > label {
+    width: 100%;
+    max-width: 100%;
+    align-self: stretch;
   }
 
   .filters input,
