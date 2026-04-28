@@ -87,6 +87,13 @@ def ensure_database() -> None:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
+
+            CREATE INDEX IF NOT EXISTS idx_reservations_room_id ON reservations(room_id);
+            CREATE INDEX IF NOT EXISTS idx_reservations_arrival_date ON reservations(arrival_date);
+            CREATE INDEX IF NOT EXISTS idx_reservations_group_id ON reservations(group_id);
+            CREATE INDEX IF NOT EXISTS idx_reservations_status ON reservations(status);
+            CREATE INDEX IF NOT EXISTS idx_rooms_sort_order ON rooms(sort_order);
+            CREATE INDEX IF NOT EXISTS idx_platforms_sort_order ON platforms(sort_order);
             """
         )
         initialize_meta(conn)
@@ -301,11 +308,20 @@ def fetch_reservations(conn: sqlite3.Connection) -> list[dict]:
 
 
 def write_settings_db(conn: sqlite3.Connection, settings: dict) -> None:
-    conn.execute("DELETE FROM settings")
+    upsert_settings_db(conn, settings)
+    sync_rooms_db(conn, settings["rooms"])
+    sync_platforms_db(conn, settings["platforms"])
+
+
+def upsert_settings_db(conn: sqlite3.Connection, settings: dict) -> None:
     conn.execute(
         """
         INSERT INTO settings(id, property_name, description, currency)
         VALUES(1, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            property_name = excluded.property_name,
+            description = excluded.description,
+            currency = excluded.currency
         """,
         (
             settings["propertyName"],
@@ -313,23 +329,73 @@ def write_settings_db(conn: sqlite3.Connection, settings: dict) -> None:
             settings["currency"],
         ),
     )
-    conn.execute("DELETE FROM rooms")
+
+
+def sync_rooms_db(conn: sqlite3.Connection, rooms: list[dict]) -> None:
     conn.executemany(
-        "INSERT INTO rooms(id, name, color, sort_order) VALUES(?, ?, ?, ?)",
+        """
+        INSERT INTO rooms(id, name, color, sort_order)
+        VALUES(?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            name = excluded.name,
+            color = excluded.color,
+            sort_order = excluded.sort_order
+        """,
         [
             (room["id"], room["name"], room["color"], index)
-            for index, room in enumerate(settings["rooms"])
+            for index, room in enumerate(rooms)
         ],
     )
-    conn.execute("DELETE FROM platforms")
     conn.executemany(
-        "INSERT INTO platforms(name, sort_order) VALUES(?, ?)",
-        [(platform, index) for index, platform in enumerate(settings["platforms"])],
+        "DELETE FROM rooms WHERE id = ?",
+        [(row["id"],) for row in conn.execute("SELECT id FROM rooms").fetchall() if row["id"] not in {room["id"] for room in rooms}],
+    )
+
+
+def sync_platforms_db(conn: sqlite3.Connection, platforms: list[str]) -> None:
+    conn.executemany(
+        """
+        INSERT INTO platforms(name, sort_order)
+        VALUES(?, ?)
+        ON CONFLICT(name) DO UPDATE SET
+            sort_order = excluded.sort_order
+        """,
+        [(platform, index) for index, platform in enumerate(platforms)],
+    )
+    conn.executemany(
+        "DELETE FROM platforms WHERE name = ?",
+        [(row["name"],) for row in conn.execute("SELECT name FROM platforms").fetchall() if row["name"] not in set(platforms)],
     )
 
 
 def write_reservations_db(conn: sqlite3.Connection, reservations: list[dict]) -> None:
     conn.execute("DELETE FROM reservations")
+    upsert_reservations_db(conn, reservations)
+
+
+def reservation_to_db_row(reservation: dict) -> tuple:
+    return (
+        reservation["id"],
+        reservation.get("groupId"),
+        reservation["bookingType"],
+        reservation["status"],
+        reservation["bookingName"],
+        reservation["roomId"],
+        reservation["arrivalDate"],
+        reservation["departureDate"],
+        reservation["clientName"],
+        reservation["clientContact"],
+        reservation["platform"],
+        float(reservation["amount"]),
+        reservation["comment"],
+        reservation["createdAt"],
+        reservation["updatedAt"],
+    )
+
+
+def upsert_reservations_db(conn: sqlite3.Connection, reservations: list[dict]) -> None:
+    if not reservations:
+        return
     conn.executemany(
         """
         INSERT INTO reservations(
@@ -350,28 +416,32 @@ def write_reservations_db(conn: sqlite3.Connection, reservations: list[dict]) ->
             updated_at
         )
         VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            group_id = excluded.group_id,
+            booking_type = excluded.booking_type,
+            status = excluded.status,
+            booking_name = excluded.booking_name,
+            room_id = excluded.room_id,
+            arrival_date = excluded.arrival_date,
+            departure_date = excluded.departure_date,
+            client_name = excluded.client_name,
+            client_contact = excluded.client_contact,
+            platform = excluded.platform,
+            amount = excluded.amount,
+            comment = excluded.comment,
+            created_at = excluded.created_at,
+            updated_at = excluded.updated_at
         """,
-        [
-            (
-                reservation["id"],
-                reservation.get("groupId"),
-                reservation["bookingType"],
-                reservation["status"],
-                reservation["bookingName"],
-                reservation["roomId"],
-                reservation["arrivalDate"],
-                reservation["departureDate"],
-                reservation["clientName"],
-                reservation["clientContact"],
-                reservation["platform"],
-                float(reservation["amount"]),
-                reservation["comment"],
-                reservation["createdAt"],
-                reservation["updatedAt"],
-            )
-            for reservation in reservations
-        ],
+        [reservation_to_db_row(reservation) for reservation in reservations],
     )
+
+
+def delete_reservation_db(conn: sqlite3.Connection, reservation_id: str) -> None:
+    conn.execute("DELETE FROM reservations WHERE id = ?", (reservation_id,))
+
+
+def delete_reservations_by_group_db(conn: sqlite3.Connection, group_id: str) -> None:
+    conn.execute("DELETE FROM reservations WHERE group_id = ?", (group_id,))
 
 
 def validate_settings(payload: dict) -> dict:
@@ -710,18 +780,14 @@ class AppHandler(SimpleHTTPRequestHandler):
                         new_reservations = build_reservations(payload, state["settings"], reservations)
                         payload_group_id = str(payload.get("groupId", "")).strip()
                         payload_id = str(payload.get("id", "")).strip()
-                        updated = reservations
                         if payload_group_id:
-                            updated = [
-                                item for item in updated if str(item.get("groupId") or "") != payload_group_id
-                            ]
+                            delete_reservations_by_group_db(conn, payload_group_id)
                         elif payload_id:
-                            updated = [item for item in updated if item["id"] != payload_id]
-                        updated.extend(new_reservations)
-                        updated.sort(key=lambda item: (item["arrivalDate"], item["createdAt"], item["id"]))
-                        write_reservations_db(conn, updated)
+                            delete_reservation_db(conn, payload_id)
+                        upsert_reservations_db(conn, new_reservations)
                         bump_version(conn, "reservations_revision")
                         conn.commit()
+                        updated = fetch_reservations(conn)
                         self.send_json({"reservations": updated, "versions": get_versions(conn)})
                         return
         except ConflictError as exc:
@@ -754,19 +820,13 @@ class AppHandler(SimpleHTTPRequestHandler):
                     (item for item in state["reservations"] if item["id"] == reservation_id),
                     None,
                 )
-                if reservation is None:
-                    updated = state["reservations"]
-                elif reservation.get("groupId"):
-                    updated = [
-                        item
-                        for item in state["reservations"]
-                        if str(item.get("groupId") or "") != str(reservation["groupId"])
-                    ]
-                else:
-                    updated = [item for item in state["reservations"] if item["id"] != reservation_id]
-                write_reservations_db(conn, updated)
+                if reservation and reservation.get("groupId"):
+                    delete_reservations_by_group_db(conn, str(reservation["groupId"]))
+                elif reservation:
+                    delete_reservation_db(conn, reservation_id)
                 bump_version(conn, "reservations_revision")
                 conn.commit()
+                updated = fetch_reservations(conn)
                 self.send_json({"reservations": updated, "versions": get_versions(conn)})
 
     def send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:

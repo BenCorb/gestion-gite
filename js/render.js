@@ -25,22 +25,36 @@ export function initializeReportControls(state, elements) {
   const today = new Date();
   const currentMonthValue = elements.reportMonth.value;
   const currentYearValue = elements.reportYear.value;
-
-  if (!elements.reportMonth.value) {
-    elements.reportMonth.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-  }
+  const fallbackMonthValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 
   const years = new Set([
     today.getFullYear(),
     ...state.reservations.map((reservation) => parseIsoDate(reservation.arrivalDate).getFullYear()),
   ]);
 
+  const monthOptions = [...years]
+    .sort((a, b) => b - a)
+    .flatMap((year) =>
+      Array.from({ length: 12 }, (_, index) => {
+        const monthNumber = 12 - index;
+        const value = `${year}-${String(monthNumber).padStart(2, "0")}`;
+        const label = new Date(year, monthNumber - 1, 1).toLocaleDateString("fr-FR", {
+          month: "long",
+          year: "numeric",
+        });
+        return `<option value="${value}">${escapeHtml(label.charAt(0).toUpperCase() + label.slice(1))}</option>`;
+      }),
+    );
+  elements.reportMonth.innerHTML = monthOptions.join("");
+
   elements.reportYear.innerHTML = [...years]
     .sort((a, b) => b - a)
     .map((year) => `<option value="${year}">${year}</option>`)
     .join("");
 
-  elements.reportMonth.value = currentMonthValue || elements.reportMonth.value;
+  elements.reportMonth.value = [...elements.reportMonth.options].some((option) => option.value === currentMonthValue)
+    ? currentMonthValue
+    : fallbackMonthValue;
   elements.reportYear.value = [...years].includes(Number(currentYearValue))
     ? currentYearValue
     : String(today.getFullYear());
@@ -93,7 +107,7 @@ function renderTopStats(state, elements) {
     { label: "Séjours à venir", value: upcoming.length },
     { label: "Occupations aujourd'hui", value: currentGuests },
     { label: "Réservations du mois", value: thisMonth.length },
-    { label: "CA cumulé", value: formatCurrency(state, totalRevenue) },
+    { label: "CA prévu", value: formatCurrency(state, totalRevenue) },
   ];
 
   elements.topStats.innerHTML = stats
