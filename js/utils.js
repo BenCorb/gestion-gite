@@ -175,6 +175,9 @@ export function matchesQuickFilter(filter, reservation, today = new Date()) {
   if (filter === "pending") {
     return reservation.status === "pending";
   }
+  if (filter === "to-pay") {
+    return reservation.status === "confirmed";
+  }
   if (filter === "paid") {
     return reservation.status === "paid";
   }
