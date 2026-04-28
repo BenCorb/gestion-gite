@@ -1,6 +1,7 @@
 export function cacheElements(elements) {
   elements.propertyTitle = document.getElementById("property-title");
   elements.syncStatus = document.getElementById("sync-status");
+  elements.refreshButton = document.getElementById("refresh-button");
   elements.topStats = document.getElementById("top-stats");
   elements.tabButtons = [...document.querySelectorAll(".tab-button")];
   elements.tabPanels = [...document.querySelectorAll(".tab-panel")];

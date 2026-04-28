@@ -67,6 +67,7 @@ export function createActions(ctx) {
       });
     });
 
+    elements.refreshButton.addEventListener("click", () => loadState(true));
     elements.bookingType.addEventListener("change", handleBookingTypeChange);
     elements.reservationForm.addEventListener("submit", handleReservationSubmit);
     elements.resetFormButton.addEventListener("click", resetReservationForm);
