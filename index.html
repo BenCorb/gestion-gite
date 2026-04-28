@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SUIVI DE RÉSERVATIONS</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Suivi de réservations</p>
+          <h1 id="property-title">Mon gîte</h1>
+          <p id="sync-status" class="sync-status">Synchronisé</p>
+        </div>
+      </header>
+
+      <section class="stats-grid" id="top-stats"></section>
+
+      <nav class="tabs" aria-label="Navigation principale">
+        <button class="tab-button active" data-tab="alerts" type="button">
+          🔔 Alertes
+        </button>
+        <button class="tab-button" data-tab="reservations" type="button">
+          🛏️ Réservations
+        </button>
+        <button class="tab-button" data-tab="calendar" type="button">
+          🗓️ Calendrier
+        </button>
+        <button class="tab-button" data-tab="planning" type="button">
+          🧭 Planning
+        </button>
+        <button class="tab-button" data-tab="reports" type="button">
+          📊 Bilans
+        </button>
+        <button class="tab-button tab-button-settings" data-tab="settings" type="button">
+          ⚙️ Paramètres
+        </button>
+      </nav>
+
+      <main>
+        <section class="tab-panel" id="tab-reservations">
+          <div class="panel-grid">
+            <article class="panel card">
+              <div class="panel-heading">
+                <div>
+                  <h2>Réservation</h2>
+                  <p>Ajoutez, modifiez et vérifiez les séjours chambre par chambre.</p>
+                </div>
+                <span class="badge" id="form-mode-badge">Nouveau</span>
+              </div>
+
+              <form id="reservation-form" class="form-grid">
+                <input type="hidden" id="reservation-id" />
+                <input type="hidden" id="reservation-group-id" />
+
+                <label>
+                  <span>Type</span>
+                  <select id="booking-type" name="bookingType" required>
+                    <option value="reservation">Réservation</option>
+                    <option value="block">Blocage</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Chambre</span>
+                  <select id="room-id" name="roomId" required></select>
+                </label>
+
+                <div class="full-width block-only-field is-hidden">
+                  <span class="field-label">Chambres à bloquer</span>
+                  <div id="block-rooms-selector" class="checkbox-grid"></div>
+                </div>
+
+                <label>
+                  <span>Date d'arrivée</span>
+                  <input id="arrival-date" name="arrivalDate" type="date" required />
+                </label>
+
+                <label>
+                  <span>Date de départ</span>
+                  <input id="departure-date" name="departureDate" type="date" required />
+                </label>
+
+                <label class="reservation-only-field">
+                  <span>Nom du client</span>
+                  <input id="client-name" name="clientName" type="text" required />
+                </label>
+
+                <label class="reservation-only-field">
+                  <span>Contact client</span>
+                  <input id="client-contact" name="clientContact" type="text" required />
+                </label>
+
+                <label class="reservation-only-field">
+                  <span>Plateforme</span>
+                  <select id="platform" name="platform" required></select>
+                </label>
+
+                <label class="reservation-only-field">
+                  <span>Statut</span>
+                  <select id="reservation-status" name="reservationStatus">
+                    <option value="pending">En attente</option>
+                    <option value="confirmed">Confirmée</option>
+                    <option value="paid">Payée</option>
+                    <option value="cancelled">Annulée</option>
+                  </select>
+                </label>
+
+                <label class="reservation-only-field">
+                  <span>Montant</span>
+                  <input
+                    id="amount"
+                    name="amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                  />
+                </label>
+
+                <label class="full-width">
+                  <span>Commentaire</span>
+                  <textarea id="comment" name="comment" rows="4"></textarea>
+                </label>
+
+                <div class="form-actions full-width">
+                  <button class="primary-button" type="submit" id="save-reservation-button">
+                    Enregistrer
+                  </button>
+                  <button class="secondary-button" type="button" id="reset-form-button">
+                    Réinitialiser
+                  </button>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel card">
+              <div class="panel-heading compact">
+                <div>
+                  <h2>Liste des réservations</h2>
+                  <p>Vue chronologique de tous les séjours.</p>
+                </div>
+                <div class="filters">
+                  <label>
+                    <span>Chambre</span>
+                    <select id="reservation-filter-room"></select>
+                  </label>
+                  <label>
+                    <span>Recherche</span>
+                    <input id="reservation-search" type="search" placeholder="Client / n°" />
+                  </label>
+                </div>
+              </div>
+              <div class="quick-filters" id="quick-filters">
+                <button class="filter-chip active" data-filter="all" type="button">Tout</button>
+                <button class="filter-chip" data-filter="today" type="button">Aujourd'hui</button>
+                <button class="filter-chip" data-filter="upcoming" type="button">À venir</button>
+                <button class="filter-chip" data-filter="month" type="button">Ce mois</button>
+                <button class="filter-chip" data-filter="pending" type="button">En attente</button>
+                <button class="filter-chip" data-filter="paid" type="button">Payées</button>
+                <button class="filter-chip" data-filter="blocks" type="button">Blocages</button>
+              </div>
+              <div id="reservations-list" class="reservation-list empty-state-host"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="tab-panel active" id="tab-alerts">
+          <article class="panel card">
+            <div class="panel-heading compact">
+              <div>
+                <h2>Alertes</h2>
+                <p>Points à surveiller aujourd'hui et à court terme.</p>
+              </div>
+            </div>
+            <div id="alerts-list" class="alerts-list"></div>
+          </article>
+        </section>
+
+        <section class="tab-panel" id="tab-calendar">
+          <article class="panel card">
+            <div class="panel-heading compact">
+              <div>
+                <h2>Calendrier des réservations</h2>
+                <p>Visualisez les occupations et les chevauchements potentiels.</p>
+              </div>
+              <div class="calendar-controls">
+                <button class="secondary-button" id="calendar-today" type="button">Aujourd'hui</button>
+                <button class="secondary-button" id="calendar-prev" type="button">Mois précédent</button>
+                <h3 id="calendar-month-label"></h3>
+                <button class="secondary-button" id="calendar-next" type="button">Mois suivant</button>
+              </div>
+            </div>
+            <div class="calendar-scroll">
+              <div id="calendar-grid" class="calendar-grid"></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="tab-panel" id="tab-planning">
+          <article class="panel card">
+            <div class="panel-heading compact">
+              <div>
+                <h2>Planning par chambre</h2>
+                <p>Vue mensuelle des occupations, chambre par chambre.</p>
+              </div>
+              <div class="calendar-controls">
+                <button class="secondary-button" id="planning-today" type="button">Aujourd'hui</button>
+                <button class="secondary-button" id="planning-prev" type="button">Mois précédent</button>
+                <h3 id="planning-month-label"></h3>
+                <button class="secondary-button" id="planning-next" type="button">Mois suivant</button>
+              </div>
+            </div>
+            <div class="planning-scroll">
+              <div id="planning-grid" class="planning-grid"></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="tab-panel" id="tab-reports">
+          <div class="panel-grid reports-layout">
+            <article class="panel card">
+              <div class="panel-heading compact">
+                <div>
+                  <h2>Bilans mensuels</h2>
+                  <p>Résultats du mois sélectionné, détail par chambre et plateformes.</p>
+                </div>
+                <label>
+                  <span>Mois</span>
+                  <input id="report-month" type="month" />
+                </label>
+              </div>
+              <div id="monthly-stats" class="stats-grid"></div>
+              <div class="report-section">
+                <div class="section-header">
+                  <h3>Comparaison avec le mois précédent</h3>
+                </div>
+                <div id="monthly-comparison" class="breakdown-grid"></div>
+              </div>
+              <div class="report-section">
+                <div class="section-header">
+                  <h3>CA par plateforme</h3>
+                </div>
+                <div id="monthly-platform-breakdown" class="breakdown-grid"></div>
+              </div>
+              <div id="monthly-room-breakdown" class="breakdown-grid"></div>
+            </article>
+
+            <article class="panel card">
+              <div class="panel-heading compact">
+                <div>
+                  <h2>Bilan annuel</h2>
+                  <p>Vue globale de l'année et comparaison par mois.</p>
+                </div>
+                <label>
+                  <span>Année</span>
+                  <select id="report-year"></select>
+                </label>
+                <button class="secondary-button" id="export-csv-button" type="button">Exporter CSV</button>
+              </div>
+              <div id="yearly-stats" class="stats-grid"></div>
+              <div class="report-section">
+                <div class="section-header">
+                  <h3>Top chambres</h3>
+                </div>
+                <div id="yearly-room-insights" class="breakdown-grid"></div>
+              </div>
+              <div class="table-wrapper">
+                <table class="report-table">
+                  <thead>
+                    <tr>
+                      <th>Mois</th>
+                      <th>Réservations</th>
+                      <th>Nuits</th>
+                      <th>CA</th>
+                    </tr>
+                  </thead>
+                  <tbody id="yearly-table-body"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="tab-settings">
+          <div class="panel-grid settings-layout">
+            <article class="panel card">
+              <div class="panel-heading">
+                <div>
+                  <h2>Paramètres du gîte</h2>
+                  <p>Personnalisez le nom, les chambres et les plateformes de réservation.</p>
+                </div>
+              </div>
+
+              <form id="settings-form" class="form-grid">
+                <label class="full-width">
+                  <span>Nom du gîte</span>
+                  <input id="property-name-input" type="text" required />
+                </label>
+
+                <label>
+                  <span>Devise</span>
+                  <input id="currency-input" type="text" maxlength="6" required />
+                </label>
+
+                <div class="full-width settings-section">
+                  <div class="section-header">
+                    <h3>Chambres</h3>
+                    <button class="secondary-button" id="add-room-button" type="button">
+                      Ajouter une chambre
+                    </button>
+                  </div>
+                  <div id="rooms-editor" class="stack-list"></div>
+                </div>
+
+                <div class="full-width settings-section">
+                  <div class="section-header">
+                    <h3>Plateformes</h3>
+                    <button class="secondary-button" id="add-platform-button" type="button">
+                      Ajouter une plateforme
+                    </button>
+                  </div>
+                  <div id="platforms-editor" class="stack-list"></div>
+                </div>
+
+                <div class="form-actions full-width">
+                  <button class="primary-button" type="submit">Sauvegarder les paramètres</button>
+                </div>
+
+                <div class="full-width settings-section">
+                  <div class="section-header">
+                    <h3>Sauvegarde</h3>
+                  </div>
+                  <div class="form-actions">
+                    <button class="secondary-button" id="export-backup-button" type="button">
+                      Exporter JSON
+                    </button>
+                    <label class="upload-button">
+                      <input id="import-backup-input" type="file" accept="application/json" hidden />
+                      <span class="secondary-button">Restaurer JSON</span>
+                    </label>
+                  </div>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel card">
+              <div class="panel-heading">
+                <div>
+                  <h2>Conseils d'utilisation</h2>
+                  <p>Bonnes pratiques pour garder un suivi fiable et agréable.</p>
+                </div>
+              </div>
+              <ul class="tips-list">
+                <li>Les données du projet sont stockées localement dans une base SQLite.</li>
+                <li>Les bilans utilisent la date d'arrivée pour rattacher la réservation au mois et à l'année.</li>
+                <li>La suppression d'une chambre est bloquée tant qu'elle contient des réservations.</li>
+                <li>Le calendrier affiche chaque nuit réservée pour visualiser rapidement les occupations.</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" aria-live="polite"></div>
+
+    <template id="empty-state-template">
+      <div class="empty-state">
+        <h3>Aucune donnée à afficher</h3>
+        <p>Ajoutez une réservation ou ajustez vos filtres.</p>
+      </div>
+    </template>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
