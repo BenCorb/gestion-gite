@@ -1,0 +1,97 @@
+export async function fetchState() {
+  const response = await fetch("/api/state");
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw buildApiError(response, payload.error || "Impossible de charger les données.");
+  }
+
+  return payload;
+}
+
+export async function saveReservationPayload(payload) {
+  const response = await fetch("/api/reservations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw buildApiError(response, data.error || "Impossible d'enregistrer la réservation.");
+  }
+
+  return data;
+}
+
+export async function deleteReservationRequest(id) {
+  const response = await fetch(`/api/reservations/${id}`, {
+    method: "DELETE",
+    headers: {
+      "X-Settings-Version": payloadVersions.settingsVersion,
+      "X-Reservations-Version": payloadVersions.reservationsVersion,
+    },
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw buildApiError(response, data.error || "Suppression impossible.");
+  }
+
+  return data;
+}
+
+let payloadVersions = {
+  settingsVersion: "",
+  reservationsVersion: "",
+};
+
+export function setApiVersions(versions) {
+  payloadVersions = {
+    settingsVersion: versions?.settingsVersion || "",
+    reservationsVersion: versions?.reservationsVersion || "",
+  };
+}
+
+export async function saveSettingsPayload(payload) {
+  const response = await fetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw buildApiError(response, data.error || "Impossible de sauvegarder les paramètres.");
+  }
+
+  return data;
+}
+
+function buildApiError(response, message) {
+  const error = new Error(message);
+  error.status = response.status;
+  return error;
+}
+
+export async function fetchBackup() {
+  const response = await fetch("/api/backup");
+  const data = await response.json();
+  if (!response.ok) {
+    throw buildApiError(response, data.error || "Impossible d'exporter la sauvegarde.");
+  }
+  return data;
+}
+
+export async function restoreBackup(payload) {
+  const response = await fetch("/api/restore", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw buildApiError(response, data.error || "Impossible de restaurer la sauvegarde.");
+  }
+  return data;
+}
