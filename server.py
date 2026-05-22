@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import collections
 import json
+import logging
 import os
 import re
 import socket
 import sqlite3
 import threading
+import time
 import uuid
 import webbrowser
 import cgi
@@ -13,7 +16,7 @@ import hashlib
 import hmac
 import secrets
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -29,8 +32,17 @@ RESERVATIONS_FILE = DATA_DIR / "reservations.json"
 HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "8001"))
 SESSION_COOKIE_NAME = "gite_admin_session"
+SESSION_DAYS = int(os.environ.get("GITE_SESSION_DAYS", "7"))
+LOGIN_MAX_ATTEMPTS = 10
+LOGIN_WINDOW_SECONDS = 15 * 60
 MAX_UPLOAD_SIZE = 5 * 1024 * 1024
 ALLOWED_IMAGE_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif"}
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
+logger = logging.getLogger("gite")
+
+_login_attempts: dict[str, list[float]] = collections.defaultdict(list)
+_login_lock = threading.Lock()
 
 
 DEFAULT_SETTINGS = {
@@ -211,6 +223,12 @@ def migrate_database(conn: sqlite3.Connection) -> None:
         if column not in columns:
             conn.execute(statement)
 
+    session_cols = {row["name"] for row in conn.execute("PRAGMA table_info(admin_sessions)").fetchall()}
+    if "expires_at" not in session_cols:
+        conn.execute("ALTER TABLE admin_sessions ADD COLUMN expires_at TEXT")
+        # Expire existing sessions immediately so re-login is required after upgrade.
+        conn.execute("UPDATE admin_sessions SET expires_at = ?", (datetime.now().isoformat(timespec="seconds"),))
+
 
 def initialize_site_settings(conn: sqlite3.Connection) -> None:
     conn.executemany(
@@ -223,7 +241,11 @@ def initialize_admin_auth(conn: sqlite3.Connection) -> None:
     existing = conn.execute("SELECT id FROM admin_auth WHERE id = 1").fetchone()
     if existing:
         return
-    password = os.environ.get("ADMIN_INITIAL_PASSWORD", "admin")
+    password = os.environ.get("ADMIN_INITIAL_PASSWORD")
+    if not password:
+        password = secrets.token_urlsafe(12)
+        logger.warning("Mot de passe admin initial généré automatiquement : %s", password)
+        logger.warning("Définissez la variable ADMIN_INITIAL_PASSWORD pour choisir votre mot de passe.")
     conn.execute(
         "INSERT INTO admin_auth(id, password_hash, session_revision) VALUES(1, ?, ?)",
         (hash_password(password), uuid.uuid4().hex),
@@ -605,6 +627,32 @@ def fetch_booking_requests(conn: sqlite3.Connection) -> list[dict]:
     ]
 
 
+def fetch_booking_request_by_id(conn: sqlite3.Connection, request_id: str) -> dict | None:
+    row = conn.execute(
+        """
+        SELECT id, room_id, arrival_date, departure_date, guest_name, guest_contact,
+               guest_count, message, status, created_at, updated_at
+        FROM booking_requests WHERE id = ?
+        """,
+        (request_id,),
+    ).fetchone()
+    if not row:
+        return None
+    return {
+        "id": row["id"],
+        "roomId": row["room_id"],
+        "arrivalDate": row["arrival_date"],
+        "departureDate": row["departure_date"],
+        "guestName": row["guest_name"],
+        "guestContact": row["guest_contact"],
+        "guestCount": row["guest_count"],
+        "message": row["message"],
+        "status": row["status"],
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+    }
+
+
 def validate_booking_request(payload: dict, settings: dict, reservations: list[dict]) -> dict:
     room_id = str(payload.get("roomId", "")).strip()
     arrival_date = str(payload.get("arrivalDate", "")).strip()
@@ -715,6 +763,18 @@ def is_room_available(room_id: str, arrival_date: str, departure_date: str, rese
     return True
 
 
+def is_room_available_db(conn: sqlite3.Connection, room_id: str, arrival_date: str, departure_date: str) -> bool:
+    count = conn.execute(
+        """
+        SELECT COUNT(*) FROM reservations
+        WHERE room_id = ? AND status != 'cancelled'
+          AND arrival_date < ? AND departure_date > ?
+        """,
+        (room_id, departure_date, arrival_date),
+    ).fetchone()[0]
+    return count == 0
+
+
 def build_public_site(conn: sqlite3.Connection) -> dict:
     settings = fetch_settings(conn)
     return {
@@ -729,12 +789,11 @@ def build_public_site(conn: sqlite3.Connection) -> dict:
 def build_availability(conn: sqlite3.Connection, arrival_date: str, departure_date: str) -> dict:
     validate_date_range(arrival_date, departure_date)
     settings = fetch_settings(conn)
-    reservations = fetch_reservations(conn)
     available_rooms = [
         room
         for room in settings["rooms"]
         if room.get("publicVisible", True)
-        and is_room_available(room["id"], arrival_date, departure_date, reservations)
+        and is_room_available_db(conn, room["id"], arrival_date, departure_date)
     ]
     return {"arrivalDate": arrival_date, "departureDate": departure_date, "rooms": available_rooms}
 
@@ -1187,6 +1246,18 @@ def get_next_booking_name(reservations: list[dict], booking_type: str) -> str:
     return f"{label} n°{highest_number + 1}"
 
 
+def detect_image_type(data: bytes) -> str | None:
+    if data[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return "image/gif"
+    return None
+
+
 def hash_password(password: str, salt: str | None = None) -> str:
     salt = salt or secrets.token_hex(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 120_000)
@@ -1209,10 +1280,11 @@ def hash_session_token(token: str) -> str:
 
 def create_session(conn: sqlite3.Connection) -> str:
     token = secrets.token_urlsafe(32)
+    expires_at = (datetime.now() + timedelta(days=SESSION_DAYS)).isoformat(timespec="seconds")
     auth = conn.execute("SELECT session_revision FROM admin_auth WHERE id = 1").fetchone()
     conn.execute(
-        "INSERT INTO admin_sessions(token_hash, session_revision, created_at) VALUES(?, ?, ?)",
-        (hash_session_token(token), auth["session_revision"], datetime.now().isoformat(timespec="seconds")),
+        "INSERT INTO admin_sessions(token_hash, session_revision, created_at, expires_at) VALUES(?, ?, ?, ?)",
+        (hash_session_token(token), auth["session_revision"], datetime.now().isoformat(timespec="seconds"), expires_at),
     )
     return token
 
@@ -1220,6 +1292,8 @@ def create_session(conn: sqlite3.Connection) -> str:
 def is_valid_session(conn: sqlite3.Connection, token: str | None) -> bool:
     if not token:
         return False
+    now = datetime.now().isoformat(timespec="seconds")
+    conn.execute("DELETE FROM admin_sessions WHERE expires_at IS NOT NULL AND expires_at <= ?", (now,))
     session = conn.execute(
         "SELECT session_revision FROM admin_sessions WHERE token_hash = ?",
         (hash_session_token(token),),
@@ -1363,16 +1437,33 @@ class AppHandler(SimpleHTTPRequestHandler):
 
         try:
             if parsed.path == "/api/login":
+                client_ip = self.client_address[0]
+                now_ts = time.time()
+                with _login_lock:
+                    _login_attempts[client_ip] = [
+                        t for t in _login_attempts[client_ip] if now_ts - t < LOGIN_WINDOW_SECONDS
+                    ]
+                    attempt_count = len(_login_attempts[client_ip])
+                if attempt_count >= LOGIN_MAX_ATTEMPTS:
+                    logger.warning("login rate-limited ip=%s attempts=%d", client_ip, attempt_count)
+                    self.send_error_json("Trop de tentatives. Réessayez dans 15 minutes.", HTTPStatus.TOO_MANY_REQUESTS)
+                    return
                 with DATA_LOCK:
                     ensure_database()
                     with get_connection() as conn:
                         auth = conn.execute("SELECT password_hash FROM admin_auth WHERE id = 1").fetchone()
                         password = str(payload.get("password", ""))
                         if not auth or not verify_password(password, auth["password_hash"]):
+                            with _login_lock:
+                                _login_attempts[client_ip].append(now_ts)
+                            logger.warning("login failed ip=%s", client_ip)
                             self.send_error_json("Mot de passe incorrect.", HTTPStatus.UNAUTHORIZED)
                             return
+                        with _login_lock:
+                            _login_attempts.pop(client_ip, None)
                         token = create_session(conn)
                         conn.commit()
+                        logger.info("login success ip=%s", client_ip)
                         self.send_json({"authenticated": True}, headers={"Set-Cookie": session_cookie(token)})
                         return
 
@@ -1422,10 +1513,7 @@ class AppHandler(SimpleHTTPRequestHandler):
                     with DATA_LOCK:
                         ensure_database()
                         with get_connection() as conn:
-                            request = next(
-                                (item for item in fetch_booking_requests(conn) if item["id"] == request_id),
-                                None,
-                            )
+                            request = fetch_booking_request_by_id(conn, request_id)
                             if not request:
                                 self.send_error_json("Demande introuvable.", HTTPStatus.NOT_FOUND)
                                 return
@@ -1578,11 +1666,19 @@ class AppHandler(SimpleHTTPRequestHandler):
                 updated = fetch_reservations(conn)
                 self.send_json({"reservations": updated, "versions": get_versions(conn)})
 
+    def end_headers(self) -> None:
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "SAMEORIGIN")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        self.send_header("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
+        super().end_headers()
+
     def send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK, headers: dict | None = None) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
         for key, value in (headers or {}).items():
             self.send_header(key, value)
         self.end_headers()
@@ -1592,7 +1688,7 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.send_json({"error": message}, status=status)
 
     def log_message(self, format: str, *args) -> None:
-        return
+        logger.debug("%s - %s", self.address_string(), format % args)
 
     def current_session_token(self) -> str | None:
         return cookie_value(self.headers, SESSION_COOKIE_NAME)
@@ -1631,11 +1727,14 @@ class AppHandler(SimpleHTTPRequestHandler):
         if not extension:
             self.send_error_json("Format d'image non supporté.", HTTPStatus.BAD_REQUEST)
             return
+        file_data = file_item.file.read()
+        if detect_image_type(file_data) != content_type:
+            self.send_error_json("Format d'image non supporté.", HTTPStatus.BAD_REQUEST)
+            return
         UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
         filename = f"{uuid.uuid4().hex}{extension}"
         target = UPLOADS_DIR / filename
-        with target.open("wb") as output:
-            shutil.copyfileobj(file_item.file, output)
+        target.write_bytes(file_data)
         self.send_json({"url": f"/uploads/{filename}"}, HTTPStatus.CREATED)
 
     def serve_upload(self, filename: str) -> None:
