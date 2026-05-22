@@ -1,5 +1,8 @@
 import { calculateNights, escapeHtml, formatCurrency, showToast } from "./js/utils.js";
 
+const CHEVRON_LEFT = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8L10 13"/></svg>`;
+const CHEVRON_RIGHT = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3L11 8L6 13"/></svg>`;
+
 const BODY_FONTS = {
   lato:          { stack: '"Lato",sans-serif',           googleFonts: 'Lato:wght@400;700' },
   raleway:       { stack: '"Raleway",sans-serif',        googleFonts: 'Raleway:wght@400;700' },
@@ -18,12 +21,16 @@ const HEADING_FONTS = {
   librefranklin: { stack: '"Libre Franklin",sans-serif', googleFonts: 'Libre+Franklin:wght@700' },
 };
 
+const CLOSE_ICON = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>`;
+
 const state = {
   site: null,
   rooms: [],
   availability: null,
   roomPhotoIndexes: {},
   gitePhotoIndex: 0,
+  lightboxPhotos: [],
+  lightboxIndex: 0,
 };
 
 const elements = {
@@ -65,6 +72,37 @@ const elements = {
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
+  const lb = document.createElement("div");
+  lb.id = "lightbox";
+  lb.className = "lightbox-backdrop is-hidden";
+  lb.setAttribute("role", "dialog");
+  lb.setAttribute("aria-modal", "true");
+  lb.innerHTML = `
+    <button class="lightbox-close" id="lightbox-close" aria-label="Fermer">${CLOSE_ICON}</button>
+    <button class="lightbox-nav lightbox-prev" id="lightbox-prev" aria-label="Photo précédente">${CHEVRON_LEFT}</button>
+    <img id="lightbox-img" src="" alt="" />
+    <button class="lightbox-nav lightbox-next" id="lightbox-next" aria-label="Photo suivante">${CHEVRON_RIGHT}</button>
+    <span class="lightbox-count" id="lightbox-count"></span>
+  `;
+  document.body.appendChild(lb);
+  elements.lightbox = lb;
+  elements.lightboxImg = document.getElementById("lightbox-img");
+  elements.lightboxCount = document.getElementById("lightbox-count");
+  elements.lightboxClose = document.getElementById("lightbox-close");
+  elements.lightboxPrev = document.getElementById("lightbox-prev");
+  elements.lightboxNext = document.getElementById("lightbox-next");
+
+  elements.lightboxClose.addEventListener("click", (e) => { e.stopPropagation(); closeLightbox(); });
+  elements.lightboxPrev.addEventListener("click", (e) => { e.stopPropagation(); changeLightboxPhoto(-1); });
+  elements.lightboxNext.addEventListener("click", (e) => { e.stopPropagation(); changeLightboxPhoto(1); });
+  elements.lightbox.addEventListener("click", closeLightbox);
+  document.addEventListener("keydown", (e) => {
+    if (elements.lightbox.classList.contains("is-hidden")) return;
+    if (e.key === "Escape") closeLightbox();
+    if (e.key === "ArrowLeft") changeLightboxPhoto(-1);
+    if (e.key === "ArrowRight") changeLightboxPhoto(1);
+  });
+
   await loadPublicSite();
   elements.availabilityForm.addEventListener("submit", searchAvailability);
   elements.requestForm.addEventListener("submit", submitBookingRequest);
@@ -134,20 +172,21 @@ function renderRooms(rooms) {
         <article class="public-room-card">
           ${
             image
-              ? `<div class="room-carousel">
+              ? `<div class="room-carousel" data-room-id="${escapeHtml(room.id)}">
                   <img src="${escapeHtml(image)}" alt="${escapeHtml(photos[selectedPhotoIndex]?.alt || room.name)}" loading="lazy" />
                   ${
                     photos.length > 1
-                      ? `<button class="icon-button carousel-button prev" type="button" data-carousel-room="${escapeHtml(room.id)}" data-carousel-direction="-1">‹</button>
-                         <button class="icon-button carousel-button next" type="button" data-carousel-room="${escapeHtml(room.id)}" data-carousel-direction="1">›</button>
+                      ? `<button class="icon-button carousel-button prev" type="button" data-carousel-room="${escapeHtml(room.id)}" data-carousel-direction="-1" aria-label="Photo précédente">${CHEVRON_LEFT}</button>
+                         <button class="icon-button carousel-button next" type="button" data-carousel-room="${escapeHtml(room.id)}" data-carousel-direction="1" aria-label="Photo suivante">${CHEVRON_RIGHT}</button>
                          <span class="carousel-count">${selectedPhotoIndex + 1}/${photos.length}</span>`
                       : ""
                   }
+                  <div class="room-image-overlay"><h3>${escapeHtml(room.name)}</h3></div>
                 </div>`
               : ""
           }
-          <div>
-            <h3>${escapeHtml(room.name)}</h3>
+          <div class="room-card-body">
+            ${!image ? `<h3>${escapeHtml(room.name)}</h3>` : ""}
             <p>${escapeHtml(room.summary || room.description || "Chambre confortable du gîte.")}</p>
             <div class="reservation-meta">
               <span>${room.capacity} voyageur(s)</span>
@@ -177,6 +216,17 @@ function renderRooms(rooms) {
   elements.rooms.querySelectorAll("[data-amenities-room]").forEach((button) => {
     button.addEventListener("click", () => openAmenitiesModal(button.dataset.amenitiesRoom));
   });
+  elements.rooms.querySelectorAll(".room-carousel img").forEach((img) => {
+    img.addEventListener("click", () => {
+      const roomId = img.closest(".room-carousel")?.dataset.roomId;
+      if (!roomId) return;
+      const room = [...state.rooms, ...(state.availability?.rooms || [])].find((r) => r.id === roomId);
+      const photos = room?.photos?.length
+        ? room.photos
+        : state.site.site?.heroImageUrl ? [{ url: state.site.site.heroImageUrl, alt: room?.name || "" }] : [];
+      if (photos.length) openLightbox(photos, state.roomPhotoIndexes[roomId] || 0);
+    });
+  });
 }
 
 function renderGallery(gallery) {
@@ -204,6 +254,13 @@ function renderGiteSection(site) {
   elements.giteCarousel.querySelectorAll("[data-gite-carousel-direction]").forEach((button) => {
     button.addEventListener("click", () => changeGitePhoto(Number(button.dataset.giteCarouselDirection)));
   });
+  const giteImg = elements.giteCarousel.querySelector("img");
+  if (giteImg) {
+    giteImg.addEventListener("click", () => {
+      const photos = state.site?.site?.gitePhotos || [];
+      if (photos.length) openLightbox(photos, state.gitePhotoIndex);
+    });
+  }
 }
 
 function renderPhotoCarousel(photos, selectedIndex, name, fallbackAlt) {
@@ -217,8 +274,8 @@ function renderPhotoCarousel(photos, selectedIndex, name, fallbackAlt) {
       <img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.alt || fallbackAlt)}" loading="lazy" />
       ${
         photos.length > 1
-          ? `<button class="icon-button carousel-button prev" type="button" data-${name}-carousel-direction="-1">‹</button>
-             <button class="icon-button carousel-button next" type="button" data-${name}-carousel-direction="1">›</button>
+          ? `<button class="icon-button carousel-button prev" type="button" data-${name}-carousel-direction="-1" aria-label="Photo précédente">${CHEVRON_LEFT}</button>
+             <button class="icon-button carousel-button next" type="button" data-${name}-carousel-direction="1" aria-label="Photo suivante">${CHEVRON_RIGHT}</button>
              <span class="carousel-count">${safeIndex + 1}/${photos.length}</span>`
           : ""
       }
@@ -235,7 +292,10 @@ function renderContact(site) {
   const map = site.address
     ? `<div class="map-embed"><iframe title="Carte ${escapeHtml(state.site.propertyName)}" loading="lazy" src="https://www.google.com/maps?q=${encodeURIComponent(site.address)}&z=10&output=embed"></iframe></div>`
     : "";
-  elements.contact.innerHTML = `${details.length ? details.join("") : "<p>Contactez-nous via une demande de réservation.</p>"}${map}`;
+  const detailsHtml = details.length ? details.join("") : "<p>Contactez-nous via une demande de réservation.</p>";
+  elements.contact.innerHTML = map
+    ? `<div class="contact-layout"><div class="contact-details">${detailsHtml}</div>${map}</div>`
+    : `<div class="contact-details">${detailsHtml}</div>`;
 }
 
 async function searchAvailability(event) {
@@ -353,6 +413,36 @@ function openAmenitiesModal(roomId) {
 function closeAmenitiesModal() {
   elements.amenitiesModal.classList.add("is-hidden");
   unlockScroll();
+}
+
+function openLightbox(photos, index) {
+  state.lightboxPhotos = photos;
+  state.lightboxIndex = index;
+  updateLightboxImage();
+  elements.lightbox.classList.remove("is-hidden");
+  lockScroll();
+}
+
+function closeLightbox() {
+  elements.lightbox.classList.add("is-hidden");
+  unlockScroll();
+}
+
+function changeLightboxPhoto(direction) {
+  const { lightboxPhotos: photos } = state;
+  if (photos.length < 2) return;
+  state.lightboxIndex = (state.lightboxIndex + direction + photos.length) % photos.length;
+  updateLightboxImage();
+}
+
+function updateLightboxImage() {
+  const photo = state.lightboxPhotos[state.lightboxIndex];
+  elements.lightboxImg.src = photo.url;
+  elements.lightboxImg.alt = photo.alt || "";
+  const total = state.lightboxPhotos.length;
+  elements.lightboxCount.textContent = total > 1 ? `${state.lightboxIndex + 1} / ${total}` : "";
+  elements.lightboxPrev.classList.toggle("is-hidden", total < 2);
+  elements.lightboxNext.classList.toggle("is-hidden", total < 2);
 }
 
 async function submitBookingRequest(event) {

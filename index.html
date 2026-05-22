@@ -445,6 +445,34 @@
                   <div id="platforms-editor" class="stack-list"></div>
                 </div>
 
+                <div class="full-width settings-section">
+                  <div class="section-header">
+                    <h3>Notifications par email</h3>
+                  </div>
+                  <div class="form-grid">
+                    <label>
+                      <span>Email destinataire</span>
+                      <input id="notify-email-input" type="email" placeholder="Laisser vide pour désactiver" />
+                    </label>
+                    <label>
+                      <span>Serveur SMTP</span>
+                      <input id="smtp-host-input" type="text" placeholder="smtp.gmail.com" />
+                    </label>
+                    <label>
+                      <span>Port SMTP</span>
+                      <input id="smtp-port-input" type="number" value="587" />
+                    </label>
+                    <label>
+                      <span>Identifiant SMTP</span>
+                      <input id="smtp-user-input" type="text" />
+                    </label>
+                    <label>
+                      <span>Mot de passe SMTP</span>
+                      <input id="smtp-password-input" type="password" autocomplete="new-password" />
+                    </label>
+                  </div>
+                </div>
+
                 <div class="form-actions full-width">
                   <button class="primary-button" type="submit">Sauvegarder les paramètres</button>
                 </div>
