@@ -1,1 +1,16 @@
 .DS_Store
+
+# Données locales / production
+data/*.sqlite3
+data/*.db
+data/*.json
+data/uploads/
+
+# Secrets et configuration locale
+.env
+.env.*
+!.env.example
+
+# Caches
+__pycache__/
+*.py[cod]
