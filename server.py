@@ -53,12 +53,16 @@ DEFAULT_SETTINGS = {
         "phone": "",
         "email": "",
         "gallery": [],
+        "giteTitle": "Le gîte",
+        "giteDescription": "",
+        "gitePhotos": [],
     },
 }
 
 DEFAULT_RESERVATIONS = {"reservations": []}
 DEFAULT_ROOM_COLORS = ["#98c7a3", "#e6c28b", "#9dbdd7", "#d8a7a7", "#b8abd8", "#95c8c0"]
 ALLOWED_RESERVATION_STATUSES = {"pending", "confirmed", "paid", "cancelled"}
+DIRECT_BOOKING_PLATFORM = "Réservation directe"
 DATA_LOCK = threading.RLock()
 
 
@@ -90,6 +94,8 @@ def ensure_database() -> None:
                 capacity INTEGER NOT NULL DEFAULT 2,
                 price TEXT NOT NULL DEFAULT '',
                 amenities TEXT NOT NULL DEFAULT '[]',
+                amenity_groups TEXT NOT NULL DEFAULT '[]',
+                booking_links TEXT NOT NULL DEFAULT '[]',
                 sort_order INTEGER NOT NULL
             );
 
@@ -198,6 +204,8 @@ def migrate_database(conn: sqlite3.Connection) -> None:
         "capacity": "ALTER TABLE rooms ADD COLUMN capacity INTEGER NOT NULL DEFAULT 2",
         "price": "ALTER TABLE rooms ADD COLUMN price TEXT NOT NULL DEFAULT ''",
         "amenities": "ALTER TABLE rooms ADD COLUMN amenities TEXT NOT NULL DEFAULT '[]'",
+        "amenity_groups": "ALTER TABLE rooms ADD COLUMN amenity_groups TEXT NOT NULL DEFAULT '[]'",
+        "booking_links": "ALTER TABLE rooms ADD COLUMN booking_links TEXT NOT NULL DEFAULT '[]'",
     }
     for column, statement in migrations.items():
         if column not in columns:
@@ -315,11 +323,14 @@ def get_versions_from_headers(headers) -> dict:
 
 def normalize_settings(settings: dict) -> dict:
     site = settings.get("site", DEFAULT_SETTINGS["site"])
+    platforms = normalize_string_list(settings.get("platforms", DEFAULT_SETTINGS["platforms"]))
+    if DIRECT_BOOKING_PLATFORM.lower() not in {platform.lower() for platform in platforms}:
+        platforms.append(DIRECT_BOOKING_PLATFORM)
     merged = {
         "propertyName": settings.get("propertyName", DEFAULT_SETTINGS["propertyName"]),
         "description": settings.get("description", DEFAULT_SETTINGS["description"]),
         "currency": settings.get("currency", DEFAULT_SETTINGS["currency"]),
-        "platforms": settings.get("platforms", DEFAULT_SETTINGS["platforms"]),
+        "platforms": platforms,
         "site": normalize_site_settings(site),
         "rooms": [],
     }
@@ -335,6 +346,8 @@ def normalize_settings(settings: dict) -> dict:
                 "capacity": max(1, int(room.get("capacity", 2) or 2)),
                 "price": str(room.get("price", "")).strip(),
                 "amenities": normalize_string_list(room.get("amenities", [])),
+                "amenityGroups": normalize_amenity_groups(room.get("amenityGroups"), room.get("amenities", [])),
+                "bookingLinks": normalize_booking_links(room.get("bookingLinks", [])),
                 "photos": normalize_photos(room.get("photos", [])),
             }
         )
@@ -353,6 +366,9 @@ def normalize_site_settings(site: dict) -> dict:
         "phone": str(site.get("phone", "")).strip(),
         "email": str(site.get("email", "")).strip(),
         "gallery": normalize_photos(site.get("gallery", [])),
+        "giteTitle": str(site.get("giteTitle", "Le gîte")).strip() or "Le gîte",
+        "giteDescription": str(site.get("giteDescription", "")).strip(),
+        "gitePhotos": normalize_photos(site.get("gitePhotos", [])),
     }
 
 
@@ -372,6 +388,29 @@ def normalize_string_list(values) -> list[str]:
     return normalized
 
 
+def normalize_amenity_groups(groups, legacy_amenities=None) -> list[dict]:
+    normalized = []
+    if isinstance(groups, list):
+        for group in groups:
+            if isinstance(group, str):
+                name = group.strip()
+                items = []
+            else:
+                name = str(group.get("name", "")).strip()
+                items = normalize_string_list(group.get("items", []))
+            if name and items:
+                normalized.append({"name": name, "items": items})
+
+    if normalized:
+        return normalized
+
+    legacy_items = normalize_string_list(legacy_amenities or [])
+    if legacy_items:
+        return [{"name": "Équipements", "items": legacy_items}]
+
+    return []
+
+
 def normalize_photos(values) -> list[dict]:
     if not isinstance(values, list):
         return []
@@ -386,6 +425,25 @@ def normalize_photos(values) -> list[dict]:
         if url:
             photos.append({"url": url, "alt": alt})
     return photos
+
+
+def normalize_booking_links(values) -> list[dict]:
+    if not isinstance(values, list):
+        return []
+    links = []
+    seen = set()
+    for item in values:
+        if isinstance(item, str):
+            label = "Réserver"
+            url = item.strip()
+        else:
+            label = str(item.get("label", "")).strip() or "Réserver"
+            url = str(item.get("url", "")).strip()
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        links.append({"label": label, "url": url})
+    return links
 
 
 def normalize_reservations(reservations: list[dict]) -> list[dict]:
@@ -413,7 +471,8 @@ def fetch_settings(conn: sqlite3.Connection) -> dict:
     ).fetchone()
     rooms = conn.execute(
         """
-        SELECT id, name, color, public_visible, summary, description, capacity, price, amenities
+        SELECT id, name, color, public_visible, summary, description, capacity, price,
+               amenities, amenity_groups, booking_links
         FROM rooms
         ORDER BY sort_order, name
         """
@@ -440,6 +499,8 @@ def fetch_settings(conn: sqlite3.Connection) -> dict:
                     "capacity": room["capacity"],
                     "price": room["price"],
                     "amenities": json.loads(room["amenities"] or "[]"),
+                    "amenityGroups": json.loads(room["amenity_groups"] or "[]"),
+                    "bookingLinks": json.loads(room["booking_links"] or "[]"),
                     "photos": photos_by_room.get(room["id"], []),
                 }
                 for room in rooms
@@ -613,6 +674,22 @@ def update_booking_request_status_db(conn: sqlite3.Connection, request_id: str, 
     )
 
 
+def build_reservation_payload_from_request(request: dict, payload: dict, settings: dict) -> dict:
+    edited = payload.get("reservation") if isinstance(payload.get("reservation"), dict) else {}
+    return {
+        "bookingType": "reservation",
+        "status": str(edited.get("status", "pending")).strip() or "pending",
+        "roomId": str(edited.get("roomId", request["roomId"])).strip(),
+        "arrivalDate": str(edited.get("arrivalDate", request["arrivalDate"])).strip(),
+        "departureDate": str(edited.get("departureDate", request["departureDate"])).strip(),
+        "clientName": str(edited.get("clientName", request["guestName"])).strip(),
+        "clientContact": str(edited.get("clientContact", request["guestContact"])).strip(),
+        "platform": DIRECT_BOOKING_PLATFORM,
+        "amount": float(edited.get("amount", 0) or 0),
+        "comment": str(edited.get("comment", request["message"])).strip(),
+    }
+
+
 def validate_date_range(arrival_date: str, departure_date: str) -> None:
     try:
         arrival = datetime.strptime(arrival_date, "%Y-%m-%d")
@@ -691,9 +768,10 @@ def sync_rooms_db(conn: sqlite3.Connection, rooms: list[dict]) -> None:
     conn.executemany(
         """
         INSERT INTO rooms(
-            id, name, color, public_visible, summary, description, capacity, price, amenities, sort_order
+            id, name, color, public_visible, summary, description, capacity, price,
+            amenities, amenity_groups, booking_links, sort_order
         )
-        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             name = excluded.name,
             color = excluded.color,
@@ -703,6 +781,8 @@ def sync_rooms_db(conn: sqlite3.Connection, rooms: list[dict]) -> None:
             capacity = excluded.capacity,
             price = excluded.price,
             amenities = excluded.amenities,
+            amenity_groups = excluded.amenity_groups,
+            booking_links = excluded.booking_links,
             sort_order = excluded.sort_order
         """,
         [
@@ -716,6 +796,8 @@ def sync_rooms_db(conn: sqlite3.Connection, rooms: list[dict]) -> None:
                 int(room.get("capacity", 2) or 2),
                 room.get("price", ""),
                 json.dumps(room.get("amenities", []), ensure_ascii=False),
+                json.dumps(room.get("amenityGroups", []), ensure_ascii=False),
+                json.dumps(room.get("bookingLinks", []), ensure_ascii=False),
                 index,
             )
             for index, room in enumerate(rooms)
@@ -893,6 +975,8 @@ def validate_settings(payload: dict) -> dict:
                 "capacity": capacity,
                 "price": str(room.get("price", "")).strip(),
                 "amenities": normalize_string_list(room.get("amenities", [])),
+                "amenityGroups": normalize_amenity_groups(room.get("amenityGroups"), room.get("amenities", [])),
+                "bookingLinks": normalize_booking_links(room.get("bookingLinks", [])),
                 "photos": normalize_photos(room.get("photos", [])),
             }
         )
@@ -913,6 +997,8 @@ def validate_settings(payload: dict) -> dict:
         raise ValueError("Au moins une chambre valide est requise.")
     if not normalized_platforms:
         raise ValueError("Au moins une plateforme valide est requise.")
+    if DIRECT_BOOKING_PLATFORM.lower() not in {platform.lower() for platform in normalized_platforms}:
+        normalized_platforms.append(DIRECT_BOOKING_PLATFORM)
 
     return {
         "propertyName": property_name,
@@ -1192,6 +1278,8 @@ def public_room_summary(room: dict) -> dict:
             "capacity",
             "price",
             "amenities",
+            "amenityGroups",
+            "bookingLinks",
             "photos",
         ]
     }
@@ -1350,20 +1438,14 @@ class AppHandler(SimpleHTTPRequestHandler):
                             if action == "accept":
                                 settings = fetch_settings(conn)
                                 reservations = fetch_reservations(conn)
-                                if not is_room_available(request["roomId"], request["arrivalDate"], request["departureDate"], reservations):
+                                reservation_payload = build_reservation_payload_from_request(request, payload, settings)
+                                if not is_room_available(
+                                    reservation_payload["roomId"],
+                                    reservation_payload["arrivalDate"],
+                                    reservation_payload["departureDate"],
+                                    reservations,
+                                ):
                                     raise ValueError("Cette chambre n'est plus disponible pour ces dates.")
-                                reservation_payload = {
-                                    "bookingType": "reservation",
-                                    "status": "pending",
-                                    "roomId": request["roomId"],
-                                    "arrivalDate": request["arrivalDate"],
-                                    "departureDate": request["departureDate"],
-                                    "clientName": request["guestName"],
-                                    "clientContact": request["guestContact"],
-                                    "platform": "Site direct" if "Site direct" in settings["platforms"] else settings["platforms"][0],
-                                    "amount": 0,
-                                    "comment": request["message"],
-                                }
                                 new_reservations = build_reservations(reservation_payload, settings, reservations)
                                 upsert_reservations_db(conn, new_reservations)
                                 update_booking_request_status_db(conn, request_id, "accepted")
