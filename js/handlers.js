@@ -1,11 +1,15 @@
 import {
+  changeAdminPassword,
   deleteReservationRequest,
   fetchBackup,
   fetchState,
+  logoutAdmin,
   restoreBackup,
   saveReservationPayload,
   saveSettingsPayload,
   setApiVersions,
+  updateBookingRequest,
+  uploadImage,
 } from "./api.js";
 import { initializeReportControls, renderApp, renderReservationFormOptions } from "./render.js";
 import {
@@ -25,8 +29,9 @@ import {
 } from "./utils.js";
 
 export function createActions(ctx) {
-  const { elements, setReservations, setSettings, setVersions, state } = ctx;
+  const { elements, setBookingRequests, setReservations, setSettings, setVersions, state } = ctx;
   let autoRefreshIntervalId = null;
+  let settingsDirty = false;
 
   function rerender() {
     initializeReportControls(state, elements);
@@ -43,6 +48,7 @@ export function createActions(ctx) {
         (previousSettingsVersion && previousSettingsVersion !== payload.versions.settingsVersion);
       setSettings(payload.settings);
       setReservations(payload.reservations);
+      setBookingRequests(payload.bookingRequests);
       setVersions(payload.versions);
       setApiVersions(payload.versions);
       rerender();
@@ -73,6 +79,7 @@ export function createActions(ctx) {
     });
 
     elements.refreshButton.addEventListener("click", () => loadState("manual"));
+    elements.headerLogoutButton.addEventListener("click", handleLogout);
     elements.bookingType.addEventListener("change", handleBookingTypeChange);
     elements.reservationForm.addEventListener("submit", handleReservationSubmit);
     elements.resetFormButton.addEventListener("click", resetReservationForm);
@@ -88,10 +95,21 @@ export function createActions(ctx) {
     elements.reportYear.addEventListener("change", rerender);
     elements.exportCsvButton.addEventListener("click", exportCsv);
     elements.settingsForm.addEventListener("submit", handleSettingsSubmit);
+    elements.settingsForm.addEventListener("input", () => {
+      settingsDirty = true;
+    });
+    elements.settingsForm.addEventListener("change", () => {
+      settingsDirty = true;
+    });
+    elements.siteLogoUpload.addEventListener("change", (event) => handleMediaUpload(event, elements.siteLogoUrl));
+    elements.siteHeroUpload.addEventListener("change", (event) => handleMediaUpload(event, elements.siteHeroUrl));
+    elements.siteGitePhotoUpload.addEventListener("change", handleGitePhotoUpload);
     elements.addRoomButton.addEventListener("click", () => addInlineItem("room"));
     elements.addPlatformButton.addEventListener("click", () => addInlineItem("platform"));
     elements.exportBackupButton.addEventListener("click", exportBackup);
     elements.importBackupInput.addEventListener("change", importBackup);
+    elements.changePasswordButton.addEventListener("click", handlePasswordChange);
+    elements.logoutButton.addEventListener("click", handleLogout);
     startAutoRefresh();
   }
 
@@ -263,6 +281,15 @@ export function createActions(ctx) {
         name: input.value.trim(),
         color:
           elements.roomsEditor.querySelector(`[data-room-color="${input.dataset.roomName}"]`)?.value || "#98c7a3",
+        publicVisible: elements.roomsEditor.querySelector(`[data-room-visible="${input.dataset.roomName}"]`)?.checked ?? true,
+        summary: elements.roomsEditor.querySelector(`[data-room-summary="${input.dataset.roomName}"]`)?.value.trim() || "",
+        description: elements.roomsEditor.querySelector(`[data-room-description="${input.dataset.roomName}"]`)?.value.trim() || "",
+        capacity: Number(elements.roomsEditor.querySelector(`[data-room-capacity="${input.dataset.roomName}"]`)?.value || 2),
+        price: elements.roomsEditor.querySelector(`[data-room-price="${input.dataset.roomName}"]`)?.value.trim() || "",
+        amenityGroups: getRoomAmenityGroups(input.dataset.roomName),
+        amenities: getRoomAmenityGroups(input.dataset.roomName).flatMap((group) => group.items),
+        bookingLinks: getRoomBookingLinks(input.dataset.roomName),
+        photos: JSON.parse(elements.roomsEditor.querySelector(`[data-room-photos="${input.dataset.roomName}"]`)?.value || "[]"),
       }))
       .filter((room) => room.name);
 
@@ -291,8 +318,31 @@ export function createActions(ctx) {
       propertyName: elements.propertyNameInput.value.trim(),
       description: state.settings.description || "",
       currency: elements.currencyInput.value.trim().toUpperCase(),
+      site: {
+        ...state.settings.site,
+        logoUrl: elements.siteLogoUrl.value,
+        heroImageUrl: elements.siteHeroUrl.value,
+        headline: elements.siteHeadlineInput.value.trim(),
+        subtitle: elements.siteSubtitleInput.value.trim(),
+        intro: elements.siteIntroInput.value.trim(),
+        giteTitle: elements.siteGiteTitleInput.value.trim(),
+        giteDescription: elements.siteGiteDescriptionInput.value.trim(),
+        gitePhotos: state.settings.site.gitePhotos || [],
+        address: elements.siteAddressInput.value.trim(),
+        phone: elements.sitePhoneInput.value.trim(),
+        email: elements.siteEmailInput.value.trim(),
+        bodyFont: elements.siteBodyFontSelect.value || "lato",
+        headingFont: elements.siteHeadingFontSelect.value || "playfair",
+      },
       rooms,
       platforms,
+      notifications: {
+        notifyEmail:  elements.notifyEmailInput.value.trim(),
+        smtpHost:     elements.smtpHostInput.value.trim(),
+        smtpPort:     elements.smtpPortInput.value.trim() || "587",
+        smtpUser:     elements.smtpUserInput.value.trim(),
+        smtpPassword: elements.smtpPasswordInput.value,
+      },
       _versions: state.versions,
     };
 
@@ -301,6 +351,7 @@ export function createActions(ctx) {
       setSettings(data.settings);
       setVersions(data.versions);
       setApiVersions(data.versions);
+      settingsDirty = false;
       rerender();
       resetReservationForm();
       showToast(elements, "Paramètres sauvegardés.");
@@ -336,6 +387,7 @@ export function createActions(ctx) {
       const data = await restoreBackup(payload);
       setSettings(data.settings);
       setReservations(data.reservations);
+      setBookingRequests(data.bookingRequests || state.bookingRequests);
       setVersions(data.versions);
       setApiVersions(data.versions);
       rerender();
@@ -398,11 +450,237 @@ export function createActions(ctx) {
         id: `room-${Date.now()}`,
         name: `Nouvelle chambre ${state.settings.rooms.length + 1}`,
         color: getDefaultRoomColor(state.settings.rooms.length),
+        publicVisible: true,
+        summary: "",
+        description: "",
+        capacity: 2,
+        price: "",
+        amenities: [],
+        amenityGroups: [],
+        bookingLinks: [],
+        photos: [],
       });
     } else {
       state.settings.platforms.push(`Nouvelle plateforme ${state.settings.platforms.length + 1}`);
     }
+    settingsDirty = true;
     renderApp({ ...ctx, actions });
+  }
+
+  async function handleMediaUpload(event, targetInput) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    try {
+      const data = await uploadImage(file);
+      targetInput.value = data.url;
+      if (targetInput === elements.siteLogoUrl) {
+        state.settings.site.logoUrl = data.url;
+      }
+      if (targetInput === elements.siteHeroUrl) {
+        state.settings.site.heroImageUrl = data.url;
+      }
+      settingsDirty = true;
+      rerender();
+      showToast(elements, "Image ajoutée.");
+    } catch (error) {
+      showToast(elements, error.message, true);
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  async function uploadRoomPhoto(roomId, file) {
+    if (!file) {
+      return;
+    }
+    try {
+      const data = await uploadImage(file);
+      const room = state.settings.rooms.find((item) => item.id === roomId);
+      if (room) {
+        room.photos = [...(room.photos || []), { url: data.url, alt: room.name }];
+      }
+      settingsDirty = true;
+      rerender();
+      showToast(elements, "Photo de chambre ajoutée.");
+    } catch (error) {
+      showToast(elements, error.message, true);
+    }
+  }
+
+  async function handleGitePhotoUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    try {
+      const data = await uploadImage(file);
+      state.settings.site.gitePhotos = [
+        ...(state.settings.site.gitePhotos || []),
+        { url: data.url, alt: state.settings.propertyName || "Le gîte" },
+      ];
+      settingsDirty = true;
+      rerender();
+      showToast(elements, "Photo du gîte ajoutée.");
+    } catch (error) {
+      showToast(elements, error.message, true);
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function removeGitePhoto(photoIndex) {
+    state.settings.site.gitePhotos = (state.settings.site.gitePhotos || []).filter((_, index) => index !== photoIndex);
+    settingsDirty = true;
+    rerender();
+  }
+
+  function removeRoomPhoto(roomId, photoIndex) {
+    const room = state.settings.rooms.find((item) => item.id === roomId);
+    if (!room) {
+      return;
+    }
+    room.photos = (room.photos || []).filter((_, index) => index !== photoIndex);
+    settingsDirty = true;
+    rerender();
+  }
+
+  function reorderRoomPhoto(roomId, fromIndex, toIndex) {
+    if (fromIndex === toIndex) return;
+    const room = state.settings.rooms.find((item) => item.id === roomId);
+    if (!room) return;
+    const photos = [...(room.photos || [])];
+    const [moved] = photos.splice(fromIndex, 1);
+    photos.splice(toIndex, 0, moved);
+    room.photos = photos;
+    settingsDirty = true;
+    rerender();
+  }
+
+  function reorderGitePhoto(fromIndex, toIndex) {
+    if (fromIndex === toIndex) return;
+    const photos = [...(state.settings.site.gitePhotos || [])];
+    const [moved] = photos.splice(fromIndex, 1);
+    photos.splice(toIndex, 0, moved);
+    state.settings.site.gitePhotos = photos;
+    settingsDirty = true;
+    rerender();
+  }
+
+  function getRoomBookingLinks(roomId) {
+    return [...elements.roomsEditor.querySelectorAll(`[data-booking-link-room="${roomId}"]`)]
+      .map((row) => ({
+        label: row.querySelector("[data-booking-link-label]")?.value.trim() || "Réserver",
+        url: row.querySelector("[data-booking-link-url]")?.value.trim() || "",
+      }))
+      .filter((link) => link.url);
+  }
+
+  function getRoomAmenityGroups(roomId) {
+    return [...elements.roomsEditor.querySelectorAll(`[data-amenity-group-room="${roomId}"]`)]
+      .map((row) => ({
+        name: row.querySelector("[data-amenity-group-name]")?.value.trim() || "",
+        items: (row.querySelector("[data-amenity-group-items]")?.value || "")
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+      }))
+      .filter((group) => group.name && group.items.length);
+  }
+
+  function addRoomAmenityGroup(roomId) {
+    const room = state.settings.rooms.find((item) => item.id === roomId);
+    if (!room) {
+      return;
+    }
+    room.amenityGroups = getRoomAmenityGroups(roomId);
+    room.amenityGroups.push({ name: "Équipements", items: [] });
+    settingsDirty = true;
+    rerender();
+  }
+
+  function removeRoomAmenityGroup(roomId, indexToRemove) {
+    const room = state.settings.rooms.find((item) => item.id === roomId);
+    if (!room) {
+      return;
+    }
+    room.amenityGroups = getRoomAmenityGroups(roomId).filter((_, index) => index !== indexToRemove);
+    settingsDirty = true;
+    rerender();
+  }
+
+  function addRoomBookingLink(roomId) {
+    const room = state.settings.rooms.find((item) => item.id === roomId);
+    if (!room) {
+      return;
+    }
+    room.bookingLinks = getRoomBookingLinks(roomId);
+    room.bookingLinks.push({ label: "Réserver", url: "" });
+    settingsDirty = true;
+    rerender();
+  }
+
+  function removeRoomBookingLink(roomId, indexToRemove) {
+    const room = state.settings.rooms.find((item) => item.id === roomId);
+    if (!room) {
+      return;
+    }
+    room.bookingLinks = getRoomBookingLinks(roomId).filter((_, index) => index !== indexToRemove);
+    settingsDirty = true;
+    rerender();
+  }
+
+  async function handleBookingRequestAction(id, action) {
+    try {
+      const data = await updateBookingRequest(id, action, action === "accept" ? getEditedRequestReservation(id) : undefined);
+      if (data.reservations) {
+        setReservations(data.reservations);
+      }
+      setBookingRequests(data.bookingRequests);
+      setVersions(data.versions);
+      setApiVersions(data.versions);
+      rerender();
+      showToast(elements, action === "accept" ? "Demande acceptée." : "Demande refusée.");
+    } catch (error) {
+      showToast(elements, error.message, true);
+    }
+  }
+
+  function getEditedRequestReservation(id) {
+    const form = elements.bookingRequestsList.querySelector(`[data-request-edit-form="${id}"]`);
+    if (!form) {
+      return undefined;
+    }
+    return {
+      roomId: form.querySelector("[data-request-room-id]")?.value || "",
+      arrivalDate: form.querySelector("[data-request-arrival-date]")?.value || "",
+      departureDate: form.querySelector("[data-request-departure-date]")?.value || "",
+      clientName: form.querySelector("[data-request-client-name]")?.value.trim() || "",
+      clientContact: form.querySelector("[data-request-client-contact]")?.value.trim() || "",
+      amount: Number(form.querySelector("[data-request-amount]")?.value || 0),
+      comment: form.querySelector("[data-request-comment]")?.value.trim() || "",
+    };
+  }
+
+  async function handlePasswordChange() {
+    try {
+      await changeAdminPassword({
+        currentPassword: elements.currentPasswordInput.value,
+        newPassword: elements.newPasswordInput.value,
+      });
+      showToast(elements, "Mot de passe modifié. Reconnecte-toi.");
+      window.setTimeout(() => {
+        window.location.href = "/gestion/";
+      }, 900);
+    } catch (error) {
+      showToast(elements, error.message, true);
+    }
+  }
+
+  async function handleLogout() {
+    await logoutAdmin();
+    window.location.href = "/gestion/";
   }
 
   function removeRoom(roomId) {
@@ -412,6 +690,7 @@ export function createActions(ctx) {
       return;
     }
     state.settings.rooms = state.settings.rooms.filter((room) => room.id !== roomId);
+    settingsDirty = true;
     renderApp({ ...ctx, actions });
   }
 
@@ -425,6 +704,7 @@ export function createActions(ctx) {
       return;
     }
     state.settings.platforms.splice(index, 1);
+    settingsDirty = true;
     renderApp({ ...ctx, actions });
   }
 
@@ -497,12 +777,21 @@ export function createActions(ctx) {
   function startAutoRefresh() {
     window.clearInterval(autoRefreshIntervalId);
     autoRefreshIntervalId = window.setInterval(() => {
+      if (shouldPauseAutoRefresh()) {
+        return;
+      }
       loadState("auto");
     }, 30000);
   }
 
+  function shouldPauseAutoRefresh() {
+    return state.activeTab === "settings" || settingsDirty;
+  }
+
   const actions = {
     addInlineItem,
+    addRoomAmenityGroup,
+    addRoomBookingLink,
     applyBookingTypeFormState,
     bindEvents,
     changeCalendarMonth,
@@ -518,9 +807,17 @@ export function createActions(ctx) {
     handleReservationSubmit,
     handleSettingsSubmit,
     importBackup,
+    handleBookingRequestAction,
+    removeRoomPhoto,
+    reorderRoomPhoto,
+    reorderGitePhoto,
+    uploadRoomPhoto,
     loadState,
     removePlatform,
+    removeGitePhoto,
     removeRoom,
+    removeRoomAmenityGroup,
+    removeRoomBookingLink,
     rerender,
     resetReservationForm,
     setActiveTab,

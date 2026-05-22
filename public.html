@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gîte</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="public-body">
+    <header class="public-hero" id="public-hero">
+      <nav class="public-nav">
+        <div class="public-brand">
+          <img id="public-logo" class="public-logo is-hidden" alt="" />
+          <strong id="public-property-name">Gîte</strong>
+        </div>
+      </nav>
+      <div class="public-hero-content">
+        <h1 id="public-headline">Bienvenue</h1>
+        <p id="public-subtitle" class="public-subtitle"></p>
+      </div>
+    </header>
+
+    <main class="public-main">
+      <section class="public-section">
+        <div>
+          <h2>Disponibilités</h2>
+          <p id="public-intro"></p>
+        </div>
+        <form id="availability-form" class="availability-form">
+          <label>
+            <span>Arrivée</span>
+            <input id="availability-arrival" type="date" required />
+          </label>
+          <label>
+            <span>Départ</span>
+            <input id="availability-departure" type="date" required />
+          </label>
+          <button class="primary-button" type="submit">Rechercher</button>
+        </form>
+      </section>
+
+      <section class="public-section">
+        <div class="section-header">
+          <h2>Chambres</h2>
+          <p id="availability-status" class="sync-status"></p>
+        </div>
+        <div id="public-rooms" class="public-room-grid"></div>
+      </section>
+
+      <section class="public-section" id="public-gite-section">
+        <div class="gite-section-layout">
+          <div>
+            <h2 id="public-gite-title">Le gîte</h2>
+            <p id="public-gite-description"></p>
+          </div>
+          <div id="public-gite-carousel" class="gite-carousel"></div>
+        </div>
+      </section>
+
+      <section class="public-section" id="public-gallery-section">
+        <h2>Galerie</h2>
+        <div id="public-gallery" class="public-gallery"></div>
+      </section>
+
+      <section class="public-section public-contact">
+        <h2>Contact</h2>
+        <div id="public-contact"></div>
+      </section>
+    </main>
+
+    <div id="request-modal" class="modal-backdrop is-hidden">
+      <form id="booking-request-form" class="modal-panel">
+        <button class="modal-close-button" type="button" id="close-request-modal" aria-label="Fermer">×</button>
+        <div class="section-header">
+          <div>
+            <h2>Demande de réservation</h2>
+            <p id="request-room-label"></p>
+          </div>
+        </div>
+        <input type="hidden" id="request-room-id" />
+        <label>
+          <span>Nom</span>
+          <input id="request-guest-name" type="text" required />
+        </label>
+        <div class="form-grid">
+          <label>
+            <span>Arrivée</span>
+            <input id="request-arrival-date" type="date" required />
+          </label>
+          <label>
+            <span>Départ</span>
+            <input id="request-departure-date" type="date" required />
+          </label>
+        </div>
+        <label>
+          <span>Email ou téléphone</span>
+          <input id="request-guest-contact" type="text" required />
+        </label>
+        <label>
+          <span>Nombre de voyageurs</span>
+          <input id="request-guest-count" type="number" min="1" value="2" required />
+        </label>
+        <label>
+          <span>Message</span>
+          <textarea id="request-message" rows="4"></textarea>
+        </label>
+        <button class="primary-button" type="submit">Envoyer la demande</button>
+      </form>
+    </div>
+
+    <div id="amenities-modal" class="modal-backdrop is-hidden">
+      <section class="modal-panel">
+        <button class="modal-close-button" type="button" id="close-amenities-modal" aria-label="Fermer">×</button>
+        <div class="section-header">
+          <div>
+            <h2 id="amenities-title">Équipements</h2>
+            <p id="amenities-room-label"></p>
+          </div>
+        </div>
+        <div id="amenities-content" class="amenities-groups"></div>
+      </section>
+    </div>
+
+    <div id="toast" class="toast" aria-live="polite"></div>
+    <script type="module" src="/public.js"></script>
+  </body>
+</html>
