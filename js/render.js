@@ -70,6 +70,7 @@ export function renderApp(ctx) {
   renderCalendar(ctx.state, ctx.elements);
   renderPlanning(ctx.state, ctx.elements);
   renderReports(ctx.state, ctx.elements);
+  renderBookingRequests(ctx);
   renderSettingsForm(ctx);
 }
 
@@ -565,20 +566,133 @@ function renderYearlyReport(state, elements) {
   elements.yearlyTableBody.innerHTML = rows.join("");
 }
 
+function renderBookingRequests(ctx) {
+  const { actions, elements, state } = ctx;
+  if (!elements.bookingRequestsList) {
+    return;
+  }
+  const requests = state.bookingRequests || [];
+  if (!requests.length) {
+    elements.bookingRequestsList.innerHTML = `<div class="empty-state"><h3>Aucune demande</h3><p>Les demandes envoyées depuis la vitrine apparaîtront ici.</p></div>`;
+    return;
+  }
+  elements.bookingRequestsList.innerHTML = requests
+    .map(
+      (request) => `
+        <article class="reservation-card">
+          <header>
+            <div>
+              <h3>${escapeHtml(request.guestName)}</h3>
+              <div class="reservation-meta">
+                <span class="room-tag custom-color" ${getRoomStyle(state, request.roomId)}>${escapeHtml(getRoomName(state, request.roomId))}</span>
+                <span class="status-tag status-${escapeHtml(request.status)}">${getBookingRequestStatusLabel(request.status)}</span>
+                <span>${formatDate(request.arrivalDate)} au ${formatDate(request.departureDate)}</span>
+              </div>
+            </div>
+            <span class="platform-tag">${request.guestCount} voyageur(s)</span>
+          </header>
+          <div class="reservation-details">
+            <div>
+              <strong>Contact</strong>
+              <span>${escapeHtml(request.guestContact)}</span>
+            </div>
+            <div>
+              <strong>Créée</strong>
+              <span>${formatDateTime(request.createdAt)}</span>
+            </div>
+            <div class="full-width">
+              <strong>Message</strong>
+              <span>${escapeHtml(request.message || "Aucun message")}</span>
+            </div>
+          </div>
+          ${
+            request.status === "new"
+              ? `<div class="form-actions">
+                  <button class="primary-button" type="button" data-request-action="accept" data-request-id="${request.id}">Accepter</button>
+                  <button class="danger-button" type="button" data-request-action="reject" data-request-id="${request.id}">Refuser</button>
+                </div>`
+              : ""
+          }
+        </article>
+      `,
+    )
+    .join("");
+  elements.bookingRequestsList.querySelectorAll("[data-request-action]").forEach((button) => {
+    button.addEventListener("click", () => actions.handleBookingRequestAction(button.dataset.requestId, button.dataset.requestAction));
+  });
+}
+
 function renderSettingsForm(ctx) {
   const { actions, elements, state } = ctx;
   elements.propertyNameInput.value = state.settings.propertyName;
   elements.currencyInput.value = state.settings.currency || "EUR";
+  elements.siteHeadlineInput.value = state.settings.site?.headline || "";
+  elements.siteSubtitleInput.value = state.settings.site?.subtitle || "";
+  elements.siteIntroInput.value = state.settings.site?.intro || "";
+  elements.siteAddressInput.value = state.settings.site?.address || "";
+  elements.sitePhoneInput.value = state.settings.site?.phone || "";
+  elements.siteEmailInput.value = state.settings.site?.email || "";
+  elements.siteLogoUrl.value = state.settings.site?.logoUrl || "";
+  elements.siteHeroUrl.value = state.settings.site?.heroImageUrl || "";
+  elements.siteMediaPreview.innerHTML = [
+    state.settings.site?.logoUrl ? `<img src="${escapeHtml(state.settings.site.logoUrl)}" alt="Logo" />` : "",
+    state.settings.site?.heroImageUrl ? `<img src="${escapeHtml(state.settings.site.heroImageUrl)}" alt="Photo principale" />` : "",
+  ].join("");
 
   elements.roomsEditor.innerHTML = state.settings.rooms
     .map(
       (room) => `
-        <div class="inline-editor">
-          <input type="text" data-room-name="${room.id}" value="${escapeHtml(room.name)}" />
-          <select class="color-select" data-room-color="${room.id}">
-            ${getRoomColorOptions(room.color)}
-          </select>
-          <button class="danger-button" type="button" data-delete-room="${room.id}">Supprimer</button>
+        <div class="room-editor">
+          <div class="inline-editor">
+            <input type="text" data-room-name="${room.id}" value="${escapeHtml(room.name)}" />
+            <select class="color-select" data-room-color="${room.id}">
+              ${getRoomColorOptions(room.color)}
+            </select>
+            <label class="checkbox-card compact-checkbox">
+              <input type="checkbox" data-room-visible="${room.id}" ${room.publicVisible !== false ? "checked" : ""} />
+              <span>Visible vitrine</span>
+            </label>
+            <button class="danger-button" type="button" data-delete-room="${room.id}">Supprimer</button>
+          </div>
+          <div class="form-grid">
+            <label>
+              <span>Résumé vitrine</span>
+              <input type="text" data-room-summary="${room.id}" value="${escapeHtml(room.summary || "")}" />
+            </label>
+            <label>
+              <span>Capacité</span>
+              <input type="number" min="1" data-room-capacity="${room.id}" value="${escapeHtml(room.capacity || 2)}" />
+            </label>
+            <label>
+              <span>Prix indicatif</span>
+              <input type="text" data-room-price="${room.id}" value="${escapeHtml(room.price || "")}" />
+            </label>
+            <label>
+              <span>Équipements</span>
+              <input type="text" data-room-amenities="${room.id}" value="${escapeHtml((room.amenities || []).join(", "))}" />
+            </label>
+            <label class="full-width">
+              <span>Description vitrine</span>
+              <textarea rows="3" data-room-description="${room.id}">${escapeHtml(room.description || "")}</textarea>
+            </label>
+            <label>
+              <span>Ajouter une photo</span>
+              <input type="file" accept="image/*" data-room-photo-upload="${room.id}" />
+            </label>
+            <input type="hidden" data-room-photos="${room.id}" value="${escapeHtml(JSON.stringify(room.photos || []))}" />
+            <div class="media-preview full-width">
+              ${(room.photos || [])
+                .map(
+                  (photo, index) => `
+                    <figure>
+                      <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.alt || room.name)}" />
+                      <button class="danger-button" type="button" data-remove-room-photo="${room.id}" data-photo-index="${index}">Retirer</button>
+                    </figure>
+                  `,
+                )
+                .join("")}
+            </div>
+          </div>
         </div>
       `,
     )
@@ -598,9 +712,23 @@ function renderSettingsForm(ctx) {
   elements.roomsEditor.querySelectorAll("[data-delete-room]").forEach((button) => {
     button.addEventListener("click", () => actions.removeRoom(button.dataset.deleteRoom));
   });
+  elements.roomsEditor.querySelectorAll("[data-room-photo-upload]").forEach((input) => {
+    input.addEventListener("change", () => actions.uploadRoomPhoto(input.dataset.roomPhotoUpload, input.files?.[0]));
+  });
+  elements.roomsEditor.querySelectorAll("[data-remove-room-photo]").forEach((button) => {
+    button.addEventListener("click", () => actions.removeRoomPhoto(button.dataset.removeRoomPhoto, Number(button.dataset.photoIndex)));
+  });
   elements.platformsEditor.querySelectorAll("[data-delete-platform]").forEach((button) => {
     button.addEventListener("click", () => actions.removePlatform(Number(button.dataset.deletePlatform)));
   });
+}
+
+function getBookingRequestStatusLabel(status) {
+  return {
+    new: "Nouvelle",
+    accepted: "Acceptée",
+    rejected: "Refusée",
+  }[status] || "Nouvelle";
 }
 
 function getReservationsForDate(state, isoDate) {

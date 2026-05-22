@@ -1,26 +1,36 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import socket
 import sqlite3
 import threading
 import uuid
 import webbrowser
+import cgi
+import hashlib
+import hmac
+import secrets
+import shutil
 from datetime import datetime
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
-DB_FILE = DATA_DIR / "reservations.sqlite3"
+DB_FILE = Path(os.environ.get("GITE_DB", DATA_DIR / "reservations.sqlite3"))
+UPLOADS_DIR = DATA_DIR / "uploads"
 SETTINGS_FILE = DATA_DIR / "settings.json"
 RESERVATIONS_FILE = DATA_DIR / "reservations.json"
-HOST = "0.0.0.0"
-PORT = 8000
+HOST = os.environ.get("HOST", "0.0.0.0")
+PORT = int(os.environ.get("PORT", "8001"))
+SESSION_COOKIE_NAME = "gite_admin_session"
+MAX_UPLOAD_SIZE = 5 * 1024 * 1024
+ALLOWED_IMAGE_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif"}
 
 
 DEFAULT_SETTINGS = {
@@ -33,6 +43,17 @@ DEFAULT_SETTINGS = {
         {"id": "chambre-3", "name": "Chambre 3", "color": "#9dbdd7"},
     ],
     "platforms": ["Airbnb", "Booking", "GreenGo"],
+    "site": {
+        "logoUrl": "",
+        "heroImageUrl": "",
+        "headline": "Bienvenue dans notre gîte",
+        "subtitle": "Un séjour confortable, simple à réserver.",
+        "intro": "Découvrez nos chambres et envoyez une demande selon les disponibilités.",
+        "address": "",
+        "phone": "",
+        "email": "",
+        "gallery": [],
+    },
 }
 
 DEFAULT_RESERVATIONS = {"reservations": []}
@@ -43,6 +64,7 @@ DATA_LOCK = threading.RLock()
 
 def ensure_database() -> None:
     DATA_DIR.mkdir(exist_ok=True)
+    DB_FILE.parent.mkdir(parents=True, exist_ok=True)
     with get_connection() as conn:
         conn.executescript(
             """
@@ -62,7 +84,27 @@ def ensure_database() -> None:
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 color TEXT NOT NULL,
+                public_visible INTEGER NOT NULL DEFAULT 1,
+                summary TEXT NOT NULL DEFAULT '',
+                description TEXT NOT NULL DEFAULT '',
+                capacity INTEGER NOT NULL DEFAULT 2,
+                price TEXT NOT NULL DEFAULT '',
+                amenities TEXT NOT NULL DEFAULT '[]',
                 sort_order INTEGER NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS room_photos (
+                id TEXT PRIMARY KEY,
+                room_id TEXT NOT NULL,
+                url TEXT NOT NULL,
+                alt TEXT NOT NULL,
+                sort_order INTEGER NOT NULL,
+                FOREIGN KEY(room_id) REFERENCES rooms(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS site_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
             );
 
             CREATE TABLE IF NOT EXISTS platforms (
@@ -88,18 +130,51 @@ def ensure_database() -> None:
                 updated_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS booking_requests (
+                id TEXT PRIMARY KEY,
+                room_id TEXT NOT NULL,
+                arrival_date TEXT NOT NULL,
+                departure_date TEXT NOT NULL,
+                guest_name TEXT NOT NULL,
+                guest_contact TEXT NOT NULL,
+                guest_count INTEGER NOT NULL,
+                message TEXT NOT NULL,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(room_id) REFERENCES rooms(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS admin_auth (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                password_hash TEXT NOT NULL,
+                session_revision TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS admin_sessions (
+                token_hash TEXT PRIMARY KEY,
+                session_revision TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+
             CREATE INDEX IF NOT EXISTS idx_reservations_room_id ON reservations(room_id);
             CREATE INDEX IF NOT EXISTS idx_reservations_arrival_date ON reservations(arrival_date);
             CREATE INDEX IF NOT EXISTS idx_reservations_group_id ON reservations(group_id);
             CREATE INDEX IF NOT EXISTS idx_reservations_status ON reservations(status);
             CREATE INDEX IF NOT EXISTS idx_rooms_sort_order ON rooms(sort_order);
             CREATE INDEX IF NOT EXISTS idx_platforms_sort_order ON platforms(sort_order);
+            CREATE INDEX IF NOT EXISTS idx_room_photos_room_id ON room_photos(room_id);
+            CREATE INDEX IF NOT EXISTS idx_booking_requests_room_id ON booking_requests(room_id);
+            CREATE INDEX IF NOT EXISTS idx_booking_requests_status ON booking_requests(status);
             """
         )
+        migrate_database(conn)
         initialize_meta(conn)
         settings_count = conn.execute("SELECT COUNT(*) FROM settings").fetchone()[0]
         if settings_count == 0:
             import_initial_data(conn)
+        initialize_site_settings(conn)
+        initialize_admin_auth(conn)
         conn.commit()
 
 
@@ -109,7 +184,41 @@ def initialize_meta(conn: sqlite3.Connection) -> None:
         [
             ("settings_revision", "1"),
             ("reservations_revision", "1"),
+            ("booking_requests_revision", "1"),
         ],
+    )
+
+
+def migrate_database(conn: sqlite3.Connection) -> None:
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(rooms)").fetchall()}
+    migrations = {
+        "public_visible": "ALTER TABLE rooms ADD COLUMN public_visible INTEGER NOT NULL DEFAULT 1",
+        "summary": "ALTER TABLE rooms ADD COLUMN summary TEXT NOT NULL DEFAULT ''",
+        "description": "ALTER TABLE rooms ADD COLUMN description TEXT NOT NULL DEFAULT ''",
+        "capacity": "ALTER TABLE rooms ADD COLUMN capacity INTEGER NOT NULL DEFAULT 2",
+        "price": "ALTER TABLE rooms ADD COLUMN price TEXT NOT NULL DEFAULT ''",
+        "amenities": "ALTER TABLE rooms ADD COLUMN amenities TEXT NOT NULL DEFAULT '[]'",
+    }
+    for column, statement in migrations.items():
+        if column not in columns:
+            conn.execute(statement)
+
+
+def initialize_site_settings(conn: sqlite3.Connection) -> None:
+    conn.executemany(
+        "INSERT OR IGNORE INTO site_settings(key, value) VALUES(?, ?)",
+        [(key, json.dumps(value, ensure_ascii=False)) for key, value in DEFAULT_SETTINGS["site"].items()],
+    )
+
+
+def initialize_admin_auth(conn: sqlite3.Connection) -> None:
+    existing = conn.execute("SELECT id FROM admin_auth WHERE id = 1").fetchone()
+    if existing:
+        return
+    password = os.environ.get("ADMIN_INITIAL_PASSWORD", "admin")
+    conn.execute(
+        "INSERT INTO admin_auth(id, password_hash, session_revision) VALUES(1, ?, ?)",
+        (hash_password(password), uuid.uuid4().hex),
     )
 
 
@@ -151,6 +260,7 @@ def load_state() -> dict:
         return {
             "settings": fetch_settings(conn),
             "reservations": fetch_reservations(conn),
+            "bookingRequests": fetch_booking_requests(conn),
             "versions": get_versions(conn),
         }
 
@@ -166,6 +276,7 @@ def get_versions(conn: sqlite3.Connection | None = None) -> dict:
         return {
             "settingsVersion": values.get("settings_revision", "1"),
             "reservationsVersion": values.get("reservations_revision", "1"),
+            "bookingRequestsVersion": values.get("booking_requests_revision", "1"),
         }
     finally:
         if owns_connection:
@@ -198,15 +309,18 @@ def get_versions_from_headers(headers) -> dict:
     return {
         "settingsVersion": headers.get("X-Settings-Version", ""),
         "reservationsVersion": headers.get("X-Reservations-Version", ""),
+        "bookingRequestsVersion": headers.get("X-Booking-Requests-Version", ""),
     }
 
 
 def normalize_settings(settings: dict) -> dict:
+    site = settings.get("site", DEFAULT_SETTINGS["site"])
     merged = {
         "propertyName": settings.get("propertyName", DEFAULT_SETTINGS["propertyName"]),
         "description": settings.get("description", DEFAULT_SETTINGS["description"]),
         "currency": settings.get("currency", DEFAULT_SETTINGS["currency"]),
         "platforms": settings.get("platforms", DEFAULT_SETTINGS["platforms"]),
+        "site": normalize_site_settings(site),
         "rooms": [],
     }
     for index, room in enumerate(settings.get("rooms", DEFAULT_SETTINGS["rooms"])):
@@ -215,9 +329,63 @@ def normalize_settings(settings: dict) -> dict:
                 "id": room.get("id", f"room-{index + 1}"),
                 "name": room.get("name", f"Chambre {index + 1}"),
                 "color": room.get("color") or DEFAULT_ROOM_COLORS[index % len(DEFAULT_ROOM_COLORS)],
+                "publicVisible": bool(room.get("publicVisible", True)),
+                "summary": str(room.get("summary", "")).strip(),
+                "description": str(room.get("description", "")).strip(),
+                "capacity": max(1, int(room.get("capacity", 2) or 2)),
+                "price": str(room.get("price", "")).strip(),
+                "amenities": normalize_string_list(room.get("amenities", [])),
+                "photos": normalize_photos(room.get("photos", [])),
             }
         )
     return merged
+
+
+def normalize_site_settings(site: dict) -> dict:
+    return {
+        "logoUrl": str(site.get("logoUrl", "")).strip(),
+        "heroImageUrl": str(site.get("heroImageUrl", "")).strip(),
+        "headline": str(site.get("headline", DEFAULT_SETTINGS["site"]["headline"])).strip()
+        or DEFAULT_SETTINGS["site"]["headline"],
+        "subtitle": str(site.get("subtitle", DEFAULT_SETTINGS["site"]["subtitle"])).strip(),
+        "intro": str(site.get("intro", DEFAULT_SETTINGS["site"]["intro"])).strip(),
+        "address": str(site.get("address", "")).strip(),
+        "phone": str(site.get("phone", "")).strip(),
+        "email": str(site.get("email", "")).strip(),
+        "gallery": normalize_photos(site.get("gallery", [])),
+    }
+
+
+def normalize_string_list(values) -> list[str]:
+    if isinstance(values, str):
+        values = values.split(",")
+    if not isinstance(values, list):
+        return []
+    normalized = []
+    seen = set()
+    for value in values:
+        item = str(value).strip()
+        key = item.lower()
+        if item and key not in seen:
+            seen.add(key)
+            normalized.append(item)
+    return normalized
+
+
+def normalize_photos(values) -> list[dict]:
+    if not isinstance(values, list):
+        return []
+    photos = []
+    for photo in values:
+        if isinstance(photo, str):
+            url = photo.strip()
+            alt = ""
+        else:
+            url = str(photo.get("url", "")).strip()
+            alt = str(photo.get("alt", "")).strip()
+        if url:
+            photos.append({"url": url, "alt": alt})
+    return photos
 
 
 def normalize_reservations(reservations: list[dict]) -> list[dict]:
@@ -244,20 +412,62 @@ def fetch_settings(conn: sqlite3.Connection) -> dict:
         "SELECT property_name, description, currency FROM settings WHERE id = 1"
     ).fetchone()
     rooms = conn.execute(
-        "SELECT id, name, color FROM rooms ORDER BY sort_order, name"
+        """
+        SELECT id, name, color, public_visible, summary, description, capacity, price, amenities
+        FROM rooms
+        ORDER BY sort_order, name
+        """
     ).fetchall()
     platforms = conn.execute(
         "SELECT name FROM platforms ORDER BY sort_order, name"
     ).fetchall()
+    photos_by_room = fetch_room_photos(conn)
+    site = fetch_site_settings(conn)
     return normalize_settings(
         {
             "propertyName": base["property_name"],
             "description": base["description"],
             "currency": base["currency"],
-            "rooms": [dict(room) for room in rooms],
+            "site": site,
+            "rooms": [
+                {
+                    "id": room["id"],
+                    "name": room["name"],
+                    "color": room["color"],
+                    "publicVisible": bool(room["public_visible"]),
+                    "summary": room["summary"],
+                    "description": room["description"],
+                    "capacity": room["capacity"],
+                    "price": room["price"],
+                    "amenities": json.loads(room["amenities"] or "[]"),
+                    "photos": photos_by_room.get(room["id"], []),
+                }
+                for room in rooms
+            ],
             "platforms": [row["name"] for row in platforms],
         }
     )
+
+
+def fetch_room_photos(conn: sqlite3.Connection) -> dict[str, list[dict]]:
+    rows = conn.execute(
+        "SELECT room_id, url, alt FROM room_photos ORDER BY sort_order, id"
+    ).fetchall()
+    photos_by_room: dict[str, list[dict]] = {}
+    for row in rows:
+        photos_by_room.setdefault(row["room_id"], []).append({"url": row["url"], "alt": row["alt"]})
+    return photos_by_room
+
+
+def fetch_site_settings(conn: sqlite3.Connection) -> dict:
+    rows = conn.execute("SELECT key, value FROM site_settings").fetchall()
+    settings = dict(DEFAULT_SETTINGS["site"])
+    for row in rows:
+        try:
+            settings[row["key"]] = json.loads(row["value"])
+        except json.JSONDecodeError:
+            settings[row["key"]] = row["value"]
+    return normalize_site_settings(settings)
 
 
 def fetch_reservations(conn: sqlite3.Connection) -> list[dict]:
@@ -307,10 +517,156 @@ def fetch_reservations(conn: sqlite3.Connection) -> list[dict]:
     )
 
 
+def fetch_booking_requests(conn: sqlite3.Connection) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT id, room_id, arrival_date, departure_date, guest_name, guest_contact,
+               guest_count, message, status, created_at, updated_at
+        FROM booking_requests
+        ORDER BY created_at DESC, id
+        """
+    ).fetchall()
+    return [
+        {
+            "id": row["id"],
+            "roomId": row["room_id"],
+            "arrivalDate": row["arrival_date"],
+            "departureDate": row["departure_date"],
+            "guestName": row["guest_name"],
+            "guestContact": row["guest_contact"],
+            "guestCount": row["guest_count"],
+            "message": row["message"],
+            "status": row["status"],
+            "createdAt": row["created_at"],
+            "updatedAt": row["updated_at"],
+        }
+        for row in rows
+    ]
+
+
+def validate_booking_request(payload: dict, settings: dict, reservations: list[dict]) -> dict:
+    room_id = str(payload.get("roomId", "")).strip()
+    arrival_date = str(payload.get("arrivalDate", "")).strip()
+    departure_date = str(payload.get("departureDate", "")).strip()
+    guest_name = str(payload.get("guestName", "")).strip()
+    guest_contact = str(payload.get("guestContact", "")).strip()
+    message = str(payload.get("message", "")).strip()
+    try:
+        guest_count = max(1, int(payload.get("guestCount", 1) or 1))
+    except (TypeError, ValueError):
+        guest_count = 1
+
+    room = next((item for item in settings["rooms"] if item["id"] == room_id and item.get("publicVisible", True)), None)
+    if not room:
+        raise ValueError("La chambre sélectionnée n'est pas disponible à la demande.")
+    if not guest_name or not guest_contact:
+        raise ValueError("Nom et contact sont requis pour envoyer une demande.")
+    validate_date_range(arrival_date, departure_date)
+    if not is_room_available(room_id, arrival_date, departure_date, reservations):
+        raise ValueError("Cette chambre n'est plus disponible pour ces dates.")
+
+    now = datetime.now().isoformat(timespec="seconds")
+    return {
+        "id": uuid.uuid4().hex,
+        "roomId": room_id,
+        "arrivalDate": arrival_date,
+        "departureDate": departure_date,
+        "guestName": guest_name,
+        "guestContact": guest_contact,
+        "guestCount": guest_count,
+        "message": message,
+        "status": "new",
+        "createdAt": now,
+        "updatedAt": now,
+    }
+
+
+def insert_booking_request_db(conn: sqlite3.Connection, request: dict) -> None:
+    conn.execute(
+        """
+        INSERT INTO booking_requests(
+            id, room_id, arrival_date, departure_date, guest_name, guest_contact,
+            guest_count, message, status, created_at, updated_at
+        )
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            request["id"],
+            request["roomId"],
+            request["arrivalDate"],
+            request["departureDate"],
+            request["guestName"],
+            request["guestContact"],
+            request["guestCount"],
+            request["message"],
+            request["status"],
+            request["createdAt"],
+            request["updatedAt"],
+        ),
+    )
+
+
+def update_booking_request_status_db(conn: sqlite3.Connection, request_id: str, status: str) -> None:
+    conn.execute(
+        "UPDATE booking_requests SET status = ?, updated_at = ? WHERE id = ?",
+        (status, datetime.now().isoformat(timespec="seconds"), request_id),
+    )
+
+
+def validate_date_range(arrival_date: str, departure_date: str) -> None:
+    try:
+        arrival = datetime.strptime(arrival_date, "%Y-%m-%d")
+        departure = datetime.strptime(departure_date, "%Y-%m-%d")
+    except ValueError as exc:
+        raise ValueError("Dates invalides.") from exc
+    if departure <= arrival:
+        raise ValueError("La date de départ doit être après la date d'arrivée.")
+
+
+def is_room_available(room_id: str, arrival_date: str, departure_date: str, reservations: list[dict]) -> bool:
+    arrival = datetime.strptime(arrival_date, "%Y-%m-%d")
+    departure = datetime.strptime(departure_date, "%Y-%m-%d")
+    for reservation in reservations:
+        if reservation["roomId"] != room_id:
+            continue
+        if str(reservation.get("status", "")).strip() == "cancelled":
+            continue
+        existing_arrival = datetime.strptime(reservation["arrivalDate"], "%Y-%m-%d")
+        existing_departure = datetime.strptime(reservation["departureDate"], "%Y-%m-%d")
+        if arrival < existing_departure and departure > existing_arrival:
+            return False
+    return True
+
+
+def build_public_site(conn: sqlite3.Connection) -> dict:
+    settings = fetch_settings(conn)
+    return {
+        "propertyName": settings["propertyName"],
+        "description": settings["description"],
+        "currency": settings["currency"],
+        "site": settings["site"],
+        "rooms": [room for room in settings["rooms"] if room.get("publicVisible", True)],
+    }
+
+
+def build_availability(conn: sqlite3.Connection, arrival_date: str, departure_date: str) -> dict:
+    validate_date_range(arrival_date, departure_date)
+    settings = fetch_settings(conn)
+    reservations = fetch_reservations(conn)
+    available_rooms = [
+        room
+        for room in settings["rooms"]
+        if room.get("publicVisible", True)
+        and is_room_available(room["id"], arrival_date, departure_date, reservations)
+    ]
+    return {"arrivalDate": arrival_date, "departureDate": departure_date, "rooms": available_rooms}
+
+
 def write_settings_db(conn: sqlite3.Connection, settings: dict) -> None:
     upsert_settings_db(conn, settings)
     sync_rooms_db(conn, settings["rooms"])
     sync_platforms_db(conn, settings["platforms"])
+    sync_site_settings_db(conn, settings["site"])
 
 
 def upsert_settings_db(conn: sqlite3.Connection, settings: dict) -> None:
@@ -334,21 +690,68 @@ def upsert_settings_db(conn: sqlite3.Connection, settings: dict) -> None:
 def sync_rooms_db(conn: sqlite3.Connection, rooms: list[dict]) -> None:
     conn.executemany(
         """
-        INSERT INTO rooms(id, name, color, sort_order)
-        VALUES(?, ?, ?, ?)
+        INSERT INTO rooms(
+            id, name, color, public_visible, summary, description, capacity, price, amenities, sort_order
+        )
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             name = excluded.name,
             color = excluded.color,
+            public_visible = excluded.public_visible,
+            summary = excluded.summary,
+            description = excluded.description,
+            capacity = excluded.capacity,
+            price = excluded.price,
+            amenities = excluded.amenities,
             sort_order = excluded.sort_order
         """,
         [
-            (room["id"], room["name"], room["color"], index)
+            (
+                room["id"],
+                room["name"],
+                room["color"],
+                1 if room.get("publicVisible", True) else 0,
+                room.get("summary", ""),
+                room.get("description", ""),
+                int(room.get("capacity", 2) or 2),
+                room.get("price", ""),
+                json.dumps(room.get("amenities", []), ensure_ascii=False),
+                index,
+            )
             for index, room in enumerate(rooms)
         ],
     )
+    sync_room_photos_db(conn, rooms)
     conn.executemany(
         "DELETE FROM rooms WHERE id = ?",
         [(row["id"],) for row in conn.execute("SELECT id FROM rooms").fetchall() if row["id"] not in {room["id"] for room in rooms}],
+    )
+
+
+def sync_room_photos_db(conn: sqlite3.Connection, rooms: list[dict]) -> None:
+    room_ids = {room["id"] for room in rooms}
+    conn.executemany(
+        "DELETE FROM room_photos WHERE room_id = ?",
+        [(room_id,) for room_id in room_ids],
+    )
+    rows = []
+    for room in rooms:
+        for index, photo in enumerate(room.get("photos", [])):
+            rows.append((uuid.uuid4().hex, room["id"], photo["url"], photo.get("alt", ""), index))
+    conn.executemany(
+        "INSERT INTO room_photos(id, room_id, url, alt, sort_order) VALUES(?, ?, ?, ?, ?)",
+        rows,
+    )
+
+
+def sync_site_settings_db(conn: sqlite3.Connection, site: dict) -> None:
+    conn.executemany(
+        """
+        INSERT INTO site_settings(key, value)
+        VALUES(?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+        """,
+        [(key, json.dumps(value, ensure_ascii=False)) for key, value in normalize_site_settings(site).items()],
     )
 
 
@@ -475,7 +878,24 @@ def validate_settings(payload: dict) -> dict:
             raise ValueError("Chaque chambre doit utiliser une couleur pastel proposée.")
         seen_room_ids.add(room_id)
         seen_room_names.add(room_name.lower())
-        normalized_rooms.append({"id": room_id, "name": room_name, "color": room_color})
+        try:
+            capacity = max(1, int(room.get("capacity", 2) or 2))
+        except (TypeError, ValueError):
+            capacity = 2
+        normalized_rooms.append(
+            {
+                "id": room_id,
+                "name": room_name,
+                "color": room_color,
+                "publicVisible": bool(room.get("publicVisible", True)),
+                "summary": str(room.get("summary", "")).strip(),
+                "description": str(room.get("description", "")).strip(),
+                "capacity": capacity,
+                "price": str(room.get("price", "")).strip(),
+                "amenities": normalize_string_list(room.get("amenities", [])),
+                "photos": normalize_photos(room.get("photos", [])),
+            }
+        )
 
     normalized_platforms = []
     seen_platforms = set()
@@ -500,6 +920,7 @@ def validate_settings(payload: dict) -> dict:
         "currency": currency,
         "rooms": normalized_rooms,
         "platforms": normalized_platforms,
+        "site": normalize_site_settings(payload.get("site", {})),
     }
 
 
@@ -680,31 +1101,169 @@ def get_next_booking_name(reservations: list[dict], booking_type: str) -> str:
     return f"{label} n°{highest_number + 1}"
 
 
+def hash_password(password: str, salt: str | None = None) -> str:
+    salt = salt or secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 120_000)
+    return f"pbkdf2_sha256${salt}${digest.hex()}"
+
+
+def verify_password(password: str, encoded: str) -> bool:
+    try:
+        algorithm, salt, digest = encoded.split("$", 2)
+    except ValueError:
+        return False
+    if algorithm != "pbkdf2_sha256":
+        return False
+    return hmac.compare_digest(hash_password(password, salt), encoded)
+
+
+def hash_session_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def create_session(conn: sqlite3.Connection) -> str:
+    token = secrets.token_urlsafe(32)
+    auth = conn.execute("SELECT session_revision FROM admin_auth WHERE id = 1").fetchone()
+    conn.execute(
+        "INSERT INTO admin_sessions(token_hash, session_revision, created_at) VALUES(?, ?, ?)",
+        (hash_session_token(token), auth["session_revision"], datetime.now().isoformat(timespec="seconds")),
+    )
+    return token
+
+
+def is_valid_session(conn: sqlite3.Connection, token: str | None) -> bool:
+    if not token:
+        return False
+    session = conn.execute(
+        "SELECT session_revision FROM admin_sessions WHERE token_hash = ?",
+        (hash_session_token(token),),
+    ).fetchone()
+    auth = conn.execute("SELECT session_revision FROM admin_auth WHERE id = 1").fetchone()
+    return bool(session and auth and session["session_revision"] == auth["session_revision"])
+
+
+def delete_session(conn: sqlite3.Connection, token: str | None) -> None:
+    if token:
+        conn.execute("DELETE FROM admin_sessions WHERE token_hash = ?", (hash_session_token(token),))
+
+
+def change_admin_password(conn: sqlite3.Connection, current_password: str, new_password: str) -> None:
+    if len(new_password) < 8:
+        raise ValueError("Le nouveau mot de passe doit contenir au moins 8 caractères.")
+    auth = conn.execute("SELECT password_hash FROM admin_auth WHERE id = 1").fetchone()
+    if not auth or not verify_password(current_password, auth["password_hash"]):
+        raise ValueError("Mot de passe actuel incorrect.")
+    revision = uuid.uuid4().hex
+    conn.execute(
+        "UPDATE admin_auth SET password_hash = ?, session_revision = ? WHERE id = 1",
+        (hash_password(new_password), revision),
+    )
+    conn.execute("DELETE FROM admin_sessions")
+
+
+def cookie_value(headers, name: str) -> str | None:
+    cookie_header = headers.get("Cookie", "")
+    for item in cookie_header.split(";"):
+        key, _, value = item.strip().partition("=")
+        if key == name:
+            return value
+    return None
+
+
+def session_cookie(token: str, clear: bool = False) -> str:
+    if clear:
+        value = f"{SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"
+    else:
+        value = f"{SESSION_COOKIE_NAME}={token}; Path=/; HttpOnly; SameSite=Lax"
+    if os.environ.get("GITE_COOKIE_SECURE") == "1":
+        value += "; Secure"
+    return value
+
+
+def public_room_summary(room: dict) -> dict:
+    return {
+        key: room[key]
+        for key in [
+            "id",
+            "name",
+            "color",
+            "summary",
+            "description",
+            "capacity",
+            "price",
+            "amenities",
+            "photos",
+        ]
+    }
+
+
 class AppHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(BASE_DIR), **kwargs)
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == "/api/session":
+            self.send_json({"authenticated": self.is_authenticated()})
+            return
+        if parsed.path == "/api/public-site":
+            ensure_database()
+            with get_connection() as conn:
+                self.send_json(build_public_site(conn))
+            return
+        if parsed.path == "/api/availability":
+            params = parse_qs(parsed.query)
+            try:
+                ensure_database()
+                with get_connection() as conn:
+                    self.send_json(
+                        build_availability(
+                            conn,
+                            params.get("arrivalDate", [""])[0],
+                            params.get("departureDate", [""])[0],
+                        )
+                    )
+            except ValueError as exc:
+                self.send_error_json(str(exc), HTTPStatus.BAD_REQUEST)
+            return
+        if parsed.path.startswith("/uploads/"):
+            self.serve_upload(parsed.path.removeprefix("/uploads/"))
+            return
         if parsed.path == "/api/state":
+            if not self.require_admin():
+                return
             self.send_json(load_state())
             return
         if parsed.path == "/api/backup":
+            if not self.require_admin():
+                return
             state = load_state()
             self.send_json(
                 {
                     "settings": state["settings"],
                     "reservations": state["reservations"],
+                    "bookingRequests": state["bookingRequests"],
                     "exportedAt": datetime.now().isoformat(timespec="seconds"),
                 }
             )
             return
         if parsed.path == "/":
+            self.path = "/public.html"
+        elif parsed.path in {"/gestion", "/gestion/"}:
+            self.path = "/index.html" if self.is_authenticated() else "/login.html"
+        elif parsed.path == "/gestion/app":
             self.path = "/index.html"
         super().do_GET()
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
+
+        if parsed.path == "/api/upload":
+            if not self.require_admin():
+                return
+            self.handle_upload()
+            return
+
         length = int(self.headers.get("Content-Length", "0"))
         raw_payload = self.rfile.read(length) if length else b"{}"
 
@@ -715,6 +1274,111 @@ class AppHandler(SimpleHTTPRequestHandler):
             return
 
         try:
+            if parsed.path == "/api/login":
+                with DATA_LOCK:
+                    ensure_database()
+                    with get_connection() as conn:
+                        auth = conn.execute("SELECT password_hash FROM admin_auth WHERE id = 1").fetchone()
+                        password = str(payload.get("password", ""))
+                        if not auth or not verify_password(password, auth["password_hash"]):
+                            self.send_error_json("Mot de passe incorrect.", HTTPStatus.UNAUTHORIZED)
+                            return
+                        token = create_session(conn)
+                        conn.commit()
+                        self.send_json({"authenticated": True}, headers={"Set-Cookie": session_cookie(token)})
+                        return
+
+            if parsed.path == "/api/logout":
+                with DATA_LOCK:
+                    ensure_database()
+                    with get_connection() as conn:
+                        delete_session(conn, self.current_session_token())
+                        conn.commit()
+                self.send_json({"authenticated": False}, headers={"Set-Cookie": session_cookie("", clear=True)})
+                return
+
+            if parsed.path == "/api/booking-requests":
+                with DATA_LOCK:
+                    ensure_database()
+                    with get_connection() as conn:
+                        settings = fetch_settings(conn)
+                        reservations = fetch_reservations(conn)
+                        booking_request = validate_booking_request(payload, settings, reservations)
+                        insert_booking_request_db(conn, booking_request)
+                        bump_version(conn, "booking_requests_revision")
+                        conn.commit()
+                        self.send_json({"bookingRequest": booking_request}, HTTPStatus.CREATED)
+                        return
+
+            if not self.require_admin():
+                return
+
+            if parsed.path == "/api/admin/password":
+                with DATA_LOCK:
+                    ensure_database()
+                    with get_connection() as conn:
+                        change_admin_password(
+                            conn,
+                            str(payload.get("currentPassword", "")),
+                            str(payload.get("newPassword", "")),
+                        )
+                        conn.commit()
+                        self.send_json({"authenticated": False}, headers={"Set-Cookie": session_cookie("", clear=True)})
+                        return
+
+            if parsed.path.startswith("/api/booking-requests/"):
+                parts = parsed.path.strip("/").split("/")
+                if len(parts) == 3 and parts[0] == "api" and parts[1] == "booking-requests":
+                    request_id = parts[2]
+                    action = str(payload.get("action", "")).strip()
+                    with DATA_LOCK:
+                        ensure_database()
+                        with get_connection() as conn:
+                            request = next(
+                                (item for item in fetch_booking_requests(conn) if item["id"] == request_id),
+                                None,
+                            )
+                            if not request:
+                                self.send_error_json("Demande introuvable.", HTTPStatus.NOT_FOUND)
+                                return
+                            if action == "reject":
+                                update_booking_request_status_db(conn, request_id, "rejected")
+                                bump_version(conn, "booking_requests_revision")
+                                conn.commit()
+                                self.send_json({"bookingRequests": fetch_booking_requests(conn), "versions": get_versions(conn)})
+                                return
+                            if action == "accept":
+                                settings = fetch_settings(conn)
+                                reservations = fetch_reservations(conn)
+                                if not is_room_available(request["roomId"], request["arrivalDate"], request["departureDate"], reservations):
+                                    raise ValueError("Cette chambre n'est plus disponible pour ces dates.")
+                                reservation_payload = {
+                                    "bookingType": "reservation",
+                                    "status": "pending",
+                                    "roomId": request["roomId"],
+                                    "arrivalDate": request["arrivalDate"],
+                                    "departureDate": request["departureDate"],
+                                    "clientName": request["guestName"],
+                                    "clientContact": request["guestContact"],
+                                    "platform": "Site direct" if "Site direct" in settings["platforms"] else settings["platforms"][0],
+                                    "amount": 0,
+                                    "comment": request["message"],
+                                }
+                                new_reservations = build_reservations(reservation_payload, settings, reservations)
+                                upsert_reservations_db(conn, new_reservations)
+                                update_booking_request_status_db(conn, request_id, "accepted")
+                                bump_version(conn, "reservations_revision")
+                                bump_version(conn, "booking_requests_revision")
+                                conn.commit()
+                                self.send_json(
+                                    {
+                                        "reservations": fetch_reservations(conn),
+                                        "bookingRequests": fetch_booking_requests(conn),
+                                        "versions": get_versions(conn),
+                                    }
+                                )
+                                return
+
             if parsed.path == "/api/settings":
                 with DATA_LOCK:
                     ensure_database()
@@ -761,6 +1425,7 @@ class AppHandler(SimpleHTTPRequestHandler):
                             {
                                 "settings": settings,
                                 "reservations": reservations,
+                                "bookingRequests": fetch_booking_requests(conn),
                                 "versions": get_versions(conn),
                             }
                         )
@@ -805,6 +1470,8 @@ class AppHandler(SimpleHTTPRequestHandler):
         if not parsed.path.startswith(prefix):
             self.send_error_json("Route introuvable.", HTTPStatus.NOT_FOUND)
             return
+        if not self.require_admin():
+            return
 
         reservation_id = parsed.path.removeprefix(prefix)
         with DATA_LOCK:
@@ -829,11 +1496,13 @@ class AppHandler(SimpleHTTPRequestHandler):
                 updated = fetch_reservations(conn)
                 self.send_json({"reservations": updated, "versions": get_versions(conn)})
 
-    def send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
+    def send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK, headers: dict | None = None) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        for key, value in (headers or {}).items():
+            self.send_header(key, value)
         self.end_headers()
         self.wfile.write(body)
 
@@ -842,6 +1511,70 @@ class AppHandler(SimpleHTTPRequestHandler):
 
     def log_message(self, format: str, *args) -> None:
         return
+
+    def current_session_token(self) -> str | None:
+        return cookie_value(self.headers, SESSION_COOKIE_NAME)
+
+    def is_authenticated(self) -> bool:
+        ensure_database()
+        with get_connection() as conn:
+            return is_valid_session(conn, self.current_session_token())
+
+    def require_admin(self) -> bool:
+        if self.is_authenticated():
+            return True
+        self.send_error_json("Authentification requise.", HTTPStatus.UNAUTHORIZED)
+        return False
+
+    def handle_upload(self) -> None:
+        content_length = int(self.headers.get("Content-Length", "0"))
+        if content_length > MAX_UPLOAD_SIZE:
+            self.send_error_json("Image trop lourde.", HTTPStatus.BAD_REQUEST)
+            return
+        form = cgi.FieldStorage(
+            fp=self.rfile,
+            headers=self.headers,
+            environ={
+                "REQUEST_METHOD": "POST",
+                "CONTENT_TYPE": self.headers.get("Content-Type", ""),
+                "CONTENT_LENGTH": str(content_length),
+            },
+        )
+        file_item = form["file"] if "file" in form else None
+        if file_item is None or not getattr(file_item, "file", None):
+            self.send_error_json("Fichier manquant.", HTTPStatus.BAD_REQUEST)
+            return
+        content_type = file_item.type
+        extension = ALLOWED_IMAGE_TYPES.get(content_type)
+        if not extension:
+            self.send_error_json("Format d'image non supporté.", HTTPStatus.BAD_REQUEST)
+            return
+        UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+        filename = f"{uuid.uuid4().hex}{extension}"
+        target = UPLOADS_DIR / filename
+        with target.open("wb") as output:
+            shutil.copyfileobj(file_item.file, output)
+        self.send_json({"url": f"/uploads/{filename}"}, HTTPStatus.CREATED)
+
+    def serve_upload(self, filename: str) -> None:
+        safe_name = Path(filename).name
+        target = UPLOADS_DIR / safe_name
+        if not target.exists() or not target.is_file():
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
+        content_type = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".webp": "image/webp",
+            ".gif": "image/gif",
+        }.get(target.suffix.lower(), "application/octet-stream")
+        body = target.read_bytes()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
 
 def main() -> None:
@@ -854,10 +1587,11 @@ def main() -> None:
         print(f"Accessible sur le réseau local via {lan_url}")
     else:
         print("Adresse réseau local non détectée automatiquement.")
-    try:
-        webbrowser.open(local_url)
-    except Exception:
-        pass
+    if os.environ.get("GITE_OPEN_BROWSER", "1") != "0":
+        try:
+            webbrowser.open(local_url)
+        except Exception:
+            pass
     server.serve_forever()
 
 
