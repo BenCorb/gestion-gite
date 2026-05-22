@@ -401,7 +401,7 @@ function renderPlanning(state, elements) {
         const iso = dateToIso(date);
         const isToday = iso === todayIso;
         const reservation = state.reservations.find(
-          (item) => item.roomId === room.id && isDateInStay(iso, item.arrivalDate, item.departureDate),
+          (item) => item.roomId === room.id && isDateInStay(iso, item.arrivalDate, item.departureDate) && item.status !== "cancelled",
         );
         const statusClass = reservation ? `planning-${getEntryType(reservation)}` : "";
         const todayClass = isToday ? "today" : "";
