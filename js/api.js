@@ -44,12 +44,14 @@ export async function deleteReservationRequest(id) {
 let payloadVersions = {
   settingsVersion: "",
   reservationsVersion: "",
+  bookingRequestsVersion: "",
 };
 
 export function setApiVersions(versions) {
   payloadVersions = {
     settingsVersion: versions?.settingsVersion || "",
     reservationsVersion: versions?.reservationsVersion || "",
+    bookingRequestsVersion: versions?.bookingRequestsVersion || "",
   };
 }
 
@@ -92,6 +94,55 @@ export async function restoreBackup(payload) {
   const data = await response.json();
   if (!response.ok) {
     throw buildApiError(response, data.error || "Impossible de restaurer la sauvegarde.");
+  }
+  return data;
+}
+
+export async function uploadImage(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch("/api/upload", {
+    method: "POST",
+    body: formData,
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw buildApiError(response, data.error || "Upload impossible.");
+  }
+  return data;
+}
+
+export async function updateBookingRequest(id, action, reservation) {
+  const response = await fetch(`/api/booking-requests/${id}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, reservation }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw buildApiError(response, data.error || "Action impossible sur la demande.");
+  }
+  return data;
+}
+
+export async function changeAdminPassword(payload) {
+  const response = await fetch("/api/admin/password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw buildApiError(response, data.error || "Changement de mot de passe impossible.");
+  }
+  return data;
+}
+
+export async function logoutAdmin() {
+  const response = await fetch("/api/logout", { method: "POST" });
+  const data = await response.json();
+  if (!response.ok) {
+    throw buildApiError(response, data.error || "Déconnexion impossible.");
   }
   return data;
 }
