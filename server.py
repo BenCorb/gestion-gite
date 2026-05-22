@@ -722,6 +722,27 @@ def update_booking_request_status_db(conn: sqlite3.Connection, request_id: str, 
     )
 
 
+def build_cancelled_reservation_from_request(request: dict) -> dict:
+    now = datetime.now().isoformat(timespec="seconds")
+    return {
+        "id": uuid.uuid4().hex,
+        "groupId": None,
+        "bookingType": "reservation",
+        "status": "cancelled",
+        "bookingName": request["guestName"],
+        "roomId": request["roomId"],
+        "arrivalDate": request["arrivalDate"],
+        "departureDate": request["departureDate"],
+        "clientName": request["guestName"],
+        "clientContact": request["guestContact"],
+        "platform": DIRECT_BOOKING_PLATFORM,
+        "amount": 0.0,
+        "comment": request["message"] or "",
+        "createdAt": now,
+        "updatedAt": now,
+    }
+
+
 def build_reservation_payload_from_request(request: dict, payload: dict, settings: dict) -> dict:
     edited = payload.get("reservation") if isinstance(payload.get("reservation"), dict) else {}
     return {
@@ -1518,10 +1539,17 @@ class AppHandler(SimpleHTTPRequestHandler):
                                 self.send_error_json("Demande introuvable.", HTTPStatus.NOT_FOUND)
                                 return
                             if action == "reject":
+                                cancelled = build_cancelled_reservation_from_request(request)
+                                upsert_reservations_db(conn, [cancelled])
                                 update_booking_request_status_db(conn, request_id, "rejected")
+                                bump_version(conn, "reservations_revision")
                                 bump_version(conn, "booking_requests_revision")
                                 conn.commit()
-                                self.send_json({"bookingRequests": fetch_booking_requests(conn), "versions": get_versions(conn)})
+                                self.send_json({
+                                    "reservations": fetch_reservations(conn),
+                                    "bookingRequests": fetch_booking_requests(conn),
+                                    "versions": get_versions(conn),
+                                })
                                 return
                             if action == "accept":
                                 settings = fetch_settings(conn)
@@ -1671,6 +1699,11 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.send_header("X-Frame-Options", "SAMEORIGIN")
         self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
         self.send_header("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
+        path = getattr(self, "path", "") or ""
+        if path.startswith("/api/"):
+            self.send_header("Cache-Control", "no-store")
+        else:
+            self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
     def send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK, headers: dict | None = None) -> None:
@@ -1678,7 +1711,6 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
         for key, value in (headers or {}).items():
             self.send_header(key, value)
         self.end_headers()
