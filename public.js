@@ -102,7 +102,7 @@ function renderRooms(rooms) {
           ${
             image
               ? `<div class="room-carousel">
-                  <img src="${escapeHtml(image)}" alt="${escapeHtml(photos[selectedPhotoIndex]?.alt || room.name)}" />
+                  <img src="${escapeHtml(image)}" alt="${escapeHtml(photos[selectedPhotoIndex]?.alt || room.name)}" loading="lazy" />
                   ${
                     photos.length > 1
                       ? `<button class="icon-button carousel-button prev" type="button" data-carousel-room="${escapeHtml(room.id)}" data-carousel-direction="-1">‹</button>
@@ -149,7 +149,7 @@ function renderRooms(rooms) {
 function renderGallery(gallery) {
   elements.gallerySection.classList.toggle("is-hidden", !gallery.length);
   elements.gallery.innerHTML = gallery
-    .map((photo) => `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.alt || state.site.propertyName)}" />`)
+    .map((photo) => `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.alt || state.site.propertyName)}" loading="lazy" />`)
     .join("");
 }
 
@@ -181,7 +181,7 @@ function renderPhotoCarousel(photos, selectedIndex, name, fallbackAlt) {
   const image = photos[safeIndex];
   return `
     <div class="room-carousel">
-      <img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.alt || fallbackAlt)}" />
+      <img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.alt || fallbackAlt)}" loading="lazy" />
       ${
         photos.length > 1
           ? `<button class="icon-button carousel-button prev" type="button" data-${name}-carousel-direction="-1">‹</button>
@@ -239,21 +239,39 @@ function closeModal() {
 function changeRoomPhoto(roomId, direction) {
   const room = [...state.rooms, ...(state.availability?.rooms || [])].find((item) => item.id === roomId);
   const photos = room?.photos || [];
-  if (photos.length < 2) {
-    return;
-  }
+  if (photos.length < 2) return;
+
   const currentIndex = state.roomPhotoIndexes[roomId] || 0;
-  state.roomPhotoIndexes[roomId] = (currentIndex + direction + photos.length) % photos.length;
-  renderRooms(state.availability?.rooms || state.rooms);
+  const newIndex = (currentIndex + direction + photos.length) % photos.length;
+  state.roomPhotoIndexes[roomId] = newIndex;
+
+  const button = elements.rooms.querySelector(`[data-carousel-room="${CSS.escape(roomId)}"]`);
+  if (!button) return;
+  const carousel = button.closest(".room-carousel");
+  if (!carousel) return;
+  const img = carousel.querySelector("img");
+  if (img) {
+    img.src = photos[newIndex].url;
+    img.alt = photos[newIndex].alt || room.name;
+  }
+  const counter = carousel.querySelector(".carousel-count");
+  if (counter) counter.textContent = `${newIndex + 1}/${photos.length}`;
 }
 
 function changeGitePhoto(direction) {
   const photos = state.site?.site?.gitePhotos || [];
-  if (photos.length < 2) {
-    return;
-  }
+  if (photos.length < 2) return;
+
   state.gitePhotoIndex = (state.gitePhotoIndex + direction + photos.length) % photos.length;
-  renderGiteSection(state.site.site || {});
+  const newIndex = state.gitePhotoIndex;
+
+  const img = elements.giteCarousel.querySelector("img");
+  if (img) {
+    img.src = photos[newIndex].url;
+    img.alt = photos[newIndex].alt || (state.site?.site?.giteTitle || "Le gîte");
+  }
+  const counter = elements.giteCarousel.querySelector(".carousel-count");
+  if (counter) counter.textContent = `${newIndex + 1}/${photos.length}`;
 }
 
 function getAmenityGroups(room) {
