@@ -68,6 +68,8 @@ DEFAULT_SETTINGS = {
         "giteTitle": "Le gîte",
         "giteDescription": "",
         "gitePhotos": [],
+        "bodyFont": "lato",
+        "headingFont": "playfair",
     },
 }
 
@@ -376,6 +378,10 @@ def normalize_settings(settings: dict) -> dict:
     return merged
 
 
+VALID_BODY_FONTS = {"lato", "raleway", "opensans", "nunito", "librefranklin"}
+VALID_HEADING_FONTS = {"playfair", "cormorant", "montserrat", "baskerville", "satisfy", "patrickhand", "librefranklin"}
+
+
 def normalize_site_settings(site: dict) -> dict:
     return {
         "logoUrl": str(site.get("logoUrl", "")).strip(),
@@ -391,6 +397,8 @@ def normalize_site_settings(site: dict) -> dict:
         "giteTitle": str(site.get("giteTitle", "Le gîte")).strip() or "Le gîte",
         "giteDescription": str(site.get("giteDescription", "")).strip(),
         "gitePhotos": normalize_photos(site.get("gitePhotos", [])),
+        "bodyFont": site.get("bodyFont", "lato") if site.get("bodyFont", "lato") in VALID_BODY_FONTS else "lato",
+        "headingFont": site.get("headingFont", "playfair") if site.get("headingFont", "playfair") in VALID_HEADING_FONTS else "playfair",
     }
 
 

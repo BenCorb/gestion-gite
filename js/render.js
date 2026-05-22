@@ -686,6 +686,8 @@ function renderSettingsForm(ctx) {
   elements.siteAddressInput.value = state.settings.site?.address || "";
   elements.sitePhoneInput.value = state.settings.site?.phone || "";
   elements.siteEmailInput.value = state.settings.site?.email || "";
+  elements.siteBodyFontSelect.value = state.settings.site?.bodyFont || "lato";
+  elements.siteHeadingFontSelect.value = state.settings.site?.headingFont || "playfair";
   elements.siteLogoUrl.value = state.settings.site?.logoUrl || "";
   elements.siteHeroUrl.value = state.settings.site?.heroImageUrl || "";
   elements.siteMediaPreview.innerHTML = [
@@ -695,13 +697,14 @@ function renderSettingsForm(ctx) {
   elements.siteGitePhotosPreview.innerHTML = (state.settings.site?.gitePhotos || [])
     .map(
       (photo, index) => `
-        <figure>
+        <figure draggable="true" data-drag-index="${index}">
           <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.alt || "Le gîte")}" />
           <button class="danger-button" type="button" data-remove-gite-photo="${index}">Retirer</button>
         </figure>
       `,
     )
     .join("");
+  attachPhotoDragHandlers(elements.siteGitePhotosPreview, "gite", actions);
 
   elements.roomsEditor.innerHTML = state.settings.rooms
     .map(
@@ -782,7 +785,7 @@ function renderSettingsForm(ctx) {
               ${(room.photos || [])
                 .map(
                   (photo, index) => `
-                    <figure>
+                    <figure draggable="true" data-drag-room="${room.id}" data-drag-index="${index}">
                       <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.alt || room.name)}" />
                       <button class="danger-button" type="button" data-remove-room-photo="${room.id}" data-photo-index="${index}">Retirer</button>
                     </figure>
@@ -835,6 +838,7 @@ function renderSettingsForm(ctx) {
   elements.roomsEditor.querySelectorAll("[data-remove-room-photo]").forEach((button) => {
     button.addEventListener("click", () => actions.removeRoomPhoto(button.dataset.removeRoomPhoto, Number(button.dataset.photoIndex)));
   });
+  attachPhotoDragHandlers(elements.roomsEditor, "room", actions);
   elements.platformsEditor.querySelectorAll("[data-delete-platform]").forEach((button) => {
     button.addEventListener("click", () => actions.removePlatform(Number(button.dataset.deletePlatform)));
   });
@@ -904,6 +908,40 @@ function buildPlatformBreakdown(state, reservations, totalRevenue) {
     })
     .filter((item) => item.reservations > 0 || item.revenue > 0)
     .sort((a, b) => b.revenue - a.revenue);
+}
+
+function attachPhotoDragHandlers(container, type, actions) {
+  let draggedIndex = null;
+  let draggedRoomId = null;
+
+  container.querySelectorAll("figure[draggable]").forEach((figure) => {
+    figure.addEventListener("dragstart", (e) => {
+      draggedIndex = Number(figure.dataset.dragIndex);
+      draggedRoomId = figure.dataset.dragRoom || null;
+      e.dataTransfer.effectAllowed = "move";
+      // setTimeout lets the browser capture the drag image before opacity changes
+      setTimeout(() => figure.classList.add("dragging"), 0);
+    });
+    figure.addEventListener("dragend", () => figure.classList.remove("dragging"));
+    figure.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      figure.classList.add("drag-over");
+    });
+    figure.addEventListener("dragleave", () => figure.classList.remove("drag-over"));
+    figure.addEventListener("drop", (e) => {
+      e.preventDefault();
+      figure.classList.remove("drag-over");
+      if (draggedIndex === null) return;
+      const toIndex = Number(figure.dataset.dragIndex);
+      if (type === "gite") {
+        actions.reorderGitePhoto(draggedIndex, toIndex);
+      } else if (type === "room" && figure.dataset.dragRoom === draggedRoomId) {
+        actions.reorderRoomPhoto(draggedRoomId, draggedIndex, toIndex);
+      }
+      draggedIndex = null;
+    });
+  });
 }
 
 function createComparisonCard(label, currentValue, previousValue, unitOrCurrency, isCurrency = false, state = null) {

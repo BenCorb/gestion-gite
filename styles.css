@@ -47,6 +47,15 @@ textarea {
   min-width: 0;
 }
 
+html {
+  overflow-x: hidden;
+}
+
+html.modal-open,
+body.modal-open {
+  overflow: hidden;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -110,6 +119,11 @@ textarea {
   padding: 8px;
 }
 
+#public-property-name {
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  line-height: 1.1;
+}
+
 .public-hero-content {
   max-width: 760px;
   padding-bottom: 6vh;
@@ -124,6 +138,11 @@ textarea {
   max-width: 56ch;
   font-size: 1.25rem;
   line-height: 1.5;
+}
+
+#public-intro,
+#public-gite-description {
+  white-space: pre-wrap;
 }
 
 .public-main {
@@ -309,6 +328,8 @@ textarea {
   position: relative;
   display: grid;
   gap: 14px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
 }
 
 .modal-close-button {
@@ -370,6 +391,18 @@ textarea {
   margin: 0;
   display: grid;
   gap: 8px;
+}
+
+.media-preview figure[draggable="true"] {
+  cursor: grab;
+}
+.media-preview figure[draggable="true"].dragging {
+  opacity: 0.35;
+}
+.media-preview figure[draggable="true"].drag-over {
+  outline: 2px dashed var(--accent-strong);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
 }
 
 .nested-settings-section {
@@ -1453,7 +1486,7 @@ textarea {
   }
 
   .availability-form {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .public-hero {

@@ -1,5 +1,23 @@
 import { calculateNights, escapeHtml, formatCurrency, showToast } from "./js/utils.js";
 
+const BODY_FONTS = {
+  lato:          { stack: '"Lato",sans-serif',           googleFonts: 'Lato:wght@400;700' },
+  raleway:       { stack: '"Raleway",sans-serif',        googleFonts: 'Raleway:wght@400;700' },
+  opensans:      { stack: '"Open Sans",sans-serif',      googleFonts: 'Open+Sans:wght@400;700' },
+  nunito:        { stack: '"Nunito",sans-serif',         googleFonts: 'Nunito:wght@400;700' },
+  librefranklin: { stack: '"Libre Franklin",sans-serif', googleFonts: 'Libre+Franklin:wght@400;700' },
+};
+
+const HEADING_FONTS = {
+  playfair:      { stack: '"Playfair Display",serif',   googleFonts: 'Playfair+Display:wght@700' },
+  cormorant:     { stack: '"Cormorant Garamond",serif', googleFonts: 'Cormorant+Garamond:wght@600;700' },
+  montserrat:    { stack: '"Montserrat",sans-serif',    googleFonts: 'Montserrat:wght@700' },
+  baskerville:   { stack: '"Libre Baskerville",serif',  googleFonts: 'Libre+Baskerville:wght@700' },
+  satisfy:       { stack: '"Satisfy",cursive',          googleFonts: 'Satisfy' },
+  patrickhand:   { stack: '"Patrick Hand SC",cursive',  googleFonts: 'Patrick+Hand+SC' },
+  librefranklin: { stack: '"Libre Franklin",sans-serif', googleFonts: 'Libre+Franklin:wght@700' },
+};
+
 const state = {
   site: null,
   rooms: [],
@@ -85,6 +103,21 @@ function renderPublicSite() {
   renderGiteSection(site);
   renderGallery(site.gallery || []);
   renderContact(site);
+  applyFontPair(site.bodyFont, site.headingFont);
+}
+
+function applyFontPair(bodyKey, headingKey) {
+  const body = BODY_FONTS[bodyKey] || BODY_FONTS.lato;
+  const heading = HEADING_FONTS[headingKey] || HEADING_FONTS.playfair;
+  const families = [body.googleFonts];
+  if (heading.googleFonts !== body.googleFonts) families.push(heading.googleFonts);
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = `https://fonts.googleapis.com/css2?family=${families.join("&family=")}&display=swap`;
+  document.head.appendChild(link);
+  const style = document.createElement("style");
+  style.textContent = `body{font-family:${body.stack}}h1,h2,h3,#public-property-name{font-family:${heading.stack}}`;
+  document.head.appendChild(style);
 }
 
 function renderRooms(rooms) {
@@ -200,7 +233,7 @@ function renderContact(site) {
     site.email ? `<p><a href="mailto:${escapeHtml(site.email)}">${escapeHtml(site.email)}</a></p>` : "",
   ].filter(Boolean);
   const map = site.address
-    ? `<div class="map-embed"><iframe title="Carte ${escapeHtml(state.site.propertyName)}" loading="lazy" src="https://www.google.com/maps?q=${encodeURIComponent(site.address)}&output=embed"></iframe></div>`
+    ? `<div class="map-embed"><iframe title="Carte ${escapeHtml(state.site.propertyName)}" loading="lazy" src="https://www.google.com/maps?q=${encodeURIComponent(site.address)}&z=10&output=embed"></iframe></div>`
     : "";
   elements.contact.innerHTML = `${details.length ? details.join("") : "<p>Contactez-nous via une demande de réservation.</p>"}${map}`;
 }
@@ -223,6 +256,16 @@ async function searchAvailability(event) {
   renderRooms(data.rooms);
 }
 
+function lockScroll() {
+  document.documentElement.classList.add("modal-open");
+  document.body.classList.add("modal-open");
+}
+
+function unlockScroll() {
+  document.documentElement.classList.remove("modal-open");
+  document.body.classList.remove("modal-open");
+}
+
 function openRequestModal(roomId) {
   const room = [...state.rooms, ...(state.availability?.rooms || [])].find((item) => item.id === roomId);
   elements.requestRoomId.value = roomId;
@@ -230,10 +273,12 @@ function openRequestModal(roomId) {
   elements.requestArrivalDate.value = elements.arrival.value || state.availability?.arrivalDate || "";
   elements.requestDepartureDate.value = elements.departure.value || state.availability?.departureDate || "";
   elements.modal.classList.remove("is-hidden");
+  lockScroll();
 }
 
 function closeModal() {
   elements.modal.classList.add("is-hidden");
+  unlockScroll();
 }
 
 function changeRoomPhoto(roomId, direction) {
@@ -302,10 +347,12 @@ function openAmenitiesModal(roomId) {
     )
     .join("");
   elements.amenitiesModal.classList.remove("is-hidden");
+  lockScroll();
 }
 
 function closeAmenitiesModal() {
   elements.amenitiesModal.classList.add("is-hidden");
+  unlockScroll();
 }
 
 async function submitBookingRequest(event) {
