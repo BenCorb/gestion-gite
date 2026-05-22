@@ -331,6 +331,8 @@ export function createActions(ctx) {
         address: elements.siteAddressInput.value.trim(),
         phone: elements.sitePhoneInput.value.trim(),
         email: elements.siteEmailInput.value.trim(),
+        bodyFont: elements.siteBodyFontSelect.value || "lato",
+        headingFont: elements.siteHeadingFontSelect.value || "playfair",
       },
       rooms,
       platforms,
@@ -533,6 +535,28 @@ export function createActions(ctx) {
       return;
     }
     room.photos = (room.photos || []).filter((_, index) => index !== photoIndex);
+    settingsDirty = true;
+    rerender();
+  }
+
+  function reorderRoomPhoto(roomId, fromIndex, toIndex) {
+    if (fromIndex === toIndex) return;
+    const room = state.settings.rooms.find((item) => item.id === roomId);
+    if (!room) return;
+    const photos = [...(room.photos || [])];
+    const [moved] = photos.splice(fromIndex, 1);
+    photos.splice(toIndex, 0, moved);
+    room.photos = photos;
+    settingsDirty = true;
+    rerender();
+  }
+
+  function reorderGitePhoto(fromIndex, toIndex) {
+    if (fromIndex === toIndex) return;
+    const photos = [...(state.settings.site.gitePhotos || [])];
+    const [moved] = photos.splice(fromIndex, 1);
+    photos.splice(toIndex, 0, moved);
+    state.settings.site.gitePhotos = photos;
     settingsDirty = true;
     rerender();
   }
@@ -778,6 +802,8 @@ export function createActions(ctx) {
     importBackup,
     handleBookingRequestAction,
     removeRoomPhoto,
+    reorderRoomPhoto,
+    reorderGitePhoto,
     uploadRoomPhoto,
     loadState,
     removePlatform,
