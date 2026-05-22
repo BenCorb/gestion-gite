@@ -112,11 +112,11 @@ export async function uploadImage(file) {
   return data;
 }
 
-export async function updateBookingRequest(id, action) {
+export async function updateBookingRequest(id, action, reservation) {
   const response = await fetch(`/api/booking-requests/${id}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action }),
+    body: JSON.stringify({ action, reservation }),
   });
   const data = await response.json();
   if (!response.ok) {

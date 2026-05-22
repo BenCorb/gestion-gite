@@ -48,6 +48,16 @@
         <div id="public-rooms" class="public-room-grid"></div>
       </section>
 
+      <section class="public-section" id="public-gite-section">
+        <div class="gite-section-layout">
+          <div>
+            <h2 id="public-gite-title">Le gîte</h2>
+            <p id="public-gite-description"></p>
+          </div>
+          <div id="public-gite-carousel" class="gite-carousel"></div>
+        </div>
+      </section>
+
       <section class="public-section" id="public-gallery-section">
         <h2>Galerie</h2>
         <div id="public-gallery" class="public-gallery"></div>
@@ -61,18 +71,28 @@
 
     <div id="request-modal" class="modal-backdrop is-hidden">
       <form id="booking-request-form" class="modal-panel">
+        <button class="modal-close-button" type="button" id="close-request-modal" aria-label="Fermer">×</button>
         <div class="section-header">
           <div>
             <h2>Demande de réservation</h2>
             <p id="request-room-label"></p>
           </div>
-          <button class="icon-button" type="button" id="close-request-modal">Fermer</button>
         </div>
         <input type="hidden" id="request-room-id" />
         <label>
           <span>Nom</span>
           <input id="request-guest-name" type="text" required />
         </label>
+        <div class="form-grid">
+          <label>
+            <span>Arrivée</span>
+            <input id="request-arrival-date" type="date" required />
+          </label>
+          <label>
+            <span>Départ</span>
+            <input id="request-departure-date" type="date" required />
+          </label>
+        </div>
         <label>
           <span>Email ou téléphone</span>
           <input id="request-guest-contact" type="text" required />
@@ -87,6 +107,19 @@
         </label>
         <button class="primary-button" type="submit">Envoyer la demande</button>
       </form>
+    </div>
+
+    <div id="amenities-modal" class="modal-backdrop is-hidden">
+      <section class="modal-panel">
+        <button class="modal-close-button" type="button" id="close-amenities-modal" aria-label="Fermer">×</button>
+        <div class="section-header">
+          <div>
+            <h2 id="amenities-title">Équipements</h2>
+            <p id="amenities-room-label"></p>
+          </div>
+        </div>
+        <div id="amenities-content" class="amenities-groups"></div>
+      </section>
     </div>
 
     <div id="toast" class="toast" aria-live="polite"></div>

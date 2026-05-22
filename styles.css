@@ -102,11 +102,12 @@ textarea {
 }
 
 .public-logo {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  object-fit: cover;
+  width: 168px;
+  height: 74px;
+  border-radius: 14px;
+  object-fit: contain;
   background: rgba(255, 255, 255, 0.88);
+  padding: 8px;
 }
 
 .public-hero-content {
@@ -147,6 +148,7 @@ textarea {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 18px;
+  margin-top: 24px;
 }
 
 .public-room-card,
@@ -163,11 +165,49 @@ textarea {
   border-radius: var(--radius-md);
 }
 
-.public-room-card img {
+.room-carousel {
+  position: relative;
+}
+
+.room-carousel img,
+.public-room-card > img {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
   display: block;
+}
+
+.carousel-button {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 252, 246, 0.92);
+  font-size: 1.25rem;
+}
+
+.carousel-button.prev {
+  left: 10px;
+}
+
+.carousel-button.next {
+  right: 10px;
+}
+
+.carousel-count {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(33, 27, 20, 0.72);
+  color: #fffdf8;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .public-room-card > div {
@@ -199,6 +239,55 @@ textarea {
   color: var(--accent-strong);
 }
 
+.gite-section-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(280px, 1.15fr);
+  gap: 28px;
+  align-items: center;
+}
+
+.gite-section-layout p {
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.gite-carousel {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.gite-carousel:empty {
+  display: none;
+}
+
+.map-embed {
+  margin-top: 18px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  min-height: 320px;
+}
+
+.map-embed iframe {
+  width: 100%;
+  height: 360px;
+  border: 0;
+  display: block;
+}
+
+.public-room-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.public-room-actions a {
+  text-decoration: none;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -217,8 +306,47 @@ textarea {
 }
 
 .modal-panel {
+  position: relative;
   display: grid;
   gap: 14px;
+}
+
+.modal-close-button {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(139, 106, 61, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 252, 246, 0.92);
+  color: var(--accent-strong);
+  cursor: pointer;
+  font-size: 1.35rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.modal-close-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(139, 106, 61, 0.12);
+}
+
+.amenities-groups {
+  display: grid;
+  gap: 16px;
+}
+
+.amenities-groups ul {
+  margin: 8px 0 0;
+  padding-left: 22px;
+}
+
+.amenities-groups li {
+  margin: 5px 0;
 }
 
 .login-body {
@@ -242,6 +370,12 @@ textarea {
   margin: 0;
   display: grid;
   gap: 8px;
+}
+
+.nested-settings-section {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(242, 235, 223, 0.42);
 }
 
 .hero {
@@ -597,6 +731,7 @@ textarea {
 }
 
 .reservation-meta {
+  margin-top: 8px;
   margin-bottom: 12px;
   color: var(--muted);
   font-size: 0.88rem;
@@ -1328,6 +1463,10 @@ textarea {
 
   .public-nav {
     align-items: flex-start;
+  }
+
+  .gite-section-layout {
+    grid-template-columns: 1fr;
   }
 
   .toast {
