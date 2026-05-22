@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SUIVI DE RÉSERVATIONS</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="page-shell">
@@ -16,6 +16,7 @@
         </div>
         <div class="hero-actions">
           <button class="secondary-button" id="refresh-button" type="button">Actualiser</button>
+          <button class="danger-button" id="header-logout-button" type="button">Déconnexion</button>
         </div>
       </header>
 
@@ -36,6 +37,9 @@
         </button>
         <button class="tab-button" data-tab="reports" type="button">
           📊 Bilans
+        </button>
+        <button class="tab-button" data-tab="requests" type="button">
+          ✉️ Demandes
         </button>
         <button class="tab-button tab-button-settings" data-tab="settings" type="button">
           ⚙️ Paramètres
@@ -288,6 +292,18 @@
           </div>
         </section>
 
+        <section class="tab-panel" id="tab-requests">
+          <article class="panel card">
+            <div class="panel-heading compact">
+              <div>
+                <h2>Demandes de réservation</h2>
+                <p>Demandes envoyées depuis la page vitrine.</p>
+              </div>
+            </div>
+            <div id="booking-requests-list" class="reservation-list empty-state-host"></div>
+          </article>
+        </section>
+
         <section class="tab-panel" id="tab-settings">
           <div class="panel-grid settings-layout">
             <article class="panel card">
@@ -311,6 +327,84 @@
 
                 <div class="full-width settings-section">
                   <div class="section-header">
+                    <h3>Page vitrine</h3>
+                  </div>
+                  <div class="form-grid">
+                    <label>
+                      <span>Titre vitrine</span>
+                      <input id="site-headline-input" type="text" />
+                    </label>
+                    <label>
+                      <span>Sous-titre</span>
+                      <input id="site-subtitle-input" type="text" />
+                    </label>
+                    <label class="full-width">
+                      <span>Introduction</span>
+                      <textarea id="site-intro-input" rows="3"></textarea>
+                    </label>
+                    <label>
+                      <span>Titre section gîte</span>
+                      <input id="site-gite-title-input" type="text" />
+                    </label>
+                    <label class="full-width">
+                      <span>Présentation du gîte</span>
+                      <textarea id="site-gite-description-input" rows="4"></textarea>
+                    </label>
+                    <label>
+                      <span>Adresse</span>
+                      <input id="site-address-input" type="text" />
+                    </label>
+                    <label>
+                      <span>Téléphone</span>
+                      <input id="site-phone-input" type="text" />
+                    </label>
+                    <label>
+                      <span>Email public</span>
+                      <input id="site-email-input" type="email" />
+                    </label>
+                    <label>
+                      <span>Police du corps</span>
+                      <select id="site-body-font-select">
+                        <option value="lato">Lato</option>
+                        <option value="raleway">Raleway</option>
+                        <option value="opensans">Open Sans</option>
+                        <option value="nunito">Nunito</option>
+                        <option value="librefranklin">Libre Franklin</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>Police des titres</span>
+                      <select id="site-heading-font-select">
+                        <option value="playfair">Playfair Display</option>
+                        <option value="cormorant">Cormorant Garamond</option>
+                        <option value="montserrat">Montserrat</option>
+                        <option value="baskerville">Libre Baskerville</option>
+                        <option value="satisfy">Satisfy</option>
+                        <option value="patrickhand">Patrick Hand SC</option>
+                        <option value="librefranklin">Libre Franklin</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>Logo</span>
+                      <input id="site-logo-upload" type="file" accept="image/*" />
+                    </label>
+                    <label>
+                      <span>Photo principale</span>
+                      <input id="site-hero-upload" type="file" accept="image/*" />
+                    </label>
+                    <label>
+                      <span>Photo section gîte</span>
+                      <input id="site-gite-photo-upload" type="file" accept="image/*" />
+                    </label>
+                    <input id="site-logo-url" type="hidden" />
+                    <input id="site-hero-url" type="hidden" />
+                    <div class="full-width media-preview" id="site-media-preview"></div>
+                    <div class="full-width media-preview" id="site-gite-photos-preview"></div>
+                  </div>
+                </div>
+
+                <div class="full-width settings-section">
+                  <div class="section-header">
                     <h3>Chambres</h3>
                     <button class="secondary-button" id="add-room-button" type="button">
                       Ajouter une chambre
@@ -321,12 +415,62 @@
 
                 <div class="full-width settings-section">
                   <div class="section-header">
+                    <h3>Accès gestion</h3>
+                  </div>
+                  <div class="form-grid">
+                    <label>
+                      <span>Mot de passe actuel</span>
+                      <input id="current-password-input" type="password" autocomplete="current-password" />
+                    </label>
+                    <label>
+                      <span>Nouveau mot de passe</span>
+                      <input id="new-password-input" type="password" autocomplete="new-password" />
+                    </label>
+                    <button class="secondary-button" id="change-password-button" type="button">
+                      Changer le mot de passe
+                    </button>
+                    <button class="danger-button" id="logout-button" type="button">
+                      Déconnexion
+                    </button>
+                  </div>
+                </div>
+
+                <div class="full-width settings-section">
+                  <div class="section-header">
                     <h3>Plateformes</h3>
                     <button class="secondary-button" id="add-platform-button" type="button">
                       Ajouter une plateforme
                     </button>
                   </div>
                   <div id="platforms-editor" class="stack-list"></div>
+                </div>
+
+                <div class="full-width settings-section">
+                  <div class="section-header">
+                    <h3>Notifications par email</h3>
+                  </div>
+                  <div class="form-grid">
+                    <label>
+                      <span>Email destinataire</span>
+                      <input id="notify-email-input" type="email" placeholder="Laisser vide pour désactiver" />
+                    </label>
+                    <label>
+                      <span>Serveur SMTP</span>
+                      <input id="smtp-host-input" type="text" placeholder="smtp.gmail.com" />
+                    </label>
+                    <label>
+                      <span>Port SMTP</span>
+                      <input id="smtp-port-input" type="number" value="587" />
+                    </label>
+                    <label>
+                      <span>Identifiant SMTP</span>
+                      <input id="smtp-user-input" type="text" />
+                    </label>
+                    <label>
+                      <span>Mot de passe SMTP</span>
+                      <input id="smtp-password-input" type="password" autocomplete="new-password" />
+                    </label>
+                  </div>
                 </div>
 
                 <div class="form-actions full-width">
@@ -378,6 +522,6 @@
       </div>
     </template>
 
-    <script type="module" src="app.js"></script>
+    <script type="module" src="/app.js"></script>
   </body>
 </html>
