@@ -59,6 +59,8 @@ export function cacheElements(elements) {
   elements.siteAddressInput = document.getElementById("site-address-input");
   elements.sitePhoneInput = document.getElementById("site-phone-input");
   elements.siteEmailInput = document.getElementById("site-email-input");
+  elements.siteBodyFontSelect = document.getElementById("site-body-font-select");
+  elements.siteHeadingFontSelect = document.getElementById("site-heading-font-select");
   elements.siteLogoUpload = document.getElementById("site-logo-upload");
   elements.siteHeroUpload = document.getElementById("site-hero-upload");
   elements.siteGitePhotoUpload = document.getElementById("site-gite-photo-upload");
