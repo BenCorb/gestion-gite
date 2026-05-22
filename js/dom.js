@@ -59,6 +59,11 @@ export function cacheElements(elements) {
   elements.siteAddressInput = document.getElementById("site-address-input");
   elements.sitePhoneInput = document.getElementById("site-phone-input");
   elements.siteEmailInput = document.getElementById("site-email-input");
+  elements.notifyEmailInput = document.getElementById("notify-email-input");
+  elements.smtpHostInput = document.getElementById("smtp-host-input");
+  elements.smtpPortInput = document.getElementById("smtp-port-input");
+  elements.smtpUserInput = document.getElementById("smtp-user-input");
+  elements.smtpPasswordInput = document.getElementById("smtp-password-input");
   elements.siteBodyFontSelect = document.getElementById("site-body-font-select");
   elements.siteHeadingFontSelect = document.getElementById("site-heading-font-select");
   elements.siteLogoUpload = document.getElementById("site-logo-upload");

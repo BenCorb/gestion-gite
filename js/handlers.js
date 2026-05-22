@@ -336,6 +336,13 @@ export function createActions(ctx) {
       },
       rooms,
       platforms,
+      notifications: {
+        notifyEmail:  elements.notifyEmailInput.value.trim(),
+        smtpHost:     elements.smtpHostInput.value.trim(),
+        smtpPort:     elements.smtpPortInput.value.trim() || "587",
+        smtpUser:     elements.smtpUserInput.value.trim(),
+        smtpPassword: elements.smtpPasswordInput.value,
+      },
       _versions: state.versions,
     };
 

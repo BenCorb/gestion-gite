@@ -86,11 +86,11 @@ textarea {
 }
 
 .public-hero {
-  min-height: 76vh;
-  padding: 24px min(6vw, 76px);
+  min-height: 100vh;
+  padding: 28px min(6vw, 76px);
   color: #fffdf8;
   background:
-    linear-gradient(90deg, rgba(33, 27, 20, 0.62), rgba(33, 27, 20, 0.22)),
+    linear-gradient(105deg, rgba(33, 27, 20, 0.80) 30%, rgba(33, 27, 20, 0.28) 100%),
     linear-gradient(135deg, #7b664b, #a98a5e);
   background-size: cover;
   background-position: center;
@@ -120,13 +120,15 @@ textarea {
 }
 
 #public-property-name {
-  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  font-size: clamp(1.4rem, 3vw, 2.4rem);
   line-height: 1.1;
+  letter-spacing: 0.03em;
+  font-weight: 700;
 }
 
 .public-hero-content {
   max-width: 760px;
-  padding-bottom: 6vh;
+  padding-bottom: 10vh;
 }
 
 .public-hero-content h1 {
@@ -138,6 +140,9 @@ textarea {
   max-width: 56ch;
   font-size: 1.25rem;
   line-height: 1.5;
+  font-style: italic;
+  opacity: 0.85;
+  margin-top: 12px;
 }
 
 #public-intro,
@@ -151,8 +156,28 @@ textarea {
 }
 
 .public-section {
-  padding: 42px 0;
-  border-bottom: 1px solid var(--border);
+  padding: 72px 0;
+}
+
+.public-section + .public-section {
+  border-top: 1px solid var(--border);
+}
+
+.public-section h2 {
+  font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+  margin-bottom: 32px;
+  position: relative;
+  display: inline-block;
+}
+
+.public-section h2::after {
+  content: "";
+  display: block;
+  margin-top: 10px;
+  width: 48px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
 }
 
 .availability-form {
@@ -188,10 +213,14 @@ textarea {
   position: relative;
 }
 
+.room-carousel img {
+  cursor: zoom-in;
+}
+
 .room-carousel img,
 .public-room-card > img {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
   display: block;
 }
@@ -200,21 +229,29 @@ textarea {
   position: absolute;
   top: 50%;
   translate: 0 -50%;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   display: grid;
   place-items: center;
-  background: rgba(255, 252, 246, 0.92);
-  font-size: 1.25rem;
+  background: rgba(20, 14, 8, 0.48);
+  backdrop-filter: blur(6px);
+  color: #fffdf8;
+  border: 1px solid rgba(255, 253, 248, 0.18);
+  transition: background 0.18s, scale 0.18s;
+}
+
+.carousel-button:hover {
+  background: rgba(20, 14, 8, 0.72);
+  scale: 1.1;
 }
 
 .carousel-button.prev {
-  left: 10px;
+  left: 12px;
 }
 
 .carousel-button.next {
-  right: 10px;
+  right: 12px;
 }
 
 .carousel-count {
@@ -229,8 +266,26 @@ textarea {
   font-weight: 700;
 }
 
-.public-room-card > div {
-  padding: 18px;
+.room-image-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 32px 18px 16px;
+  background: linear-gradient(to top, rgba(33, 27, 20, 0.78) 0%, transparent 100%);
+  color: #fffdf8;
+  pointer-events: none;
+}
+
+.room-image-overlay h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: inherit;
+  font-weight: 700;
+}
+
+.room-card-body {
+  padding: 16px 18px 20px;
 }
 
 .amenities {
@@ -238,14 +293,26 @@ textarea {
   font-size: 0.9rem;
 }
 
-.public-gallery,
+.public-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
 .media-preview {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
 }
 
-.public-gallery img,
+.public-gallery img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
 .media-preview img {
   width: 100%;
   aspect-ratio: 4 / 3;
@@ -281,8 +348,23 @@ textarea {
   display: none;
 }
 
+.contact-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 40px;
+  align-items: start;
+}
+
+.contact-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
 .map-embed {
-  margin-top: 18px;
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--border);
@@ -294,6 +376,98 @@ textarea {
   height: 360px;
   border: 0;
   display: block;
+}
+
+.lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(10, 7, 4, 0.94);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+}
+
+.lightbox-backdrop img {
+  max-width: calc(100vw - 140px);
+  max-height: calc(100vh - 80px);
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  cursor: default;
+  user-select: none;
+  display: block;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 253, 248, 0.12);
+  border: 1px solid rgba(255, 253, 248, 0.2);
+  border-radius: 50%;
+  color: #fffdf8;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+
+.lightbox-close:hover {
+  background: rgba(255, 253, 248, 0.24);
+}
+
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 253, 248, 0.12);
+  border: 1px solid rgba(255, 253, 248, 0.2);
+  border-radius: 50%;
+  color: #fffdf8;
+  cursor: pointer;
+  transition: background 0.18s, scale 0.18s;
+}
+
+.lightbox-nav:hover {
+  background: rgba(255, 253, 248, 0.24);
+  scale: 1.08;
+}
+
+.lightbox-prev { left: 18px; }
+.lightbox-next { right: 18px; }
+
+.lightbox-count {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  translate: -50% 0;
+  color: rgba(255, 253, 248, 0.65);
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+
+@media (max-width: 780px) {
+  .lightbox-backdrop img {
+    max-width: 100vw;
+    max-height: calc(100vh - 100px);
+  }
+  .lightbox-nav {
+    width: 40px;
+    height: 40px;
+  }
+  .lightbox-prev { left: 8px; }
+  .lightbox-next { right: 8px; }
 }
 
 .public-room-actions {
@@ -673,6 +847,11 @@ textarea {
 .danger-button {
   background: rgba(138, 78, 67, 0.12);
   color: var(--danger);
+}
+
+.icon-button.carousel-button {
+  padding: 0;
+  font-size: 0;
 }
 
 .primary-button:hover,
@@ -1490,8 +1669,12 @@ textarea {
   }
 
   .public-hero {
-    min-height: 68vh;
+    min-height: 100svh;
     padding: 18px;
+  }
+
+  .contact-layout {
+    grid-template-columns: 1fr;
   }
 
   .public-nav {
