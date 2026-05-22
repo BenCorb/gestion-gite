@@ -686,6 +686,11 @@ function renderSettingsForm(ctx) {
   elements.siteAddressInput.value = state.settings.site?.address || "";
   elements.sitePhoneInput.value = state.settings.site?.phone || "";
   elements.siteEmailInput.value = state.settings.site?.email || "";
+  elements.notifyEmailInput.value  = state.settings.notifications?.notifyEmail  || "";
+  elements.smtpHostInput.value     = state.settings.notifications?.smtpHost     || "";
+  elements.smtpPortInput.value     = state.settings.notifications?.smtpPort     || "587";
+  elements.smtpUserInput.value     = state.settings.notifications?.smtpUser     || "";
+  elements.smtpPasswordInput.value = state.settings.notifications?.smtpPassword || "";
   elements.siteBodyFontSelect.value = state.settings.site?.bodyFont || "lato";
   elements.siteHeadingFontSelect.value = state.settings.site?.headingFont || "playfair";
   elements.siteLogoUrl.value = state.settings.site?.logoUrl || "";

@@ -16,6 +16,8 @@ import hashlib
 import hmac
 import secrets
 import shutil
+import smtplib
+from email.message import EmailMessage
 from datetime import datetime, timedelta
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -71,6 +73,13 @@ DEFAULT_SETTINGS = {
         "bodyFont": "lato",
         "headingFont": "playfair",
     },
+    "notifications": {
+        "notifyEmail": "",
+        "smtpHost": "",
+        "smtpPort": "587",
+        "smtpUser": "",
+        "smtpPassword": "",
+    },
 }
 
 DEFAULT_RESERVATIONS = {"reservations": []}
@@ -123,6 +132,11 @@ def ensure_database() -> None:
             );
 
             CREATE TABLE IF NOT EXISTS site_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS notification_settings (
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             );
@@ -194,6 +208,7 @@ def ensure_database() -> None:
         if settings_count == 0:
             import_initial_data(conn)
         initialize_site_settings(conn)
+        initialize_notification_settings(conn)
         initialize_admin_auth(conn)
         conn.commit()
 
@@ -236,6 +251,13 @@ def initialize_site_settings(conn: sqlite3.Connection) -> None:
     conn.executemany(
         "INSERT OR IGNORE INTO site_settings(key, value) VALUES(?, ?)",
         [(key, json.dumps(value, ensure_ascii=False)) for key, value in DEFAULT_SETTINGS["site"].items()],
+    )
+
+
+def initialize_notification_settings(conn: sqlite3.Connection) -> None:
+    conn.executemany(
+        "INSERT OR IGNORE INTO notification_settings(key, value) VALUES(?, ?)",
+        [(key, json.dumps(value, ensure_ascii=False)) for key, value in DEFAULT_SETTINGS["notifications"].items()],
     )
 
 
@@ -356,6 +378,7 @@ def normalize_settings(settings: dict) -> dict:
         "currency": settings.get("currency", DEFAULT_SETTINGS["currency"]),
         "platforms": platforms,
         "site": normalize_site_settings(site),
+        "notifications": normalize_notification_settings(settings.get("notifications", {})),
         "rooms": [],
     }
     for index, room in enumerate(settings.get("rooms", DEFAULT_SETTINGS["rooms"])):
@@ -512,12 +535,14 @@ def fetch_settings(conn: sqlite3.Connection) -> dict:
     ).fetchall()
     photos_by_room = fetch_room_photos(conn)
     site = fetch_site_settings(conn)
+    notifications = fetch_notification_settings(conn)
     return normalize_settings(
         {
             "propertyName": base["property_name"],
             "description": base["description"],
             "currency": base["currency"],
             "site": site,
+            "notifications": notifications,
             "rooms": [
                 {
                     "id": room["id"],
@@ -559,6 +584,35 @@ def fetch_site_settings(conn: sqlite3.Connection) -> dict:
         except json.JSONDecodeError:
             settings[row["key"]] = row["value"]
     return normalize_site_settings(settings)
+
+
+def normalize_notification_settings(notif: dict) -> dict:
+    port = str(notif.get("smtpPort", "587")).strip()
+    return {
+        "notifyEmail":  str(notif.get("notifyEmail", "")).strip(),
+        "smtpHost":     str(notif.get("smtpHost", "")).strip(),
+        "smtpPort":     port if port.isdigit() else "587",
+        "smtpUser":     str(notif.get("smtpUser", "")).strip(),
+        "smtpPassword": str(notif.get("smtpPassword", "")).strip(),
+    }
+
+
+def fetch_notification_settings(conn: sqlite3.Connection) -> dict:
+    rows = conn.execute("SELECT key, value FROM notification_settings").fetchall()
+    raw = {**DEFAULT_SETTINGS["notifications"]}
+    for row in rows:
+        try:
+            raw[row["key"]] = json.loads(row["value"])
+        except json.JSONDecodeError:
+            raw[row["key"]] = row["value"]
+    return normalize_notification_settings(raw)
+
+
+def sync_notification_settings_db(conn: sqlite3.Connection, notif: dict) -> None:
+    conn.executemany(
+        "INSERT OR REPLACE INTO notification_settings(key, value) VALUES(?, ?)",
+        [(k, json.dumps(v, ensure_ascii=False)) for k, v in normalize_notification_settings(notif).items()],
+    )
 
 
 def fetch_reservations(conn: sqlite3.Connection) -> list[dict]:
@@ -686,6 +740,7 @@ def validate_booking_request(payload: dict, settings: dict, reservations: list[d
     return {
         "id": uuid.uuid4().hex,
         "roomId": room_id,
+        "roomName": room["name"],
         "arrivalDate": arrival_date,
         "departureDate": departure_date,
         "guestName": guest_name,
@@ -832,6 +887,7 @@ def write_settings_db(conn: sqlite3.Connection, settings: dict) -> None:
     sync_rooms_db(conn, settings["rooms"])
     sync_platforms_db(conn, settings["platforms"])
     sync_site_settings_db(conn, settings["site"])
+    sync_notification_settings_db(conn, settings.get("notifications", {}))
 
 
 def upsert_settings_db(conn: sqlite3.Connection, settings: dict) -> None:
@@ -1095,6 +1151,7 @@ def validate_settings(payload: dict) -> dict:
         "rooms": normalized_rooms,
         "platforms": normalized_platforms,
         "site": normalize_site_settings(payload.get("site", {})),
+        "notifications": normalize_notification_settings(payload.get("notifications", {})),
     }
 
 
@@ -1388,6 +1445,46 @@ def public_room_summary(room: dict) -> dict:
     }
 
 
+def send_booking_notification(request: dict, notifications: dict) -> None:
+    recipient = notifications.get("notifyEmail", "")
+    host = notifications.get("smtpHost", "")
+    user = notifications.get("smtpUser", "")
+    password = notifications.get("smtpPassword", "")
+    port = int(notifications.get("smtpPort", "587") or 587)
+    if not recipient or not host or not user:
+        return
+    room_name = request.get("roomName", request.get("roomId", ""))
+    msg = EmailMessage()
+    msg["Subject"] = f"Nouvelle demande de réservation — {room_name}"
+    msg["From"] = user
+    msg["To"] = recipient
+    msg.set_content(
+        f"Chambre : {room_name}\n"
+        f"Voyageur : {request.get('guestName', '')}\n"
+        f"Contact : {request.get('guestContact', '')}\n"
+        f"Arrivée : {request.get('arrivalDate', '')}\n"
+        f"Départ : {request.get('departureDate', '')}\n"
+        f"Voyageurs : {request.get('guestCount', '')}\n"
+        f"Message : {request.get('message', '') or '—'}\n"
+    )
+    try:
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port) as smtp:
+                smtp.ehlo()
+                smtp.login(user, password)
+                smtp.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port) as smtp:
+                smtp.ehlo()
+                smtp.starttls()
+                smtp.ehlo()
+                smtp.login(user, password)
+                smtp.send_message(msg)
+        logger.info("Notification email sent to %s", recipient)
+    except Exception as exc:
+        logger.error("Failed to send notification email: %s", exc)
+
+
 class AppHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(BASE_DIR), **kwargs)
@@ -1515,7 +1612,13 @@ class AppHandler(SimpleHTTPRequestHandler):
                         insert_booking_request_db(conn, booking_request)
                         bump_version(conn, "booking_requests_revision")
                         conn.commit()
+                        notifications = fetch_notification_settings(conn)
                         self.send_json({"bookingRequest": booking_request}, HTTPStatus.CREATED)
+                        threading.Thread(
+                            target=send_booking_notification,
+                            args=(booking_request, notifications),
+                            daemon=True,
+                        ).start()
                         return
 
             if not self.require_admin():
