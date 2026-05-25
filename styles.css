@@ -504,6 +504,7 @@ textarea {
   gap: 14px;
   max-height: calc(100vh - 40px);
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .reservation-modal {
@@ -1023,6 +1024,17 @@ textarea {
   margin-bottom: 0;
 }
 
+.reservation-card header .reservation-meta {
+  justify-content: flex-start;
+}
+
+.reservation-date-range {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
 .reservation-summary-end {
   display: inline-flex;
   align-items: center;
@@ -1482,17 +1494,45 @@ textarea {
 }
 
 @media (max-width: 780px) {
+  html,
   body {
     overflow-x: hidden;
+  }
+
+  .modal-backdrop {
+    width: 100%;
+    max-width: 100vw;
+    padding: 10px;
+    overflow-x: hidden;
+  }
+
+  .modal-panel {
+    width: min(520px, 100%);
+    max-width: calc(100vw - 20px);
+    max-height: calc(100svh - 20px);
+    padding: 18px;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+
+  .modal-panel > *,
+  .modal-panel label,
+  .modal-panel .form-grid,
+  .modal-panel .section-header,
+  .modal-panel .form-actions {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .reservation-modal {
     padding: 8px;
     align-items: stretch;
+    justify-items: stretch;
   }
 
   .reservation-modal-panel {
     width: 100%;
+    max-width: calc(100vw - 16px);
     max-height: calc(100svh - 16px);
     padding: 18px;
     border-radius: 16px;
@@ -1665,12 +1705,49 @@ textarea {
     padding: 14px;
   }
 
+  .reservations-panel .reservation-card header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+  }
+
+  .reservations-panel .reservation-card header > div {
+    width: 100%;
+    min-width: 0;
+  }
+
   .reservation-card h3 {
     font-size: 1.2rem;
   }
 
-  .reservation-meta {
+  .reservations-panel .reservation-card .reservation-meta {
+    justify-content: flex-start;
+    align-items: center;
+    flex-wrap: nowrap;
     gap: 8px;
+    max-width: 100%;
+    margin-bottom: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 3px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .reservations-panel .reservation-card .reservation-meta::-webkit-scrollbar {
+    display: none;
+  }
+
+  .reservations-panel .reservation-card .reservation-date-range {
+    margin-top: 6px;
+    font-size: 0.88rem;
+  }
+
+  .reservations-panel .reservation-card .reservation-summary-end {
+    align-items: center;
+    justify-content: flex-end;
+    margin-left: 0;
   }
 
   .reservation-details {
@@ -1680,8 +1757,19 @@ textarea {
   .room-tag,
   .platform-tag,
   .calendar-chip,
-  .type-tag {
+  .type-tag,
+  .status-tag {
     font-size: 0.72rem;
+  }
+
+  .reservations-panel .reservation-card .room-tag,
+  .reservations-panel .reservation-card .platform-tag,
+  .reservations-panel .reservation-card .type-tag,
+  .reservations-panel .reservation-card .status-tag {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 6px 10px;
+    white-space: nowrap;
   }
 
   .filters label,
