@@ -508,11 +508,18 @@ textarea {
 
 .reservation-modal {
   z-index: 45;
+  overflow-x: hidden;
 }
 
 .reservation-modal-panel {
   width: min(760px, 100%);
+  max-width: 100%;
   padding: 28px;
+  overflow-x: hidden;
+}
+
+.reservation-modal-panel .form-grid {
+  max-width: 100%;
   overflow-x: hidden;
 }
 
@@ -1489,10 +1496,12 @@ textarea {
   .reservation-modal {
     padding: 8px;
     align-items: stretch;
+    overflow-x: clip;
   }
 
   .reservation-modal-panel {
     width: 100%;
+    max-width: 100%;
     max-height: calc(100svh - 16px);
     padding: 18px;
     border-radius: 16px;
