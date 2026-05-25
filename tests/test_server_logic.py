@@ -1,8 +1,11 @@
 import sqlite3
 import unittest
 import uuid
+from http import HTTPStatus
 
 from server import (
+    ADMIN_APP_PATH,
+    AppHandler,
     DEFAULT_SETTINGS,
     DIRECT_BOOKING_PLATFORM,
     build_reservation_payload_from_request,
@@ -12,14 +15,15 @@ from server import (
     fetch_reservations,
     fetch_settings,
     insert_booking_request_db,
+    is_admin_root_path,
     is_room_available,
     initialize_meta,
+    normalize_amenity_groups,
     rebuild_reservations,
     sync_platforms_db,
     sync_rooms_db,
     sync_site_settings_db,
     validate_booking_request,
-    normalize_amenity_groups,
     upsert_settings_db,
     upsert_reservations_db,
     validate_reservation,
@@ -55,6 +59,46 @@ def make_reservation(
         "comment": "",
     }
     return validate_reservation(payload, make_settings(), [])
+
+
+class AdminRoutingTests(unittest.TestCase):
+    def make_handler(self, authenticated: bool):
+        handler = object.__new__(AppHandler)
+        handler.is_authenticated = lambda: authenticated
+        handler.redirects = []
+
+        def send_redirect(location: str, status: HTTPStatus = HTTPStatus.FOUND) -> None:
+            handler.redirects.append((location, status))
+
+        handler.send_redirect = send_redirect
+        return handler
+
+    def test_admin_roots_are_identified(self):
+        self.assertTrue(is_admin_root_path("/gestion"))
+        self.assertTrue(is_admin_root_path("/gestion/"))
+        self.assertFalse(is_admin_root_path(ADMIN_APP_PATH))
+
+    def test_authenticated_admin_root_redirects_to_app(self):
+        for path in ("/gestion", "/gestion/"):
+            with self.subTest(path=path):
+                handler = self.make_handler(authenticated=True)
+
+                redirected = handler.redirect_authenticated_admin_root(path)
+
+                self.assertTrue(redirected)
+                self.assertEqual(handler.redirects, [(ADMIN_APP_PATH, HTTPStatus.FOUND)])
+
+    def test_unauthenticated_admin_root_serves_login(self):
+        handler = self.make_handler(authenticated=False)
+
+        self.assertFalse(handler.redirect_authenticated_admin_root("/gestion/"))
+        self.assertEqual(handler.route_static_page("/gestion/"), "/login.html")
+
+    def test_admin_app_does_not_redirect_to_itself(self):
+        handler = self.make_handler(authenticated=True)
+
+        self.assertFalse(handler.redirect_authenticated_admin_root(ADMIN_APP_PATH))
+        self.assertEqual(handler.route_static_page(ADMIN_APP_PATH), "/index.html")
 
 
 class ValidateReservationTests(unittest.TestCase):

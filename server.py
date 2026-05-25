@@ -35,6 +35,8 @@ HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "8080"))
 SESSION_COOKIE_NAME = "gite_admin_session"
 SESSION_DAYS = int(os.environ.get("GITE_SESSION_DAYS", "7"))
+ADMIN_ROOT_PATHS = {"/gestion", "/gestion/"}
+ADMIN_APP_PATH = "/gestion/app"
 LOGIN_MAX_ATTEMPTS = 10
 LOGIN_WINDOW_SECONDS = 15 * 60
 MAX_UPLOAD_SIZE = 5 * 1024 * 1024
@@ -1426,6 +1428,10 @@ def session_cookie(token: str, clear: bool = False) -> str:
     return value
 
 
+def is_admin_root_path(path: str) -> bool:
+    return path in ADMIN_ROOT_PATHS
+
+
 def public_room_summary(room: dict) -> dict:
     return {
         key: room[key]
@@ -1492,14 +1498,22 @@ class AppHandler(SimpleHTTPRequestHandler):
     def route_static_page(self, path: str) -> str:
         if path == "/":
             return "/public.html"
-        if path in {"/gestion", "/gestion/"}:
-            return "/index.html" if self.is_authenticated() else "/login.html"
-        if path == "/gestion/app":
+        if is_admin_root_path(path):
+            return "/login.html"
+        if path == ADMIN_APP_PATH:
             return "/index.html"
         return path
 
+    def redirect_authenticated_admin_root(self, path: str) -> bool:
+        if is_admin_root_path(path) and self.is_authenticated():
+            self.send_redirect(ADMIN_APP_PATH)
+            return True
+        return False
+
     def do_HEAD(self) -> None:
         parsed = urlparse(self.path)
+        if self.redirect_authenticated_admin_root(parsed.path):
+            return
         self.path = self.route_static_page(parsed.path)
         super().do_HEAD()
 
@@ -1548,6 +1562,8 @@ class AppHandler(SimpleHTTPRequestHandler):
                     "exportedAt": datetime.now().isoformat(timespec="seconds"),
                 }
             )
+            return
+        if self.redirect_authenticated_admin_root(parsed.path):
             return
         self.path = self.route_static_page(parsed.path)
         super().do_GET()
@@ -1835,6 +1851,12 @@ class AppHandler(SimpleHTTPRequestHandler):
             self.send_header(key, value)
         self.end_headers()
         self.wfile.write(body)
+
+    def send_redirect(self, location: str, status: HTTPStatus = HTTPStatus.FOUND) -> None:
+        self.send_response(status)
+        self.send_header("Location", location)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def send_error_json(self, message: str, status: HTTPStatus) -> None:
         self.send_json({"error": message}, status=status)
