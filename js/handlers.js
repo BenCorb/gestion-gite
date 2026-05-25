@@ -32,6 +32,7 @@ export function createActions(ctx) {
   const { elements, setBookingRequests, setReservations, setSettings, setVersions, state } = ctx;
   let autoRefreshIntervalId = null;
   let settingsDirty = false;
+  let reservationModalTrigger = null;
 
   function rerender() {
     initializeReportControls(state, elements);
@@ -80,6 +81,16 @@ export function createActions(ctx) {
 
     elements.refreshButton.addEventListener("click", () => loadState("manual"));
     elements.headerLogoutButton.addEventListener("click", handleLogout);
+    elements.openReservationModalButton.addEventListener("click", (event) => {
+      openReservationModal({ resetForm: true, trigger: event.currentTarget });
+    });
+    elements.closeReservationModalButton.addEventListener("click", () => closeReservationModal());
+    elements.reservationModal.addEventListener("click", (event) => {
+      if (event.target === elements.reservationModal) {
+        closeReservationModal();
+      }
+    });
+    document.addEventListener("keydown", handleReservationModalKeydown);
     elements.bookingType.addEventListener("change", handleBookingTypeChange);
     elements.reservationForm.addEventListener("submit", handleReservationSubmit);
     elements.resetFormButton.addEventListener("click", resetReservationForm);
@@ -181,7 +192,7 @@ export function createActions(ctx) {
       setVersions(data.versions);
       setApiVersions(data.versions);
       rerender();
-      resetReservationForm();
+      closeReservationModal();
       showToast(elements, isBlock ? "Blocage enregistré." : "Réservation enregistrée.");
     } catch (error) {
       if (await handleConflict(error)) {
@@ -202,7 +213,68 @@ export function createActions(ctx) {
     applyBookingTypeFormState("reservation");
   }
 
-  function editReservation(id) {
+  function openReservationModal({ resetForm = false, trigger = null } = {}) {
+    reservationModalTrigger = trigger || document.activeElement;
+    if (resetForm) {
+      resetReservationForm();
+    }
+    elements.reservationModal.classList.remove("is-hidden");
+    elements.reservationModal.setAttribute("aria-hidden", "false");
+    document.documentElement.classList.add("modal-open");
+    document.body.classList.add("modal-open");
+    requestAnimationFrame(() => {
+      elements.bookingType.focus();
+    });
+  }
+
+  function closeReservationModal() {
+    if (elements.reservationModal.classList.contains("is-hidden")) {
+      return;
+    }
+    elements.reservationModal.classList.add("is-hidden");
+    elements.reservationModal.setAttribute("aria-hidden", "true");
+    document.documentElement.classList.remove("modal-open");
+    document.body.classList.remove("modal-open");
+    resetReservationForm();
+    if (reservationModalTrigger && document.contains(reservationModalTrigger)) {
+      reservationModalTrigger.focus();
+    }
+    reservationModalTrigger = null;
+  }
+
+  function handleReservationModalKeydown(event) {
+    if (elements.reservationModal.classList.contains("is-hidden")) {
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeReservationModal();
+      return;
+    }
+    if (event.key !== "Tab") {
+      return;
+    }
+
+    const focusableElements = [
+      ...elements.reservationModal.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      ),
+    ].filter((element) => !element.disabled && element.offsetParent !== null);
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+    if (!firstElement || !lastElement) {
+      return;
+    }
+    if (event.shiftKey && document.activeElement === firstElement) {
+      event.preventDefault();
+      lastElement.focus();
+    } else if (!event.shiftKey && document.activeElement === lastElement) {
+      event.preventDefault();
+      firstElement.focus();
+    }
+  }
+
+  function editReservation(id, trigger = null) {
     const reservation = state.reservations.find((item) => item.id === id);
     if (!reservation) {
       return;
@@ -237,7 +309,7 @@ export function createActions(ctx) {
     elements.comment.value = reservation.comment || "";
     elements.formModeBadge.textContent = "Édition";
     applyBookingTypeFormState(elements.bookingType.value);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    openReservationModal({ trigger });
   }
 
   async function deleteReservation(id) {
@@ -806,6 +878,7 @@ export function createActions(ctx) {
     handleBookingTypeChange,
     handleReservationSubmit,
     handleSettingsSubmit,
+    openReservationModal,
     importBackup,
     handleBookingRequestAction,
     removeRoomPhoto,
