@@ -513,6 +513,7 @@ textarea {
 .reservation-modal-panel {
   width: min(760px, 100%);
   padding: 28px;
+  overflow-x: hidden;
 }
 
 .reservation-modal-heading {
