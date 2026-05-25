@@ -7,6 +7,9 @@ export function cacheElements(elements) {
   elements.tabButtons = [...document.querySelectorAll(".tab-button")];
   elements.tabPanels = [...document.querySelectorAll(".tab-panel")];
   elements.reservationForm = document.getElementById("reservation-form");
+  elements.reservationModal = document.getElementById("reservation-modal");
+  elements.openReservationModalButton = document.getElementById("open-reservation-modal-button");
+  elements.closeReservationModalButton = document.getElementById("close-reservation-modal-button");
   elements.formModeBadge = document.getElementById("form-mode-badge");
   elements.reservationId = document.getElementById("reservation-id");
   elements.reservationGroupId = document.getElementById("reservation-group-id");
