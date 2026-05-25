@@ -277,11 +277,11 @@ function renderReservationsList(ctx) {
                 <span class="room-tag custom-color" ${getRoomStyle(state, reservation.roomId)}>${escapeHtml(roomName)}</span>
                 <span class="type-tag ${getEntryType(reservation) === "block" ? "block" : ""}">${getEntryTypeLabel(reservation)}</span>
                 <span class="status-tag status-${escapeHtml(reservation.status || "confirmed")}">${getStatusLabel(reservation.status)}</span>
-                <span>${formatDate(reservation.arrivalDate)} au ${formatDate(reservation.departureDate)}</span>
+                <span class="platform-tag">${escapeHtml(getDisplayPlatform(reservation))}</span>
               </div>
+              <span class="reservation-date-range">${formatDate(reservation.arrivalDate)} au ${formatDate(reservation.departureDate)}</span>
             </div>
             <div class="reservation-summary-end">
-              <span class="platform-tag">${escapeHtml(getDisplayPlatform(reservation))}</span>
               <span class="reservation-toggle-indicator" aria-hidden="true">⌄</span>
             </div>
           </header>
