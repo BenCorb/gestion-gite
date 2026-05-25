@@ -640,7 +640,6 @@ h3 {
 .subtitle,
 .panel-heading p,
 .empty-state p,
-.tips-list,
 .badge {
   color: var(--muted);
 }
@@ -748,9 +747,12 @@ h3 {
   gap: 20px;
 }
 
-.reports-layout,
-.settings-layout {
+.reports-layout {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.settings-layout {
+  grid-template-columns: 1fr;
 }
 
 .panel {
@@ -975,7 +977,6 @@ textarea {
 .reservation-footer span,
 .breakdown-card p,
 .breakdown-card strong,
-.tips-list li,
 .empty-state h3,
 .empty-state p,
 .panel-heading p {
@@ -1308,6 +1309,11 @@ textarea {
   align-items: center;
 }
 
+.amenity-group-row,
+.booking-link-row {
+  grid-template-columns: minmax(120px, 160px) minmax(0, 1fr) auto;
+}
+
 .color-select {
   min-width: 0;
 }
@@ -1330,15 +1336,6 @@ textarea {
 .filters label,
 .calendar-controls label {
   flex: 1 1 180px;
-}
-
-.tips-list {
-  margin: 0;
-  padding-left: 18px;
-  display: grid;
-  gap: 12px;
-  line-height: 1.42;
-  font-size: 0.94rem;
 }
 
 .empty-state {
