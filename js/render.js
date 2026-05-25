@@ -260,6 +260,7 @@ function renderReservationsList(ctx) {
     .map((reservation) => {
       const roomName = getRoomName(state, reservation.roomId);
       const detailsId = `reservation-details-${escapeHtml(reservation.id)}`;
+      const cardTitle = getReservationCardTitle(reservation);
       return `
         <article
           class="reservation-card is-collapsed"
@@ -271,7 +272,7 @@ function renderReservationsList(ctx) {
         >
           <header>
             <div>
-              <h3>${escapeHtml(reservation.bookingName)}</h3>
+              <h3>${escapeHtml(cardTitle)}</h3>
               <div class="reservation-meta">
                 <span class="room-tag custom-color" ${getRoomStyle(state, reservation.roomId)}>${escapeHtml(roomName)}</span>
                 <span class="type-tag ${getEntryType(reservation) === "block" ? "block" : ""}">${getEntryTypeLabel(reservation)}</span>
@@ -365,6 +366,13 @@ function renderReservationsList(ctx) {
       actions.deleteReservation(button.dataset.id);
     });
   });
+}
+
+function getReservationCardTitle(reservation) {
+  if (getEntryType(reservation) === "block") {
+    return reservation.bookingName || "Blocage";
+  }
+  return reservation.clientName || reservation.bookingName;
 }
 
 function renderCalendar(state, elements) {

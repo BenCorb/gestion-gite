@@ -133,6 +133,7 @@ export function createActions(ctx) {
       id: elements.reservationId.value || undefined,
       groupId: elements.reservationGroupId.value || undefined,
       bookingType,
+      bookingName: isBlock ? elements.blockTitle.value.trim() : undefined,
       status: isBlock ? "blocked" : elements.reservationStatus.value,
       roomId: elements.roomId.value,
       roomIds: blockRoomIds,
@@ -284,6 +285,7 @@ export function createActions(ctx) {
     elements.reservationId.value = reservation.id;
     elements.reservationGroupId.value = reservation.groupId || "";
     elements.bookingType.value = getEntryType(reservation);
+    elements.blockTitle.value = getEntryType(reservation) === "block" ? reservation.bookingName || "" : "";
     renderReservationFormOptions({ ...ctx, actions });
     elements.roomId.value = reservation.roomId;
 
