@@ -37,6 +37,7 @@ SESSION_COOKIE_NAME = "gite_admin_session"
 SESSION_DAYS = int(os.environ.get("GITE_SESSION_DAYS", "7"))
 ADMIN_ROOT_PATHS = {"/gestion", "/gestion/"}
 ADMIN_APP_PATH = "/gestion/app"
+ADMIN_LOGIN_PATH = "/gestion/"
 LOGIN_MAX_ATTEMPTS = 10
 LOGIN_WINDOW_SECONDS = 15 * 60
 MAX_UPLOAD_SIZE = 5 * 1024 * 1024
@@ -1510,9 +1511,18 @@ class AppHandler(SimpleHTTPRequestHandler):
             return True
         return False
 
+    def redirect_unauthenticated_admin_app(self, path: str) -> bool:
+        if path == ADMIN_APP_PATH and not self.is_authenticated():
+            self.send_redirect(ADMIN_LOGIN_PATH)
+            return True
+        return False
+
+    def redirect_admin_route(self, path: str) -> bool:
+        return self.redirect_authenticated_admin_root(path) or self.redirect_unauthenticated_admin_app(path)
+
     def do_HEAD(self) -> None:
         parsed = urlparse(self.path)
-        if self.redirect_authenticated_admin_root(parsed.path):
+        if self.redirect_admin_route(parsed.path):
             return
         self.path = self.route_static_page(parsed.path)
         super().do_HEAD()
@@ -1563,7 +1573,7 @@ class AppHandler(SimpleHTTPRequestHandler):
                 }
             )
             return
-        if self.redirect_authenticated_admin_root(parsed.path):
+        if self.redirect_admin_route(parsed.path):
             return
         self.path = self.route_static_page(parsed.path)
         super().do_GET()

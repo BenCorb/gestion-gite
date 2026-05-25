@@ -5,6 +5,7 @@ from http import HTTPStatus
 
 from server import (
     ADMIN_APP_PATH,
+    ADMIN_LOGIN_PATH,
     AppHandler,
     DEFAULT_SETTINGS,
     DIRECT_BOOKING_PLATFORM,
@@ -99,6 +100,14 @@ class AdminRoutingTests(unittest.TestCase):
 
         self.assertFalse(handler.redirect_authenticated_admin_root(ADMIN_APP_PATH))
         self.assertEqual(handler.route_static_page(ADMIN_APP_PATH), "/index.html")
+
+    def test_unauthenticated_admin_app_redirects_to_login(self):
+        handler = self.make_handler(authenticated=False)
+
+        redirected = handler.redirect_unauthenticated_admin_app(ADMIN_APP_PATH)
+
+        self.assertTrue(redirected)
+        self.assertEqual(handler.redirects, [(ADMIN_LOGIN_PATH, HTTPStatus.FOUND)])
 
 
 class ValidateReservationTests(unittest.TestCase):
