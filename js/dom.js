@@ -15,6 +15,7 @@ export function cacheElements(elements) {
   elements.reservationGroupId = document.getElementById("reservation-group-id");
   elements.bookingType = document.getElementById("booking-type");
   elements.roomId = document.getElementById("room-id");
+  elements.blockTitle = document.getElementById("block-title");
   elements.blockRoomsSelector = document.getElementById("block-rooms-selector");
   elements.arrivalDate = document.getElementById("arrival-date");
   elements.departureDate = document.getElementById("departure-date");

@@ -247,6 +247,21 @@ class BuildReservationsTests(unittest.TestCase):
         self.assertEqual({item["roomId"] for item in reservations}, {"chambre-1", "chambre-2"})
         self.assertEqual(len({item["groupId"] for item in reservations}), 1)
 
+    def test_build_block_keeps_custom_booking_name_for_each_room(self):
+        payload = {
+            "bookingType": "block",
+            "status": "blocked",
+            "bookingName": "Travaux piscine",
+            "roomIds": ["chambre-1", "chambre-2"],
+            "arrivalDate": "2026-06-01",
+            "departureDate": "2026-06-03",
+            "comment": "Maintenance",
+        }
+
+        reservations = build_reservations(payload, make_settings(), [])
+
+        self.assertEqual({item["bookingName"] for item in reservations}, {"Travaux piscine"})
+
     def test_rebuild_reservations_sorts_by_arrival_then_creation(self):
         reservations = [
             make_reservation(room_id="chambre-2", arrival="2026-07-12", departure="2026-07-14"),
