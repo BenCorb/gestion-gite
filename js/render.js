@@ -259,8 +259,16 @@ function renderReservationsList(ctx) {
   elements.reservationsList.innerHTML = filtered
     .map((reservation) => {
       const roomName = getRoomName(state, reservation.roomId);
+      const detailsId = `reservation-details-${escapeHtml(reservation.id)}`;
       return `
-        <article class="reservation-card">
+        <article
+          class="reservation-card is-collapsed"
+          role="button"
+          tabindex="0"
+          aria-expanded="false"
+          aria-controls="${detailsId}"
+          data-action="toggle-details"
+        >
           <header>
             <div>
               <h3>${escapeHtml(reservation.bookingName)}</h3>
@@ -271,39 +279,44 @@ function renderReservationsList(ctx) {
                 <span>${formatDate(reservation.arrivalDate)} au ${formatDate(reservation.departureDate)}</span>
               </div>
             </div>
-            <span class="platform-tag">${escapeHtml(getDisplayPlatform(reservation))}</span>
+            <div class="reservation-summary-end">
+              <span class="platform-tag">${escapeHtml(getDisplayPlatform(reservation))}</span>
+              <span class="reservation-toggle-indicator" aria-hidden="true">⌄</span>
+            </div>
           </header>
-          <div class="reservation-details">
-            <div>
-              <strong>Client</strong>
-              <span>${escapeHtml(reservation.clientName || "Indisponibilité manuelle")}</span>
+          <div class="reservation-collapsible is-hidden" id="${detailsId}">
+            <div class="reservation-details">
+              <div>
+                <strong>Client</strong>
+                <span>${escapeHtml(reservation.clientName || "Indisponibilité manuelle")}</span>
+              </div>
+              <div>
+                <strong>Contact</strong>
+                <span>${escapeHtml(reservation.clientContact || "-")}</span>
+              </div>
+              <div>
+                <strong>Montant</strong>
+                <span>${formatCurrency(state, Number(reservation.amount || 0))}</span>
+              </div>
+              <div>
+                <strong>Nuits</strong>
+                <span>${calculateNights(reservation.arrivalDate, reservation.departureDate)}</span>
+              </div>
+              <div class="full-width">
+                <strong>Commentaire</strong>
+                <span>${escapeHtml(reservation.comment || "Aucun commentaire")}</span>
+              </div>
             </div>
-            <div>
-              <strong>Contact</strong>
-              <span>${escapeHtml(reservation.clientContact || "-")}</span>
-            </div>
-            <div>
-              <strong>Montant</strong>
-              <span>${formatCurrency(state, Number(reservation.amount || 0))}</span>
-            </div>
-            <div>
-              <strong>Nuits</strong>
-              <span>${calculateNights(reservation.arrivalDate, reservation.departureDate)}</span>
-            </div>
-            <div class="full-width">
-              <strong>Commentaire</strong>
-              <span>${escapeHtml(reservation.comment || "Aucun commentaire")}</span>
-            </div>
-          </div>
-          <div class="reservation-footer">
-            <span>Mise à jour : ${formatDateTime(reservation.updatedAt || reservation.createdAt)}</span>
-            <div class="form-actions">
-              <button class="secondary-button" type="button" data-action="edit" data-id="${reservation.id}">
-                Modifier
-              </button>
-              <button class="danger-button" type="button" data-action="delete" data-id="${reservation.id}">
-                Supprimer
-              </button>
+            <div class="reservation-footer">
+              <span>Mise à jour : ${formatDateTime(reservation.updatedAt || reservation.createdAt)}</span>
+              <div class="form-actions">
+                <button class="secondary-button" type="button" data-action="edit" data-id="${escapeHtml(reservation.id)}">
+                  Modifier
+                </button>
+                <button class="danger-button" type="button" data-action="delete" data-id="${escapeHtml(reservation.id)}">
+                  Supprimer
+                </button>
+              </div>
             </div>
           </div>
         </article>
@@ -311,12 +324,46 @@ function renderReservationsList(ctx) {
     })
     .join("");
 
+  elements.reservationsList.querySelectorAll("[data-action='toggle-details']").forEach((card) => {
+    const toggleDetails = () => {
+      const details = card.querySelector(".reservation-collapsible");
+      const isExpanded = card.getAttribute("aria-expanded") === "true";
+      card.classList.toggle("is-collapsed", isExpanded);
+      card.classList.toggle("is-expanded", !isExpanded);
+      card.setAttribute("aria-expanded", String(!isExpanded));
+      details.classList.toggle("is-hidden", isExpanded);
+    };
+
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("button, input, select, textarea, a")) {
+        return;
+      }
+      toggleDetails();
+    });
+    card.addEventListener("keydown", (event) => {
+      if (event.target.closest("button, input, select, textarea, a")) {
+        return;
+      }
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+      event.preventDefault();
+      toggleDetails();
+    });
+  });
+
   elements.reservationsList.querySelectorAll("[data-action='edit']").forEach((button) => {
-    button.addEventListener("click", () => actions.editReservation(button.dataset.id));
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      actions.editReservation(button.dataset.id, button);
+    });
   });
 
   elements.reservationsList.querySelectorAll("[data-action='delete']").forEach((button) => {
-    button.addEventListener("click", () => actions.deleteReservation(button.dataset.id));
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      actions.deleteReservation(button.dataset.id);
+    });
   });
 }
 
