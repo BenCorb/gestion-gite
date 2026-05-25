@@ -1,0 +1,15 @@
+services:
+  gestion-gite:
+    build: .
+    container_name: gestion-gite
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8080
+      GITE_OPEN_BROWSER: 0
+      GITE_SESSION_DAYS: ${GITE_SESSION_DAYS:-7}
+      GITE_COOKIE_SECURE: ${GITE_COOKIE_SECURE:-0}
+    volumes:
+      - ./data:/app/data

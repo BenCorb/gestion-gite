@@ -333,6 +333,10 @@ class SettingsPersistenceTests(unittest.TestCase):
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             );
+            CREATE TABLE notification_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
             CREATE TABLE platforms (
                 name TEXT PRIMARY KEY,
                 sort_order INTEGER NOT NULL

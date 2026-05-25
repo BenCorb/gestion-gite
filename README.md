@@ -38,10 +38,53 @@ Le serveur s'ouvre automatiquement dans le navigateur. Accès :
 
 | URL | Description |
 |---|---|
-| `http://127.0.0.1:8001` | Vitrine publique |
-| `http://127.0.0.1:8001/gestion` | Interface admin |
+| `http://127.0.0.1:8080` | Vitrine publique |
+| `http://127.0.0.1:8080/gestion` | Interface admin |
 
-Les variables d'environnement `HOST` (défaut `0.0.0.0`) et `PORT` (défaut `8001`) permettent de changer l'adresse d'écoute.
+Les variables d'environnement `HOST` (défaut `0.0.0.0`) et `PORT` (défaut `8080`) permettent de changer l'adresse d'écoute.
+
+## Lancer avec Docker
+
+Copier le fichier d'exemple si vous voulez ajuster la configuration :
+
+```bash
+cp .env.example .env
+```
+
+Démarrer l'application :
+
+```bash
+docker compose up -d --build
+```
+
+Accès :
+
+| URL | Description |
+|---|---|
+| `http://127.0.0.1:8080` | Vitrine publique |
+| `http://127.0.0.1:8080/gestion` | Interface admin |
+
+Consulter les logs :
+
+```bash
+docker compose logs -f
+```
+
+Arrêter le conteneur :
+
+```bash
+docker compose down
+```
+
+Les données SQLite et les images uploadées sont conservées dans `./data` grâce au volume `./data:/app/data`.
+
+Au premier démarrage Docker, le mot de passe admin initial apparaît dans les logs :
+
+```bash
+docker compose logs gestion-gite
+```
+
+En production derrière HTTPS, définir `GITE_COOKIE_SECURE=1` dans `.env`.
 
 ### Premier lancement
 
