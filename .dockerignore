@@ -1,0 +1,16 @@
+.DS_Store
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+
+data/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+Dockerfile
+docker-compose.yml

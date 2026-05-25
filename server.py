@@ -32,7 +32,7 @@ UPLOADS_DIR = DATA_DIR / "uploads"
 SETTINGS_FILE = DATA_DIR / "settings.json"
 RESERVATIONS_FILE = DATA_DIR / "reservations.json"
 HOST = os.environ.get("HOST", "0.0.0.0")
-PORT = int(os.environ.get("PORT", "8001"))
+PORT = int(os.environ.get("PORT", "8080"))
 SESSION_COOKIE_NAME = "gite_admin_session"
 SESSION_DAYS = int(os.environ.get("GITE_SESSION_DAYS", "7"))
 LOGIN_MAX_ATTEMPTS = 10
@@ -1489,6 +1489,20 @@ class AppHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(BASE_DIR), **kwargs)
 
+    def route_static_page(self, path: str) -> str:
+        if path == "/":
+            return "/public.html"
+        if path in {"/gestion", "/gestion/"}:
+            return "/index.html" if self.is_authenticated() else "/login.html"
+        if path == "/gestion/app":
+            return "/index.html"
+        return path
+
+    def do_HEAD(self) -> None:
+        parsed = urlparse(self.path)
+        self.path = self.route_static_page(parsed.path)
+        super().do_HEAD()
+
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         if parsed.path == "/api/session":
@@ -1535,12 +1549,7 @@ class AppHandler(SimpleHTTPRequestHandler):
                 }
             )
             return
-        if parsed.path == "/":
-            self.path = "/public.html"
-        elif parsed.path in {"/gestion", "/gestion/"}:
-            self.path = "/index.html" if self.is_authenticated() else "/login.html"
-        elif parsed.path == "/gestion/app":
-            self.path = "/index.html"
+        self.path = self.route_static_page(parsed.path)
         super().do_GET()
 
     def do_POST(self) -> None:
