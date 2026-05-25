@@ -767,7 +767,7 @@ function renderSettingsForm(ctx) {
                 ${(room.bookingLinks || [])
                   .map(
                     (link, index) => `
-                      <div class="inline-editor" data-booking-link-room="${room.id}">
+                      <div class="inline-editor booking-link-row" data-booking-link-room="${room.id}">
                         <input type="text" data-booking-link-label value="${escapeHtml(link.label || "")}" placeholder="Airbnb, Booking..." />
                         <input type="url" data-booking-link-url value="${escapeHtml(link.url || "")}" placeholder="https://..." />
                         <button class="danger-button" type="button" data-remove-booking-link="${room.id}" data-booking-link-index="${index}">Retirer</button>

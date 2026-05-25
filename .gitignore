@@ -5,6 +5,7 @@ data/*.sqlite3
 data/*.db
 data/*.json
 data/uploads/
+favicon.png
 
 # Secrets et configuration locale
 .env
