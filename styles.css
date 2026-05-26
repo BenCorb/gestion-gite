@@ -4427,3 +4427,218 @@ textarea {
   font-weight: 700;
   color: var(--ink);
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Admin · Modale réservation (Phase 7)
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Mobile (default) : bottom-sheet behavior */
+#reservation-modal.modal-backdrop {
+  display: block;
+  padding: 0;
+  background: rgba(29, 24, 20, 0.5);
+  overflow: hidden;
+  z-index: 60;
+}
+#reservation-modal .modal-panel.reservation-modal-panel {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  width: 100%;
+  max-width: 100%;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  padding: 20px 18px calc(env(safe-area-inset-bottom, 0) + 24px);
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--surface);
+  box-shadow: 0 -10px 30px rgba(29, 24, 20, .25);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: modalSheetUp .28s cubic-bezier(.4, 0, .2, 1);
+}
+@keyframes modalSheetUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+#reservation-modal .modal-panel.reservation-modal-panel::before {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 4px;
+  background: var(--rule-strong);
+  border-radius: 4px;
+  margin: 0 auto 12px;
+  flex-shrink: 0;
+}
+#reservation-modal .modal-close-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  background: var(--paper-2);
+  color: var(--ink-2);
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+#reservation-modal .modal-close-button:hover { background: var(--rule-strong); color: var(--ink); }
+#reservation-modal .reservation-modal-heading {
+  padding: 0;
+  margin: 0 40px 8px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  border: 0;
+}
+#reservation-modal .reservation-modal-heading h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+#reservation-modal .reservation-modal-heading p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+#reservation-modal #form-mode-badge {
+  flex-shrink: 0;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  border: none;
+}
+#reservation-modal #reservation-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+  margin-top: 4px;
+}
+#reservation-modal #reservation-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  min-width: 0;
+}
+#reservation-modal #reservation-form label.full-width { grid-column: 1 / -1; }
+#reservation-modal #reservation-form input,
+#reservation-modal #reservation-form select,
+#reservation-modal #reservation-form textarea {
+  padding: 11px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--surface);
+  font-family: inherit;
+  font-weight: 400;
+  width: 100%;
+  min-width: 0;
+}
+#reservation-modal #reservation-form input:focus,
+#reservation-modal #reservation-form select:focus,
+#reservation-modal #reservation-form textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: var(--accent);
+}
+#reservation-modal #reservation-form textarea { min-height: 80px; resize: vertical; }
+#reservation-modal #reservation-form .form-actions {
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+#reservation-modal #reservation-form .form-actions button.primary-button {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+  padding: 11px 18px;
+  border-radius: var(--r-md);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  transition: background .15s ease;
+}
+#reservation-modal #reservation-form .form-actions button.primary-button:hover { background: var(--accent-deep); }
+#reservation-modal #reservation-form .form-actions button.secondary-button {
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px solid var(--rule-strong);
+  padding: 11px 18px;
+  border-radius: var(--r-md);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+}
+#reservation-modal #reservation-form .form-actions button.secondary-button:hover { background: var(--paper-2); }
+#reservation-modal #reservation-form .checkbox-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+#reservation-modal #reservation-form .checkbox-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  font-size: 14px;
+  background: var(--surface);
+}
+#reservation-modal #reservation-form .checkbox-card:has(input:checked) {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+}
+#reservation-modal #reservation-form .field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin-bottom: 4px;
+  display: block;
+}
+
+/* Desktop : centered modal instead of bottom-sheet */
+@media (min-width: 1024px) {
+  #reservation-modal.modal-backdrop {
+    display: grid;
+    place-items: center;
+    padding: 20px;
+  }
+  #reservation-modal .modal-panel.reservation-modal-panel {
+    position: relative;
+    left: auto; right: auto; bottom: auto;
+    width: min(760px, 90vw);
+    max-width: 90vw;
+    max-height: 85vh;
+    border-radius: 20px;
+    padding: 28px 32px;
+    animation: modalScaleIn .25s cubic-bezier(.4, 0, .2, 1);
+  }
+  #reservation-modal .modal-panel.reservation-modal-panel::before { display: none; }
+  @keyframes modalScaleIn {
+    from { opacity: 0; transform: scale(.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+}
