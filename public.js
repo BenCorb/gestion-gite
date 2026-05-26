@@ -1,7 +1,5 @@
 import { calculateNights, escapeHtml, formatCurrency, showToast } from "./js/utils.js";
-
-const CHEVRON_LEFT = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8L10 13"/></svg>`;
-const CHEVRON_RIGHT = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3L11 8L6 13"/></svg>`;
+import { icon } from "./js/icons.js";
 
 const BODY_FONTS = {
   lato:          { stack: '"Lato",sans-serif',           googleFonts: 'Lato:wght@400;700' },
@@ -18,10 +16,15 @@ const HEADING_FONTS = {
   baskerville:   { stack: '"Libre Baskerville",serif',  googleFonts: 'Libre+Baskerville:wght@700' },
   satisfy:       { stack: '"Satisfy",cursive',          googleFonts: 'Satisfy' },
   patrickhand:   { stack: '"Patrick Hand SC",cursive',  googleFonts: 'Patrick+Hand+SC' },
-  librefranklin: { stack: '"Libre Franklin",sans-serif', googleFonts: 'Libre+Franklin:wght@700' },
 };
 
-const CLOSE_ICON = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>`;
+const HERO_FALLBACK_GRADIENTS = [
+  "linear-gradient(135deg, #b8a87a 0%, #94864f 100%)",
+  "linear-gradient(135deg, #d7c8a8 0%, #b9a47d 100%)",
+  "linear-gradient(135deg, #d4b59a 0%, #a87a52 100%)",
+  "linear-gradient(135deg, #e6cfa3 0%, #b6986f 100%)",
+  "linear-gradient(135deg, #c9a880 0%, #8c6a48 100%)",
+];
 
 const state = {
   site: null,
@@ -31,15 +34,20 @@ const state = {
   gitePhotoIndex: 0,
   lightboxPhotos: [],
   lightboxIndex: 0,
+  filterState: "before",
+  pendingRequest: null,
 };
 
 const elements = {
   hero: document.getElementById("public-hero"),
+  heroImage: document.getElementById("public-hero-image"),
+  heroEyebrow: document.getElementById("public-hero-eyebrow"),
   logo: document.getElementById("public-logo"),
   propertyName: document.getElementById("public-property-name"),
   headline: document.getElementById("public-headline"),
   subtitle: document.getElementById("public-subtitle"),
   intro: document.getElementById("public-intro"),
+  roomsTitle: document.getElementById("public-rooms-title"),
   availabilityForm: document.getElementById("availability-form"),
   arrival: document.getElementById("availability-arrival"),
   departure: document.getElementById("availability-departure"),
@@ -52,17 +60,33 @@ const elements = {
   gallerySection: document.getElementById("public-gallery-section"),
   gallery: document.getElementById("public-gallery"),
   contact: document.getElementById("public-contact"),
+  stickyCtaButton: document.getElementById("public-sticky-cta-button"),
   modal: document.getElementById("request-modal"),
   requestForm: document.getElementById("booking-request-form"),
   requestRoomId: document.getElementById("request-room-id"),
   requestRoomLabel: document.getElementById("request-room-label"),
+  requestSummary: document.getElementById("request-summary"),
   requestArrivalDate: document.getElementById("request-arrival-date"),
   requestDepartureDate: document.getElementById("request-departure-date"),
   closeModal: document.getElementById("close-request-modal"),
   guestName: document.getElementById("request-guest-name"),
   guestContact: document.getElementById("request-guest-contact"),
   guestCount: document.getElementById("request-guest-count"),
+  guestCountDisplay: document.getElementById("request-guest-count-display"),
+  capacityHint: document.getElementById("request-capacity-hint"),
+  stepper: document.getElementById("request-stepper"),
   requestMessage: document.getElementById("request-message"),
+  nightsMeta: document.getElementById("request-nights-meta"),
+  totalAmount: document.getElementById("request-total-amount"),
+  confirmation: document.getElementById("request-confirmation"),
+  confirmationMeta: document.getElementById("confirmation-meta"),
+  confirmationRoomPhoto: document.getElementById("confirmation-room-photo"),
+  confirmationRoomName: document.getElementById("confirmation-room-name"),
+  confirmationGuestCount: document.getElementById("confirmation-guest-count"),
+  confirmationArrival: document.getElementById("confirmation-arrival"),
+  confirmationDeparture: document.getElementById("confirmation-departure"),
+  confirmationTotal: document.getElementById("confirmation-total"),
+  confirmationBack: document.getElementById("confirmation-back"),
   amenitiesModal: document.getElementById("amenities-modal"),
   amenitiesTitle: document.getElementById("amenities-title"),
   amenitiesRoomLabel: document.getElementById("amenities-room-label"),
@@ -72,16 +96,59 @@ const elements = {
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
+  buildLightbox();
+  await loadPublicSite();
+  bindEvents();
+});
+
+function bindEvents() {
+  elements.availabilityForm.addEventListener("submit", handleAvailabilitySubmit);
+  elements.arrival.addEventListener("change", handleDateChange);
+  elements.departure.addEventListener("change", handleDateChange);
+  elements.requestForm.addEventListener("submit", submitBookingRequest);
+  elements.closeModal.addEventListener("click", closeModal);
+  elements.modal.addEventListener("click", (event) => {
+    if (event.target === elements.modal) closeModal();
+  });
+  elements.closeAmenitiesModal.addEventListener("click", closeAmenitiesModal);
+  elements.amenitiesModal.addEventListener("click", (event) => {
+    if (event.target === elements.amenitiesModal) closeAmenitiesModal();
+  });
+  elements.stickyCtaButton.addEventListener("click", () => {
+    const firstAvailable = pickDefaultRoomId();
+    if (firstAvailable) openRequestModal(firstAvailable);
+    else showToast(elements, "Aucune chambre disponible pour le moment.", true);
+  });
+  elements.confirmationBack.addEventListener("click", hideConfirmation);
+  bindStepper();
+
+  ["change", "input"].forEach((evt) => {
+    elements.requestArrivalDate.addEventListener(evt, updateRequestTotals);
+    elements.requestDepartureDate.addEventListener(evt, updateRequestTotals);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      if (!elements.modal.classList.contains("is-open")) {
+      } else {
+        closeModal();
+      }
+      if (elements.amenitiesModal.classList.contains("is-open")) closeAmenitiesModal();
+    }
+  });
+}
+
+function buildLightbox() {
   const lb = document.createElement("div");
   lb.id = "lightbox";
   lb.className = "lightbox-backdrop is-hidden";
   lb.setAttribute("role", "dialog");
   lb.setAttribute("aria-modal", "true");
   lb.innerHTML = `
-    <button class="lightbox-close" id="lightbox-close" aria-label="Fermer">${CLOSE_ICON}</button>
-    <button class="lightbox-nav lightbox-prev" id="lightbox-prev" aria-label="Photo précédente">${CHEVRON_LEFT}</button>
+    <button class="lightbox-close" id="lightbox-close" aria-label="Fermer">${icon("close", 20)}</button>
+    <button class="lightbox-nav lightbox-prev" id="lightbox-prev" aria-label="Photo précédente">${icon("chevronLeft", 18)}</button>
     <img id="lightbox-img" src="" alt="" />
-    <button class="lightbox-nav lightbox-next" id="lightbox-next" aria-label="Photo suivante">${CHEVRON_RIGHT}</button>
+    <button class="lightbox-nav lightbox-next" id="lightbox-next" aria-label="Photo suivante">${icon("chevronRight", 18)}</button>
     <span class="lightbox-count" id="lightbox-count"></span>
   `;
   document.body.appendChild(lb);
@@ -102,13 +169,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (e.key === "ArrowLeft") changeLightboxPhoto(-1);
     if (e.key === "ArrowRight") changeLightboxPhoto(1);
   });
-
-  await loadPublicSite();
-  elements.availabilityForm.addEventListener("submit", searchAvailability);
-  elements.requestForm.addEventListener("submit", submitBookingRequest);
-  elements.closeModal.addEventListener("click", closeModal);
-  elements.closeAmenitiesModal.addEventListener("click", closeAmenitiesModal);
-});
+}
 
 async function loadPublicSite() {
   const response = await fetch("/api/public-site");
@@ -129,15 +190,18 @@ function renderPublicSite() {
   elements.headline.textContent = site.headline || state.site.propertyName;
   elements.subtitle.textContent = site.subtitle || "";
   elements.intro.textContent = site.intro || state.site.description || "";
+  if (site.subtitle) {
+    elements.heroEyebrow.textContent = "Chambres d'hôtes";
+  }
   elements.logo.classList.toggle("is-hidden", !site.logoUrl);
   if (site.logoUrl) {
     elements.logo.src = site.logoUrl;
     elements.logo.alt = `Logo ${state.site.propertyName}`;
   }
   if (site.heroImageUrl) {
-    elements.hero.style.backgroundImage = `linear-gradient(90deg, rgba(33, 27, 20, 0.62), rgba(33, 27, 20, 0.22)), url("${site.heroImageUrl}")`;
+    elements.heroImage.style.backgroundImage = `url("${site.heroImageUrl}")`;
   }
-  renderRooms(state.rooms);
+  renderRooms();
   renderGiteSection(site);
   renderGallery(site.gallery || []);
   renderContact(site);
@@ -145,70 +209,176 @@ function renderPublicSite() {
 }
 
 function applyFontPair(bodyKey, headingKey) {
-  const body = BODY_FONTS[bodyKey] || BODY_FONTS.lato;
-  const heading = HEADING_FONTS[headingKey] || HEADING_FONTS.playfair;
-  const families = [body.googleFonts];
-  if (heading.googleFonts !== body.googleFonts) families.push(heading.googleFonts);
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = `https://fonts.googleapis.com/css2?family=${families.join("&family=")}&display=swap`;
-  document.head.appendChild(link);
-  const style = document.createElement("style");
-  style.textContent = `body{font-family:${body.stack}}h1,h2,h3,#public-property-name{font-family:${heading.stack}}`;
-  document.head.appendChild(style);
+  const body = BODY_FONTS[bodyKey];
+  const heading = HEADING_FONTS[headingKey];
+  if (!body && !heading) return;
+
+  const families = [];
+  if (body) families.push(body.googleFonts);
+  if (heading && heading.googleFonts !== body?.googleFonts) families.push(heading.googleFonts);
+  if (families.length) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = `https://fonts.googleapis.com/css2?family=${families.join("&family=")}&display=swap`;
+    document.head.appendChild(link);
+  }
+  if (body) document.documentElement.style.setProperty("--font-body", body.stack);
+  if (heading) document.documentElement.style.setProperty("--font-heading", heading.stack);
 }
 
-function renderRooms(rooms) {
+function pickDefaultRoomId() {
+  if (state.availability?.rooms?.length) return state.availability.rooms[0].id;
+  return state.rooms[0]?.id || null;
+}
+
+function findRoom(roomId) {
+  const all = [...(state.rooms || []), ...((state.availability && state.availability.rooms) || [])];
+  return all.find((r) => r.id === roomId);
+}
+
+function roomStatus(roomId) {
+  if (!state.availability) return null;
+  const available = state.availability.rooms.some((r) => r.id === roomId);
+  return available ? "avail" : "full";
+}
+
+function gradientForRoom(roomId) {
+  let h = 0;
+  for (const c of String(roomId)) h = (h * 31 + c.charCodeAt(0)) % HERO_FALLBACK_GRADIENTS.length;
+  return HERO_FALLBACK_GRADIENTS[h];
+}
+
+function nightsForRequest() {
+  const a = elements.requestArrivalDate.value;
+  const d = elements.requestDepartureDate.value;
+  if (!a || !d) return 0;
+  return calculateNights(a, d);
+}
+
+function renderRooms() {
+  const rooms = state.rooms || [];
+  const grid = elements.rooms;
+
   if (!rooms.length) {
-    elements.rooms.innerHTML = `<div class="empty-state"><h3>Aucune chambre disponible</h3><p>Revenez bientôt pour découvrir nos hébergements.</p></div>`;
+    grid.dataset.state = "empty";
+    grid.innerHTML = `<div class="public-no-avail">
+      <div class="public-no-avail-icon">${icon("home", 26)}</div>
+      <h3 class="public-no-avail-title">Aucune chambre disponible</h3>
+      <p class="public-no-avail-meta">Revenez bientôt pour découvrir nos hébergements.</p>
+    </div>`;
     return;
   }
-  elements.rooms.innerHTML = rooms
-    .map((room) => {
-      const photos = room.photos?.length ? room.photos : (state.site.site?.heroImageUrl ? [{ url: state.site.site.heroImageUrl, alt: room.name }] : []);
-      const selectedPhotoIndex = Math.min(state.roomPhotoIndexes[room.id] || 0, Math.max(photos.length - 1, 0));
-      const image = photos[selectedPhotoIndex]?.url || "";
-      return `
-        <article class="public-room-card">
-          ${
-            image
-              ? `<div class="room-carousel" data-room-id="${escapeHtml(room.id)}">
-                  <img src="${escapeHtml(image)}" alt="${escapeHtml(photos[selectedPhotoIndex]?.alt || room.name)}" loading="lazy" />
-                  ${
-                    photos.length > 1
-                      ? `<button class="icon-button carousel-button prev" type="button" data-carousel-room="${escapeHtml(room.id)}" data-carousel-direction="-1" aria-label="Photo précédente">${CHEVRON_LEFT}</button>
-                         <button class="icon-button carousel-button next" type="button" data-carousel-room="${escapeHtml(room.id)}" data-carousel-direction="1" aria-label="Photo suivante">${CHEVRON_RIGHT}</button>
-                         <span class="carousel-count">${selectedPhotoIndex + 1}/${photos.length}</span>`
-                      : ""
-                  }
-                  <div class="room-image-overlay"><h3>${escapeHtml(room.name)}</h3></div>
-                </div>`
-              : ""
-          }
-          <div class="room-card-body">
-            ${!image ? `<h3>${escapeHtml(room.name)}</h3>` : ""}
-            <p>${escapeHtml(room.summary || room.description || "Chambre confortable du gîte.")}</p>
-            <div class="reservation-meta">
-              <span>${room.capacity} voyageur(s)</span>
-            ${room.price ? `<span>${escapeHtml(room.price)}</span>` : ""}
-            </div>
-            <div class="public-room-actions">
-              ${getAmenityGroups(room).length ? `<button class="secondary-button" type="button" data-amenities-room="${escapeHtml(room.id)}">Voir les équipements</button>` : ""}
-              <button class="primary-button" type="button" data-request-room="${escapeHtml(room.id)}">Demander cette chambre</button>
-              ${(room.bookingLinks || [])
-                .map(
-                  (link) =>
-                    `<a class="secondary-button" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label || "Réserver")}</a>`,
-                )
-                .join("")}
-            </div>
-          </div>
-        </article>
-      `;
-    })
+
+  if (state.filterState === "no-avail") {
+    grid.dataset.state = "no-avail";
+    grid.innerHTML = renderNoAvailState();
+    return;
+  }
+
+  grid.dataset.state = state.filterState;
+  grid.innerHTML = rooms.map((room) => renderRoomCard(room)).join("");
+  wireRoomCardEvents();
+}
+
+function renderNoAvailState() {
+  return `
+    <div class="public-no-avail">
+      <div class="public-no-avail-icon">${icon("calendar", 26)}</div>
+      <h3 class="public-no-avail-title">Tout est complet sur ces dates</h3>
+      <p class="public-no-avail-meta">Essayez d'autres dates ou contactez-nous directement.</p>
+    </div>
+  `;
+}
+
+function renderRoomCard(room) {
+  const photos = room.photos?.length ? room.photos : [];
+  const selectedIndex = Math.min(state.roomPhotoIndexes[room.id] || 0, Math.max(photos.length - 1, 0));
+  const photo = photos[selectedIndex];
+  const status = roomStatus(room.id);
+  const showStatus = status !== null;
+  const isAvail = status === "avail";
+  const isUnavail = status === "full";
+
+  const dots = photos.length > 1
+    ? `<div class="public-room-card-dots">${photos.map((_, i) => `<span class="public-room-card-dot${i === selectedIndex ? " is-active" : ""}"></span>`).join("")}</div>`
+    : "";
+
+  const arrows = photos.length > 1
+    ? `<button class="public-room-card-carousel-prev" type="button" data-carousel-room="${escapeHtml(room.id)}" data-carousel-direction="-1" aria-label="Photo précédente">${icon("chevronLeft", 16)}</button>
+       <button class="public-room-card-carousel-next" type="button" data-carousel-room="${escapeHtml(room.id)}" data-carousel-direction="1" aria-label="Photo suivante">${icon("chevronRight", 16)}</button>`
+    : "";
+
+  const statusPill = showStatus
+    ? `<div class="public-room-card-status"><span class="pill ${isAvail ? "pill-positive" : "pill-outline"} pill-md">${isAvail ? "Disponible" : "Complet"}</span></div>`
+    : "";
+
+  const amenities = (room.amenities || []).slice(0, 3)
+    .map((a) => `<span class="pill pill-outline">${escapeHtml(a)}</span>`)
     .join("");
+  const extra = (room.amenities || []).length > 3
+    ? `<span class="pill pill-outline">+${(room.amenities || []).length - 3}</span>`
+    : "";
+
+  const ctaLabel = isUnavail ? "Voir d'autres dates" : (state.filterState === "before" ? "Demander cette chambre" : "Demander cette chambre");
+  const ctaVariant = isUnavail ? "btn-secondary" : "btn-primary";
+  const ctaAction = isUnavail ? "scroll-dates" : "request";
+
+  const photoBg = photo?.url
+    ? `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.alt || room.name)}" loading="lazy" />`
+    : "";
+
+  const photoStyle = !photo?.url
+    ? ` style="background:${gradientForRoom(room.id)}"`
+    : "";
+
+  const amenityButton = (room.amenityGroups?.length || (room.amenities || []).length > 3)
+    ? `<button class="btn btn-secondary btn-md btn-full" type="button" data-amenities-room="${escapeHtml(room.id)}">Voir les équipements</button>`
+    : "";
+
+  const externalLinks = (room.bookingLinks || []).map((link) => `
+    <a class="btn btn-secondary btn-md btn-full public-room-card-link" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label || "Réserver")}</a>
+  `).join("");
+
+  return `
+    <article class="public-room-card" data-room-id="${escapeHtml(room.id)}">
+      <div class="public-room-card-photo"${photoStyle}>
+        ${photoBg}
+        ${statusPill}
+        ${arrows}
+        ${dots}
+      </div>
+      <div class="public-room-card-body">
+        <div class="public-room-card-header">
+          <div>
+            <h3 class="public-room-card-name">${escapeHtml(room.name)}</h3>
+            <p class="public-room-card-meta">${room.summary ? escapeHtml(room.summary) + " · " : ""}jusqu'à ${room.capacity || 2} pers</p>
+          </div>
+          ${room.price ? `<div class="public-room-card-price">
+            <div class="public-room-card-price-amount">${escapeHtml(String(room.price))}${typeof room.price === "number" ? "€" : ""}</div>
+            <div class="public-room-card-price-unit">la nuit</div>
+          </div>` : ""}
+        </div>
+        ${amenities || extra ? `<div class="public-room-card-amenities">${amenities}${extra}</div>` : ""}
+        <div class="public-room-card-actions">
+          <button class="btn ${ctaVariant} btn-md btn-full" type="button" data-action="${ctaAction}" data-request-room="${escapeHtml(room.id)}">${ctaLabel}</button>
+          ${amenityButton}
+          ${externalLinks}
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function wireRoomCardEvents() {
   elements.rooms.querySelectorAll("[data-request-room]").forEach((button) => {
-    button.addEventListener("click", () => openRequestModal(button.dataset.requestRoom));
+    button.addEventListener("click", () => {
+      if (button.dataset.action === "scroll-dates") {
+        elements.arrival.focus();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        openRequestModal(button.dataset.requestRoom);
+      }
+    });
   });
   elements.rooms.querySelectorAll("[data-carousel-room]").forEach((button) => {
     button.addEventListener("click", () => changeRoomPhoto(button.dataset.carouselRoom, Number(button.dataset.carouselDirection)));
@@ -216,14 +386,12 @@ function renderRooms(rooms) {
   elements.rooms.querySelectorAll("[data-amenities-room]").forEach((button) => {
     button.addEventListener("click", () => openAmenitiesModal(button.dataset.amenitiesRoom));
   });
-  elements.rooms.querySelectorAll(".room-carousel img").forEach((img) => {
+  elements.rooms.querySelectorAll(".public-room-card-photo img").forEach((img) => {
     img.addEventListener("click", () => {
-      const roomId = img.closest(".room-carousel")?.dataset.roomId;
+      const roomId = img.closest(".public-room-card")?.dataset.roomId;
       if (!roomId) return;
-      const room = [...state.rooms, ...(state.availability?.rooms || [])].find((r) => r.id === roomId);
-      const photos = room?.photos?.length
-        ? room.photos
-        : state.site.site?.heroImageUrl ? [{ url: state.site.site.heroImageUrl, alt: room?.name || "" }] : [];
+      const room = findRoom(roomId);
+      const photos = room?.photos || [];
       if (photos.length) openLightbox(photos, state.roomPhotoIndexes[roomId] || 0);
     });
   });
@@ -232,74 +400,81 @@ function renderRooms(rooms) {
 function renderGallery(gallery) {
   elements.gallerySection.classList.toggle("is-hidden", !gallery.length);
   elements.gallery.innerHTML = gallery
-    .map((photo) => `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.alt || state.site.propertyName)}" loading="lazy" />`)
+    .map((photo, index) => `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.alt || state.site.propertyName)}" data-gallery-index="${index}" loading="lazy" />`)
     .join("");
+  elements.gallery.querySelectorAll("img").forEach((img) => {
+    img.addEventListener("click", () => {
+      const index = Number(img.dataset.galleryIndex) || 0;
+      openLightbox(gallery, index);
+    });
+  });
 }
 
 function renderGiteSection(site) {
   const photos = site.gitePhotos || [];
   const hasContent = Boolean((site.giteDescription || "").trim()) || photos.length > 0;
   elements.giteSection.classList.toggle("is-hidden", !hasContent);
-  if (!hasContent) {
-    return;
-  }
+  if (!hasContent) return;
+
   elements.giteTitle.textContent = site.giteTitle || "Le gîte";
   elements.giteDescription.textContent = site.giteDescription || "";
-  elements.giteCarousel.innerHTML = renderPhotoCarousel(
-    photos,
-    state.gitePhotoIndex,
-    "gite",
-    site.giteTitle || "Le gîte",
-  );
-  elements.giteCarousel.querySelectorAll("[data-gite-carousel-direction]").forEach((button) => {
-    button.addEventListener("click", () => changeGitePhoto(Number(button.dataset.giteCarouselDirection)));
+  elements.giteCarousel.innerHTML = renderGiteCarousel(photos, site.giteTitle || "Le gîte");
+  elements.giteCarousel.querySelectorAll("[data-gite-direction]").forEach((button) => {
+    button.addEventListener("click", () => changeGitePhoto(Number(button.dataset.giteDirection)));
   });
   const giteImg = elements.giteCarousel.querySelector("img");
   if (giteImg) {
     giteImg.addEventListener("click", () => {
-      const photos = state.site?.site?.gitePhotos || [];
       if (photos.length) openLightbox(photos, state.gitePhotoIndex);
     });
   }
 }
 
-function renderPhotoCarousel(photos, selectedIndex, name, fallbackAlt) {
-  if (!photos.length) {
-    return "";
-  }
-  const safeIndex = Math.min(selectedIndex, Math.max(photos.length - 1, 0));
+function renderGiteCarousel(photos, fallbackAlt) {
+  if (!photos.length) return "";
+  const safeIndex = Math.min(state.gitePhotoIndex, Math.max(photos.length - 1, 0));
   const image = photos[safeIndex];
   return `
-    <div class="room-carousel">
-      <img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.alt || fallbackAlt)}" loading="lazy" />
-      ${
-        photos.length > 1
-          ? `<button class="icon-button carousel-button prev" type="button" data-${name}-carousel-direction="-1" aria-label="Photo précédente">${CHEVRON_LEFT}</button>
-             <button class="icon-button carousel-button next" type="button" data-${name}-carousel-direction="1" aria-label="Photo suivante">${CHEVRON_RIGHT}</button>
-             <span class="carousel-count">${safeIndex + 1}/${photos.length}</span>`
-          : ""
-      }
-    </div>
+    <img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.alt || fallbackAlt)}" loading="lazy" />
+    ${photos.length > 1 ? `
+      <button class="public-room-card-carousel-prev" type="button" data-gite-direction="-1" aria-label="Photo précédente">${icon("chevronLeft", 16)}</button>
+      <button class="public-room-card-carousel-next" type="button" data-gite-direction="1" aria-label="Photo suivante">${icon("chevronRight", 16)}</button>
+      <div class="public-room-card-dots">
+        ${photos.map((_, i) => `<span class="public-room-card-dot${i === safeIndex ? " is-active" : ""}"></span>`).join("")}
+      </div>
+    ` : ""}
   `;
 }
 
 function renderContact(site) {
-  const details = [
-    site.address ? `<p>${escapeHtml(site.address)}</p>` : "",
-    site.phone ? `<p>${escapeHtml(site.phone)}</p>` : "",
-    site.email ? `<p><a href="mailto:${escapeHtml(site.email)}">${escapeHtml(site.email)}</a></p>` : "",
-  ].filter(Boolean);
+  const rows = [];
+  if (site.address) rows.push(`<div class="public-contact-row">${icon("map", 18)}<span>${escapeHtml(site.address)}</span></div>`);
+  if (site.phone) rows.push(`<div class="public-contact-row">${icon("phone", 18)}<a href="tel:${escapeHtml(site.phone.replace(/\s/g, ""))}">${escapeHtml(site.phone)}</a></div>`);
+  if (site.email) rows.push(`<div class="public-contact-row">${icon("mail", 18)}<a href="mailto:${escapeHtml(site.email)}">${escapeHtml(site.email)}</a></div>`);
+  const list = rows.length ? `<div class="public-contact-list">${rows.join("")}</div>` : `<p class="public-section-intro">Contactez-nous via une demande de réservation.</p>`;
   const map = site.address
-    ? `<div class="map-embed"><iframe title="Carte ${escapeHtml(state.site.propertyName)}" loading="lazy" src="https://www.google.com/maps?q=${encodeURIComponent(site.address)}&z=10&output=embed"></iframe></div>`
+    ? `<div class="public-contact-map"><iframe title="Carte ${escapeHtml(state.site.propertyName)}" loading="lazy" src="https://www.google.com/maps?q=${encodeURIComponent(site.address)}&z=10&output=embed"></iframe></div>`
     : "";
-  const detailsHtml = details.length ? details.join("") : "<p>Contactez-nous via une demande de réservation.</p>";
-  elements.contact.innerHTML = map
-    ? `<div class="contact-layout"><div class="contact-details">${detailsHtml}</div>${map}</div>`
-    : `<div class="contact-details">${detailsHtml}</div>`;
+  elements.contact.innerHTML = `${list}${map}`;
 }
 
-async function searchAvailability(event) {
+function handleDateChange() {
+  if (elements.arrival.value && elements.departure.value) {
+    if (new Date(elements.departure.value) <= new Date(elements.arrival.value)) {
+      const next = new Date(elements.arrival.value);
+      next.setDate(next.getDate() + 1);
+      elements.departure.value = next.toISOString().slice(0, 10);
+    }
+  }
+}
+
+async function handleAvailabilitySubmit(event) {
   event.preventDefault();
+  await fetchAvailability();
+}
+
+async function fetchAvailability() {
+  if (!elements.arrival.value || !elements.departure.value) return;
   const params = new URLSearchParams({
     arrivalDate: elements.arrival.value,
     departureDate: elements.departure.value,
@@ -312,8 +487,12 @@ async function searchAvailability(event) {
   }
   state.availability = data;
   const nights = calculateNights(data.arrivalDate, data.departureDate);
-  elements.availabilityStatus.textContent = `${data.rooms.length} chambre(s) libre(s), ${nights} nuit(s)`;
-  renderRooms(data.rooms);
+  const availCount = data.rooms.length;
+  const total = state.rooms.length;
+  state.filterState = availCount === 0 ? "no-avail" : "with-dates";
+  elements.availabilityStatus.hidden = false;
+  elements.availabilityStatus.innerHTML = `<strong>${nights} nuit${nights > 1 ? "s" : ""}</strong> · ${availCount}/${total} chambre${total > 1 ? "s" : ""} disponible${availCount > 1 ? "s" : ""}`;
+  renderRooms();
 }
 
 function lockScroll() {
@@ -327,22 +506,74 @@ function unlockScroll() {
 }
 
 function openRequestModal(roomId) {
-  const room = [...state.rooms, ...(state.availability?.rooms || [])].find((item) => item.id === roomId);
+  const room = findRoom(roomId);
+  if (!room) return;
+  state.pendingRequest = { room };
   elements.requestRoomId.value = roomId;
-  elements.requestRoomLabel.textContent = room ? room.name : "Chambre sélectionnée";
+  elements.requestRoomLabel.textContent = room.name;
+  const max = Math.max(1, Number(room.capacity) || 2);
+  elements.stepper.dataset.max = String(max);
+  elements.capacityHint.textContent = `capacité max : ${max}`;
+  setStepperValue(Math.min(2, max));
   elements.requestArrivalDate.value = elements.arrival.value || state.availability?.arrivalDate || "";
   elements.requestDepartureDate.value = elements.departure.value || state.availability?.departureDate || "";
-  elements.modal.classList.remove("is-hidden");
+  updateRequestTotals();
+  elements.modal.classList.add("is-open");
+  document.querySelector(".modal-sheet")?.classList.add("is-open");
+  elements.modal.querySelectorAll(".modal-sheet").forEach((s) => s.classList.add("is-open"));
   lockScroll();
 }
 
 function closeModal() {
-  elements.modal.classList.add("is-hidden");
+  elements.modal.classList.remove("is-open");
+  elements.modal.querySelectorAll(".modal-sheet").forEach((s) => s.classList.remove("is-open"));
   unlockScroll();
 }
 
+function bindStepper() {
+  elements.stepper.querySelectorAll(".stepper-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const step = Number(btn.dataset.step) || 0;
+      const current = Number(elements.guestCount.value) || 1;
+      setStepperValue(current + step);
+    });
+  });
+}
+
+function setStepperValue(value) {
+  const min = Number(elements.stepper.dataset.min) || 1;
+  const max = Number(elements.stepper.dataset.max) || 2;
+  const clamped = Math.max(min, Math.min(max, value));
+  elements.guestCount.value = String(clamped);
+  elements.guestCountDisplay.textContent = String(clamped);
+  const buttons = elements.stepper.querySelectorAll(".stepper-btn");
+  if (buttons[0]) buttons[0].disabled = clamped <= min;
+  if (buttons[1]) buttons[1].disabled = clamped >= max;
+}
+
+function updateRequestTotals() {
+  const nights = nightsForRequest();
+  const room = state.pendingRequest?.room;
+  const price = Number(room?.price) || 0;
+  const total = nights > 0 && price > 0 ? nights * price : null;
+  elements.nightsMeta.textContent = nights > 0
+    ? `${nights} nuit${nights > 1 ? "s" : ""}${price ? ` · ${formatPrice(price)} × ${nights}` : ""}`
+    : "—";
+  elements.totalAmount.textContent = total !== null ? formatPrice(total) : "—";
+  if (nights > 0 && room) {
+    elements.requestSummary.textContent = `${nights} nuit${nights > 1 ? "s" : ""}${price ? ` · ${formatPrice(price)} × ${nights}` : ""}`;
+  } else {
+    elements.requestSummary.textContent = "";
+  }
+}
+
+function formatPrice(value) {
+  const currency = state.site?.currency || "EUR";
+  return formatCurrency({ settings: { currency } }, value);
+}
+
 function changeRoomPhoto(roomId, direction) {
-  const room = [...state.rooms, ...(state.availability?.rooms || [])].find((item) => item.id === roomId);
+  const room = findRoom(roomId);
   const photos = room?.photos || [];
   if (photos.length < 2) return;
 
@@ -350,17 +581,16 @@ function changeRoomPhoto(roomId, direction) {
   const newIndex = (currentIndex + direction + photos.length) % photos.length;
   state.roomPhotoIndexes[roomId] = newIndex;
 
-  const button = elements.rooms.querySelector(`[data-carousel-room="${CSS.escape(roomId)}"]`);
-  if (!button) return;
-  const carousel = button.closest(".room-carousel");
-  if (!carousel) return;
-  const img = carousel.querySelector("img");
+  const card = elements.rooms.querySelector(`[data-room-id="${CSS.escape(roomId)}"]`);
+  if (!card) return;
+  const img = card.querySelector(".public-room-card-photo img");
   if (img) {
     img.src = photos[newIndex].url;
     img.alt = photos[newIndex].alt || room.name;
   }
-  const counter = carousel.querySelector(".carousel-count");
-  if (counter) counter.textContent = `${newIndex + 1}/${photos.length}`;
+  card.querySelectorAll(".public-room-card-dot").forEach((dot, i) => {
+    dot.classList.toggle("is-active", i === newIndex);
+  });
 }
 
 function changeGitePhoto(direction) {
@@ -375,43 +605,38 @@ function changeGitePhoto(direction) {
     img.src = photos[newIndex].url;
     img.alt = photos[newIndex].alt || (state.site?.site?.giteTitle || "Le gîte");
   }
-  const counter = elements.giteCarousel.querySelector(".carousel-count");
-  if (counter) counter.textContent = `${newIndex + 1}/${photos.length}`;
+  elements.giteCarousel.querySelectorAll(".public-room-card-dot").forEach((dot, i) => {
+    dot.classList.toggle("is-active", i === newIndex);
+  });
 }
 
 function getAmenityGroups(room) {
-  if (room.amenityGroups?.length) {
-    return room.amenityGroups;
-  }
-  if (room.amenities?.length) {
-    return [{ name: "Équipements", items: room.amenities }];
-  }
+  if (room.amenityGroups?.length) return room.amenityGroups;
+  if (room.amenities?.length) return [{ name: "Équipements", items: room.amenities }];
   return [];
 }
 
 function openAmenitiesModal(roomId) {
-  const room = [...state.rooms, ...(state.availability?.rooms || [])].find((item) => item.id === roomId);
-  if (!room) {
-    return;
-  }
+  const room = findRoom(roomId);
+  if (!room) return;
   elements.amenitiesTitle.textContent = "Équipements";
   elements.amenitiesRoomLabel.textContent = room.name;
   elements.amenitiesContent.innerHTML = getAmenityGroups(room)
-    .map(
-      (group) => `
-        <section>
-          <h3>${escapeHtml(group.name)}</h3>
-          <ul>${(group.items || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-        </section>
-      `,
-    )
+    .map((group) => `
+      <section>
+        <h3>${escapeHtml(group.name)}</h3>
+        <ul>${(group.items || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      </section>
+    `)
     .join("");
-  elements.amenitiesModal.classList.remove("is-hidden");
+  elements.amenitiesModal.classList.add("is-open");
+  elements.amenitiesModal.querySelectorAll(".modal-sheet").forEach((s) => s.classList.add("is-open"));
   lockScroll();
 }
 
 function closeAmenitiesModal() {
-  elements.amenitiesModal.classList.add("is-hidden");
+  elements.amenitiesModal.classList.remove("is-open");
+  elements.amenitiesModal.querySelectorAll(".modal-sheet").forEach((s) => s.classList.remove("is-open"));
   unlockScroll();
 }
 
@@ -445,6 +670,34 @@ function updateLightboxImage() {
   elements.lightboxNext.classList.toggle("is-hidden", total < 2);
 }
 
+function showConfirmation(payload, room, total) {
+  elements.confirmationRoomName.textContent = room?.name || "";
+  elements.confirmationGuestCount.textContent = `${payload.guestCount} voyageur${payload.guestCount > 1 ? "s" : ""}`;
+  elements.confirmationArrival.textContent = formatHumanDate(payload.arrivalDate);
+  elements.confirmationDeparture.textContent = formatHumanDate(payload.departureDate);
+  elements.confirmationTotal.textContent = total ? formatPrice(total) : "—";
+  if (room?.photos?.[0]?.url) {
+    elements.confirmationRoomPhoto.style.backgroundImage = `url("${room.photos[0].url}")`;
+  } else {
+    elements.confirmationRoomPhoto.style.background = gradientForRoom(room?.id || "");
+  }
+  elements.confirmation.classList.add("is-visible");
+  elements.confirmation.setAttribute("aria-hidden", "false");
+  lockScroll();
+}
+
+function hideConfirmation() {
+  elements.confirmation.classList.remove("is-visible");
+  elements.confirmation.setAttribute("aria-hidden", "true");
+  unlockScroll();
+}
+
+function formatHumanDate(iso) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  return date.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
+}
+
 async function submitBookingRequest(event) {
   event.preventDefault();
   const payload = {
@@ -470,8 +723,11 @@ async function submitBookingRequest(event) {
     showToast(elements, data.error || "Demande impossible.", true);
     return;
   }
+  const room = findRoom(payload.roomId);
+  const nights = calculateNights(payload.arrivalDate, payload.departureDate);
+  const total = (Number(room?.price) || 0) * nights;
   elements.requestForm.reset();
-  elements.guestCount.value = "2";
+  setStepperValue(2);
   closeModal();
-  showToast(elements, "Demande envoyée. Nous vous répondrons rapidement.");
+  showConfirmation(payload, room, total);
 }
