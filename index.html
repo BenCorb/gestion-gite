@@ -107,8 +107,6 @@
           </button>
         </nav>
 
-        <section class="stats-grid admin-top-stats" id="top-stats"></section>
-
         <main class="admin-main-content">
         <section class="tab-panel" id="tab-reservations">
           <article class="panel card reservations-panel">
@@ -261,15 +259,15 @@
         </section>
 
         <section class="tab-panel active" id="tab-alerts">
-          <article class="panel card">
-            <div class="panel-heading compact">
-              <div>
-                <h2>Alertes</h2>
-                <p>Points à surveiller aujourd'hui et à court terme.</p>
-              </div>
+          <div class="alerts-greeting" id="alerts-greeting"></div>
+          <section class="stats-grid admin-top-stats" id="top-stats" aria-label="Statistiques rapides"></section>
+          <div class="alerts-section">
+            <div class="alerts-section-header">
+              <h2 class="alerts-section-title">À traiter</h2>
+              <p class="alerts-section-meta">Points à surveiller aujourd'hui et à court terme.</p>
             </div>
             <div id="alerts-list" class="alerts-list"></div>
-          </article>
+          </div>
         </section>
 
         <section class="tab-panel" id="tab-calendar">
