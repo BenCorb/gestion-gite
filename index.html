@@ -13,47 +13,103 @@
     <link href="https://fonts.googleapis.com/css2?family=Satisfy&family=Lato:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
-    <div class="page-shell">
-      <header class="hero">
-        <div>
-          <p class="eyebrow">Suivi de réservations</p>
-          <h1 id="property-title">Mon gîte</h1>
-          <p id="sync-status" class="sync-status">Synchronisé</p>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <aside class="admin-sidebar" aria-label="Navigation latérale">
+        <div class="admin-sidebar-header">
+          <p class="eyebrow">Gestion</p>
+          <span class="brand admin-sidebar-brand" id="property-title-sidebar">Mon gîte</span>
         </div>
-        <div class="hero-actions">
-          <button class="secondary-button" id="refresh-button" type="button">Actualiser</button>
-          <button class="danger-button" id="header-logout-button" type="button">Déconnexion</button>
+        <nav class="admin-sidebar-nav" aria-label="Navigation principale (desktop)">
+          <button class="tab-button admin-sidebar-item" data-tab="alerts" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+            <span class="admin-sidebar-item-label">Alertes</span>
+            <span class="admin-sidebar-item-badge is-hidden" data-tab-badge="alerts">0</span>
+          </button>
+          <button class="tab-button admin-sidebar-item" data-tab="reservations" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 17v-5a2 2 0 012-2h16a2 2 0 012 2v5"/><path d="M2 21v-4h20v4"/><path d="M7 10V8a2 2 0 012-2h6a2 2 0 012 2v2"/></svg>
+            <span class="admin-sidebar-item-label">Réservations</span>
+          </button>
+          <button class="tab-button admin-sidebar-item" data-tab="requests" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+            <span class="admin-sidebar-item-label">Demandes</span>
+            <span class="admin-sidebar-item-badge is-hidden" data-tab-badge="requests">0</span>
+          </button>
+          <button class="tab-button admin-sidebar-item" data-tab="calendar" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+            <span class="admin-sidebar-item-label">Calendrier</span>
+          </button>
+          <button class="tab-button admin-sidebar-item" data-tab="planning" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3L3 5v16l6-2 6 2 6-2V3l-6 2-6-2z"/><path d="M9 3v16M15 5v16"/></svg>
+            <span class="admin-sidebar-item-label">Planning</span>
+          </button>
+          <button class="tab-button admin-sidebar-item" data-tab="reports" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+            <span class="admin-sidebar-item-label">Bilans</span>
+          </button>
+          <button class="tab-button admin-sidebar-item" data-tab="settings" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+            <span class="admin-sidebar-item-label">Paramètres</span>
+          </button>
+        </nav>
+        <div class="admin-sidebar-footer">
+          <p id="sync-status-sidebar" class="admin-sidebar-sync">Synchronisé</p>
         </div>
-      </header>
+      </aside>
 
-      <section class="stats-grid" id="top-stats"></section>
+      <div class="admin-main">
+        <header class="admin-header">
+          <div class="admin-header-text">
+            <p class="eyebrow">Gestion</p>
+            <h1 class="brand admin-header-brand" id="property-title">Mon gîte</h1>
+            <p id="sync-status" class="sync-status admin-header-sync">Synchronisé</p>
+          </div>
+          <div class="admin-header-actions">
+            <button class="admin-icon-button" id="refresh-button" type="button" aria-label="Actualiser">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 11-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+            </button>
+            <button class="admin-icon-button" id="header-logout-button" type="button" aria-label="Déconnexion">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+            </button>
+          </div>
+        </header>
 
-      <nav class="tabs" aria-label="Navigation principale">
-        <button class="tab-button active" data-tab="alerts" type="button">
-          🔔 Alertes
-        </button>
-        <button class="tab-button" data-tab="reservations" type="button">
-          🛏️ Réservations
-        </button>
-        <button class="tab-button" data-tab="requests" type="button">
-          ✉️ Demandes
-        </button>
-        <button class="tab-button" data-tab="calendar" type="button">
-          🗓️ Calendrier
-        </button>
-        <button class="tab-button" data-tab="planning" type="button">
-          🧭 Planning
-        </button>
-        <button class="tab-button" data-tab="reports" type="button">
-          📊 Bilans
-        </button>
-        <button class="tab-button tab-button-settings" data-tab="settings" type="button">
-          ⚙️ Paramètres
-        </button>
-      </nav>
+        <nav class="admin-tabs" aria-label="Navigation principale">
+          <button class="tab-button admin-tab" data-tab="alerts" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+            <span>Alertes</span>
+            <span class="admin-tab-badge is-hidden" data-tab-badge-mobile="alerts">0</span>
+          </button>
+          <button class="tab-button admin-tab" data-tab="reservations" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 17v-5a2 2 0 012-2h16a2 2 0 012 2v5"/><path d="M2 21v-4h20v4"/><path d="M7 10V8a2 2 0 012-2h6a2 2 0 012 2v2"/></svg>
+            <span>Résa.</span>
+          </button>
+          <button class="tab-button admin-tab" data-tab="requests" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+            <span>Demandes</span>
+            <span class="admin-tab-badge is-hidden" data-tab-badge-mobile="requests">0</span>
+          </button>
+          <button class="tab-button admin-tab" data-tab="calendar" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+            <span>Cal.</span>
+          </button>
+          <button class="tab-button admin-tab" data-tab="planning" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3L3 5v16l6-2 6 2 6-2V3l-6 2-6-2z"/><path d="M9 3v16M15 5v16"/></svg>
+            <span>Plan.</span>
+          </button>
+          <button class="tab-button admin-tab" data-tab="reports" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+            <span>Bilans</span>
+          </button>
+          <button class="tab-button admin-tab" data-tab="settings" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+            <span>Réglages</span>
+          </button>
+        </nav>
 
-      <main>
+        <section class="stats-grid admin-top-stats" id="top-stats"></section>
+
+        <main class="admin-main-content">
         <section class="tab-panel" id="tab-reservations">
           <article class="panel card reservations-panel">
             <div class="panel-heading compact reservations-heading">
@@ -525,7 +581,8 @@
 
           </div>
         </section>
-      </main>
+        </main>
+      </div>
     </div>
 
     <div id="toast" class="toast" aria-live="polite"></div>

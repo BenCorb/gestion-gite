@@ -62,6 +62,7 @@ export function initializeReportControls(state, elements) {
 
 export function renderApp(ctx) {
   renderHeader(ctx.state, ctx.elements);
+  renderTabBadges(ctx.state);
   renderTopStats(ctx.state, ctx.elements);
   renderAlerts(ctx.state, ctx.elements);
   renderReservationFormOptions(ctx);
@@ -75,14 +76,32 @@ export function renderApp(ctx) {
 }
 
 function renderHeader(state, elements) {
-  elements.propertyTitle.textContent = state.settings.propertyName;
-  document.title = "SUIVI DE RÉSERVATIONS";
+  const name = state.settings.propertyName;
+  elements.propertyTitle.textContent = name;
+  const sidebarBrand = document.getElementById("property-title-sidebar");
+  if (sidebarBrand) sidebarBrand.textContent = name;
+  document.title = `${name} — Gestion`;
   if (state.lastSyncedAt) {
-    elements.syncStatus.textContent = `Synchronisé à ${state.lastSyncedAt.toLocaleTimeString("fr-FR", {
+    const syncText = `Synchronisé à ${state.lastSyncedAt.toLocaleTimeString("fr-FR", {
       hour: "2-digit",
       minute: "2-digit",
     })}`;
+    elements.syncStatus.textContent = syncText;
+    const sidebarSync = document.getElementById("sync-status-sidebar");
+    if (sidebarSync) sidebarSync.textContent = syncText;
   }
+}
+
+function renderTabBadges(state) {
+  const pendingRequests = (state.bookingRequests || []).filter((r) => r.status === "pending").length;
+  const updateBadge = (selector, count) => {
+    document.querySelectorAll(selector).forEach((el) => {
+      el.textContent = count;
+      el.classList.toggle("is-hidden", count <= 0);
+    });
+  };
+  updateBadge('[data-tab-badge="requests"]', pendingRequests);
+  updateBadge('[data-tab-badge-mobile="requests"]', pendingRequests);
 }
 
 function renderTopStats(state, elements) {
