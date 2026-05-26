@@ -94,7 +94,7 @@ function renderHeader(state, elements) {
 }
 
 function renderTabBadges(state) {
-  const pendingRequests = (state.bookingRequests || []).filter((r) => r.status === "pending").length;
+  const pendingRequests = (state.bookingRequests || []).filter((r) => r.status === "new").length;
   const updateBadge = (selector, count) => {
     document.querySelectorAll(selector).forEach((el) => {
       el.textContent = count;
@@ -111,7 +111,7 @@ function renderTopStats(state, elements) {
     (reservation) => reservation.status !== "cancelled",
   );
   const arrivalsToday = reservationsOnly.filter((r) => sameDay(parseIsoDate(r.arrivalDate), today));
-  const pendingRequests = (state.bookingRequests || []).filter((r) => r.status === "pending").length;
+  const pendingRequests = (state.bookingRequests || []).filter((r) => r.status === "new").length;
   const currentMonthKey = `${today.getFullYear()}-${today.getMonth() + 1}`;
   const thisMonth = reservationsOnly.filter((reservation) => {
     const date = parseIsoDate(reservation.arrivalDate);
@@ -157,7 +157,7 @@ function renderAlerts(state, elements) {
   const today = new Date();
   const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
   const alerts = [];
-  const pendingRequests = (state.bookingRequests || []).filter((r) => r.status === "pending");
+  const pendingRequests = (state.bookingRequests || []).filter((r) => r.status === "new");
 
   if (pendingRequests.length > 0) {
     const firstNames = pendingRequests.slice(0, 2).map((r) => r.guestName || "Anonyme").join(" · ");

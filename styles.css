@@ -4002,3 +4002,257 @@ textarea {
   .alerts-greeting-script { font-size: 28px; }
   .alerts-section-title { font-size: 18px; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Admin · Réservations (Phase 6.2)
+   ════════════════════════════════════════════════════════════════════════ */
+
+.tab-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 0 4px;
+}
+.tab-section-header .eyebrow { margin: 0; }
+.tab-section-title {
+  margin: 4px 0 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.2px;
+  word-break: break-word;
+}
+
+.reservations-toolbar-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+.reservations-search { width: 100%; }
+.reservations-filter-room { min-width: 0; }
+.reservations-filter-room .field-label {
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+.reservations-filter-room .field-select {
+  padding: 9px 12px;
+  font-size: 14px;
+}
+
+/* Override legacy .filter-chip — keep .chip styling from DESIGN_TOKENS */
+.filter-chip.chip {
+  padding: 7px 14px;
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-pill);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background .15s ease;
+}
+.filter-chip.chip.active,
+.filter-chip.chip.is-active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+/* Reservation cards — adapt legacy to new design */
+.reservation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+.reservation-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  padding: 0;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.reservation-card:hover,
+.reservation-card:focus-visible {
+  border-color: var(--rule-strong);
+  box-shadow: var(--shadow-float);
+}
+.reservation-card header {
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.reservation-card h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.1px;
+}
+.reservation-card .reservation-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+.reservation-card .reservation-date-range {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.reservation-card .room-tag,
+.reservation-card .type-tag,
+.reservation-card .status-tag,
+.reservation-card .platform-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  letter-spacing: 0.1px;
+  background: var(--paper-2);
+  color: var(--ink-2);
+  border: 1px solid var(--rule);
+}
+.reservation-card .room-tag.custom-color {
+  background: var(--room-color, var(--accent-soft));
+  color: var(--ink);
+  border-color: transparent;
+}
+.reservation-card .status-tag.status-pending  { background: var(--pending-tint); color: var(--pending-deep); border-color: transparent; }
+.reservation-card .status-tag.status-confirmed { background: var(--accent-soft); color: var(--accent-deep); border-color: transparent; }
+.reservation-card .status-tag.status-paid     { background: var(--positive-tint); color: var(--positive-deep); border-color: transparent; }
+.reservation-card .status-tag.status-cancelled { background: var(--danger-tint); color: var(--danger-deep); border-color: transparent; text-decoration: line-through; }
+.reservation-card .type-tag.block { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+.reservation-toggle-indicator {
+  font-size: 22px;
+  color: var(--ink-3);
+  transition: transform .2s ease;
+  margin-top: -4px;
+}
+.reservation-card.is-expanded .reservation-toggle-indicator { transform: rotate(180deg); }
+
+.reservation-collapsible {
+  border-top: 1px solid var(--rule);
+  padding: 14px 16px;
+  background: var(--paper);
+}
+.reservation-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  font-size: 14px;
+}
+.reservation-details > div { display: flex; flex-direction: column; gap: 2px; }
+.reservation-details strong {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.reservation-details span { color: var(--ink); }
+.reservation-details .full-width { grid-column: 1 / -1; }
+.reservation-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.reservation-footer .form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Demandes (Phase 6.3) — additions */
+.tab-section-meta {
+  margin: 6px 4px 4px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+#booking-requests-list .reservation-card .reservation-details {
+  padding: 14px 16px;
+  border-top: 1px solid var(--rule);
+  background: var(--paper);
+}
+.request-edit-form {
+  border-top: 1px dashed var(--rule-strong);
+  padding: 14px 16px 4px;
+  background: var(--paper);
+}
+.request-edit-form .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.request-edit-form .form-grid > label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--ink-2);
+  font-weight: 600;
+  min-width: 0;
+}
+.request-edit-form .form-grid > label.full-width { grid-column: 1 / -1; }
+.request-edit-form input,
+.request-edit-form select,
+.request-edit-form textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  width: 100%;
+  min-width: 0;
+  font-weight: 400;
+}
+.request-edit-form .form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 0 16px 14px;
+}
+.request-edit-form .form-actions button.primary-button {
+  background: var(--positive);
+  color: #fff;
+  border: 1px solid var(--positive);
+  padding: 10px 16px;
+  border-radius: var(--r-md);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.request-edit-form .form-actions button.primary-button:hover { background: var(--positive-deep); }
+.request-edit-form .form-actions button.danger-button {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid rgba(181,76,62,.35);
+  padding: 10px 16px;
+  border-radius: var(--r-md);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.request-edit-form .form-actions button.danger-button:hover { background: var(--danger-tint); }
