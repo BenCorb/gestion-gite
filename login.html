@@ -2,7 +2,7 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Accès gestion</title>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
@@ -14,42 +14,78 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body class="login-body">
-    <main class="login-panel">
-      <p class="eyebrow">Gestion privée</p>
-      <h1>Accès admin</h1>
-      <form id="login-form" class="form-grid">
-        <label class="full-width">
-          <span>Mot de passe</span>
-          <input id="admin-password" type="password" autocomplete="current-password" required />
-        </label>
-        <button class="primary-button full-width" type="submit">Entrer</button>
-      </form>
-    </main>
+    <div class="login-layout">
+      <aside class="login-hero">
+        <div class="login-hero-image" id="login-hero-image" aria-hidden="true"></div>
+        <div class="login-hero-overlay" aria-hidden="true"></div>
+        <div class="login-hero-content">
+          <span class="brand login-hero-brand" id="login-property-name">Le Clos des Vignes</span>
+          <p class="login-hero-eyebrow">Espace gestion</p>
+        </div>
+      </aside>
+      <main class="login-main">
+        <div class="login-card">
+          <h1 class="login-title">Bienvenue</h1>
+          <p class="login-meta">Entrez votre mot de passe pour accéder à la gestion.</p>
+          <form id="login-form" class="login-form" autocomplete="on">
+            <label class="field login-field">
+              <span class="field-label">Mot de passe</span>
+              <span class="login-password-wrap">
+                <svg class="login-password-leading" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                <input id="admin-password" type="password" autocomplete="current-password" required class="field-input login-password-input" placeholder="••••••••" />
+                <button type="button" class="login-password-toggle" id="toggle-password" aria-label="Afficher le mot de passe">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </span>
+            </label>
+            <button class="btn btn-primary btn-lg btn-full" type="submit">
+              <span>Se connecter</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+          </form>
+          <p class="login-footnote">Application installée localement.<br />Vos données restent chez vous.</p>
+        </div>
+      </main>
+    </div>
     <div id="toast" class="toast" aria-live="polite"></div>
     <script>
-      const elements = {
+      const loginElements = {
         form: document.getElementById("login-form"),
         password: document.getElementById("admin-password"),
+        togglePassword: document.getElementById("toggle-password"),
         toast: document.getElementById("toast"),
+        propertyName: document.getElementById("login-property-name"),
+        heroImage: document.getElementById("login-hero-image"),
       };
 
       let toastTimeoutId = null;
       function showLoginToast(message, isError = false) {
-        elements.toast.textContent = message;
-        elements.toast.style.background = isError ? "rgba(138, 78, 67, 0.96)" : "rgba(59, 51, 41, 0.95)";
-        elements.toast.classList.add("visible");
+        loginElements.toast.textContent = message;
+        loginElements.toast.classList.remove("is-error", "is-success");
+        if (isError) loginElements.toast.classList.add("is-error");
+        loginElements.toast.classList.add("visible");
         window.clearTimeout(toastTimeoutId);
         toastTimeoutId = window.setTimeout(() => {
-          elements.toast.classList.remove("visible");
+          loginElements.toast.classList.remove("visible");
         }, 3200);
       }
 
-      elements.form.addEventListener("submit", async (event) => {
+      loginElements.togglePassword.addEventListener("click", () => {
+        const isPwd = loginElements.password.type === "password";
+        loginElements.password.type = isPwd ? "text" : "password";
+        loginElements.togglePassword.setAttribute(
+          "aria-label",
+          isPwd ? "Masquer le mot de passe" : "Afficher le mot de passe",
+        );
+        loginElements.password.focus();
+      });
+
+      loginElements.form.addEventListener("submit", async (event) => {
         event.preventDefault();
         const response = await fetch("/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password: elements.password.value }),
+          body: JSON.stringify({ password: loginElements.password.value }),
         });
         const data = await response.json();
         if (!response.ok) {
@@ -58,6 +94,23 @@
         }
         window.location.replace("/gestion/app");
       });
+
+      // Fetch the public site identity for branding (best-effort)
+      fetch("/api/public-site")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (!data) return;
+          if (data.propertyName) {
+            loginElements.propertyName.textContent = data.propertyName;
+            document.title = `${data.propertyName} — Accès gestion`;
+          }
+          const hero = data.site?.heroImageUrl;
+          if (hero) loginElements.heroImage.style.backgroundImage = `url("${hero}")`;
+          const headingFont = data.site?.headingFont;
+          const bodyFont = data.site?.bodyFont;
+          // (font swap deferred to admin shell — keep defaults here for speed)
+        })
+        .catch(() => {});
     </script>
   </body>
 </html>
