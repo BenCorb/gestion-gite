@@ -4256,3 +4256,174 @@ textarea {
   font-family: inherit;
 }
 .request-edit-form .form-actions button.danger-button:hover { background: var(--danger-tint); }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Admin · Calendrier (6.4) + Planning (6.5) + Bilans (6.6) + Paramètres (6.7)
+   ════════════════════════════════════════════════════════════════════════ */
+
+.calendar-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.calendar-month-label {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.2px;
+  min-width: 140px;
+  text-align: center;
+}
+
+.calendar-card, .planning-card {
+  margin-top: 4px;
+  overflow: hidden;
+}
+.calendar-scroll, .planning-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Reports */
+.reports-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 4px;
+}
+.report-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+}
+.report-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.report-card-header .eyebrow { margin: 0; }
+.report-card-title {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.1px;
+}
+.report-card-select { display: flex; flex-direction: column; gap: 4px; }
+.report-card-select .field-label { font-size: 11px; margin-bottom: 0; }
+.report-card-select .field-select { padding: 8px 12px; font-size: 13px; }
+.report-card-actions { display: flex; gap: 8px; align-items: flex-end; }
+
+.report-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.report-section { display: flex; flex-direction: column; gap: 10px; }
+.report-section-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.breakdown-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+@media (min-width: 1024px) {
+  .reports-grid { grid-template-columns: 1fr 1fr; gap: 20px; }
+  .report-stats { grid-template-columns: repeat(4, 1fr); }
+  .breakdown-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* Settings */
+.settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+}
+.settings-block { display: flex; flex-direction: column; gap: 8px; }
+.settings-block-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+.settings-block-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.settings-block-meta {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.palette-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+.palette-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color .15s ease, background .15s ease;
+}
+.palette-swatch:hover { border-color: var(--rule-strong); }
+.palette-swatch[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+.palette-swatch-chip {
+  width: 32px; height: 32px;
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,.05);
+}
+.palette-swatch-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.palette-swatch[aria-checked="true"] .palette-swatch-label { color: var(--accent-deep); }
+.palette-meta {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.45;
+}
+
+/* Override legacy .settings-section + .panel for the redesigned card */
+#tab-settings .settings-section {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+}
+#tab-settings .settings-section > .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+#tab-settings .settings-section h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
