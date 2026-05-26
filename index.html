@@ -109,40 +109,37 @@
 
         <main class="admin-main-content">
         <section class="tab-panel" id="tab-reservations">
-          <article class="panel card reservations-panel">
-            <div class="panel-heading compact reservations-heading">
-              <div>
-                <h2>Liste des réservations</h2>
-                <p>Vue chronologique de tous les séjours.</p>
-              </div>
-              <div class="reservations-toolbar">
-                <div class="filters">
-                  <label>
-                    <span>Chambre</span>
-                    <select id="reservation-filter-room"></select>
-                  </label>
-                  <label>
-                    <span>Recherche</span>
-                    <input id="reservation-search" type="search" placeholder="Client" />
-                  </label>
-                </div>
-                <button class="primary-button" id="open-reservation-modal-button" type="button">
-                  Nouvelle réservation
-                </button>
-              </div>
+          <div class="tab-section-header">
+            <div>
+              <p class="eyebrow">Réservations</p>
+              <h2 class="tab-section-title">Liste des séjours</h2>
             </div>
-            <div class="quick-filters" id="quick-filters">
-              <button class="filter-chip active" data-filter="all" type="button">Tout</button>
-              <button class="filter-chip" data-filter="today" type="button">Aujourd'hui</button>
-              <button class="filter-chip" data-filter="upcoming" type="button">À venir</button>
-              <button class="filter-chip" data-filter="month" type="button">Ce mois</button>
-              <button class="filter-chip" data-filter="pending" type="button">En attente</button>
-              <button class="filter-chip" data-filter="to-pay" type="button">À payer</button>
-              <button class="filter-chip" data-filter="paid" type="button">Payées</button>
-              <button class="filter-chip" data-filter="blocks" type="button">Blocages</button>
+            <button class="btn btn-primary btn-md" id="open-reservation-modal-button" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              <span>Nouvelle</span>
+            </button>
+          </div>
+          <div class="reservations-toolbar-row">
+            <div class="reservations-search field-suffix">
+              <input id="reservation-search" type="search" class="field-input" placeholder="Rechercher un client…" />
+              <svg class="field-suffix-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
             </div>
-            <div id="reservations-list" class="reservation-list empty-state-host"></div>
-          </article>
+            <label class="reservations-filter-room">
+              <span class="field-label">Chambre</span>
+              <select id="reservation-filter-room" class="field-select"></select>
+            </label>
+          </div>
+          <div class="chips" id="quick-filters">
+            <button class="chip filter-chip is-active active" data-filter="all" type="button">Tout</button>
+            <button class="chip filter-chip" data-filter="today" type="button">Aujourd'hui</button>
+            <button class="chip filter-chip" data-filter="upcoming" type="button">À venir</button>
+            <button class="chip filter-chip" data-filter="month" type="button">Ce mois</button>
+            <button class="chip filter-chip" data-filter="pending" type="button">En attente</button>
+            <button class="chip filter-chip" data-filter="to-pay" type="button">À payer</button>
+            <button class="chip filter-chip" data-filter="paid" type="button">Payées</button>
+            <button class="chip filter-chip" data-filter="blocks" type="button">Blocages</button>
+          </div>
+          <div id="reservations-list" class="reservation-list empty-state-host"></div>
 
           <div
             class="modal-backdrop reservation-modal is-hidden"
@@ -376,15 +373,14 @@
         </section>
 
         <section class="tab-panel" id="tab-requests">
-          <article class="panel card">
-            <div class="panel-heading compact">
-              <div>
-                <h2>Demandes de réservation</h2>
-                <p>Demandes envoyées depuis la page vitrine.</p>
-              </div>
+          <div class="tab-section-header">
+            <div>
+              <p class="eyebrow">Demandes</p>
+              <h2 class="tab-section-title">À traiter</h2>
             </div>
-            <div id="booking-requests-list" class="reservation-list empty-state-host"></div>
-          </article>
+          </div>
+          <p class="tab-section-meta">Demandes reçues depuis la vitrine. Accepter une demande crée la réservation correspondante.</p>
+          <div id="booking-requests-list" class="reservation-list empty-state-host"></div>
         </section>
 
         <section class="tab-panel" id="tab-settings">
