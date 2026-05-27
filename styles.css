@@ -2793,13 +2793,13 @@ html { scroll-behavior: smooth; }
   height: 18px;
   color: var(--accent);
   flex-shrink: 0;
-  transform: translateY(1px);
+  display: block;
 }
 .availability-cell-value {
   display: block;
   font-size: 14px;
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 18px;
   color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
@@ -2807,7 +2807,6 @@ html { scroll-behavior: smooth; }
   font-family: inherit;
   min-width: 0;
   flex: 1;
-  transform: translateY(2px);
 }
 .availability-cell[data-empty="true"] .availability-cell-value { color: var(--ink-2); }
 .availability-cell-input {
@@ -2883,8 +2882,7 @@ html { scroll-behavior: smooth; }
   .availability-card { padding: 4px; }
   .availability-cell { padding: 0 10px; gap: 8px; min-height: 40px; }
   .availability-cell-icon { width: 16px; height: 16px; }
-  .availability-cell-label { font-size: 8px; letter-spacing: 0.6px; }
-  .availability-cell-value { font-size: 13px; }
+  .availability-cell-value { font-size: 13px; line-height: 16px; }
   .availability-divider { margin: 2px 0; }
   .availability-submit { width: 40px; height: 40px; margin-left: 2px; }
 }
@@ -3453,8 +3451,7 @@ html { scroll-behavior: smooth; }
   }
   .availability-cell { padding: 0 20px; gap: 12px; min-height: 52px; }
   .availability-cell-icon { width: 20px; height: 20px; }
-  .availability-cell-label { font-size: 10px; letter-spacing: 1px; }
-  .availability-cell-value { font-size: 16px; }
+  .availability-cell-value { font-size: 16px; line-height: 20px; }
   .availability-divider { margin: 0; height: 36px; }
   .availability-submit {
     width: 52px;
