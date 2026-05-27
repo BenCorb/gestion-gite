@@ -50,8 +50,15 @@ const elements = {
   roomsTitle: document.getElementById("public-rooms-title"),
   availabilityForm: document.getElementById("availability-form"),
   arrival: document.getElementById("availability-arrival"),
+  arrivalDisplay: document.getElementById("availability-arrival-display"),
   departure: document.getElementById("availability-departure"),
+  departureDisplay: document.getElementById("availability-departure-display"),
   availabilityStatus: document.getElementById("availability-status"),
+  topnav: document.getElementById("public-topnav"),
+  topnavBrand: document.getElementById("public-topnav-brand"),
+  topnavCta: document.getElementById("public-topnav-cta"),
+  footerBrand: document.getElementById("public-footer-brand"),
+  footerYear: document.getElementById("public-footer-year"),
   rooms: document.getElementById("public-rooms"),
   giteSection: document.getElementById("public-gite-section"),
   giteTitle: document.getElementById("public-gite-title"),
@@ -60,7 +67,6 @@ const elements = {
   gallerySection: document.getElementById("public-gallery-section"),
   gallery: document.getElementById("public-gallery"),
   contact: document.getElementById("public-contact"),
-  stickyCtaButton: document.getElementById("public-sticky-cta-button"),
   modal: document.getElementById("request-modal"),
   requestForm: document.getElementById("booking-request-form"),
   requestRoomId: document.getElementById("request-room-id"),
@@ -114,13 +120,25 @@ function bindEvents() {
   elements.amenitiesModal.addEventListener("click", (event) => {
     if (event.target === elements.amenitiesModal) closeAmenitiesModal();
   });
-  elements.stickyCtaButton.addEventListener("click", () => {
-    const firstAvailable = pickDefaultRoomId();
-    if (firstAvailable) openRequestModal(firstAvailable);
-    else showToast(elements, "Aucune chambre disponible pour le moment.", true);
-  });
+  if (elements.topnavCta) {
+    elements.topnavCta.addEventListener("click", () => {
+      const firstAvailable = pickDefaultRoomId();
+      if (firstAvailable) openRequestModal(firstAvailable);
+      else showToast(elements, "Aucune chambre disponible pour le moment.", true);
+    });
+  }
+  if (elements.topnav) {
+    const onScroll = () => {
+      elements.topnav.classList.toggle("is-scrolled", window.scrollY > 80);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  }
   elements.confirmationBack.addEventListener("click", hideConfirmation);
   bindStepper();
+  // Render footer year + initial date display
+  if (elements.footerYear) elements.footerYear.textContent = String(new Date().getFullYear());
+  syncAvailabilityDisplay();
 
   ["change", "input"].forEach((evt) => {
     elements.requestArrivalDate.addEventListener(evt, updateRequestTotals);
@@ -187,6 +205,8 @@ function renderPublicSite() {
   const site = state.site.site || {};
   document.title = state.site.propertyName;
   elements.propertyName.textContent = state.site.propertyName;
+  if (elements.topnavBrand) elements.topnavBrand.textContent = state.site.propertyName;
+  if (elements.footerBrand) elements.footerBrand.textContent = state.site.propertyName;
   elements.headline.textContent = site.headline || state.site.propertyName;
   elements.subtitle.textContent = site.subtitle || "";
   elements.intro.textContent = site.intro || state.site.description || "";
@@ -453,7 +473,13 @@ function renderContact(site) {
   if (site.email) rows.push(`<div class="public-contact-row">${icon("mail", 18)}<a href="mailto:${escapeHtml(site.email)}">${escapeHtml(site.email)}</a></div>`);
   const list = rows.length ? `<div class="public-contact-list">${rows.join("")}</div>` : `<p class="public-section-intro">Contactez-nous via une demande de réservation.</p>`;
   const map = site.address
-    ? `<div class="public-contact-map"><iframe title="Carte ${escapeHtml(state.site.propertyName)}" loading="lazy" src="https://www.google.com/maps?q=${encodeURIComponent(site.address)}&z=10&output=embed"></iframe></div>`
+    ? `<div class="public-contact-map">
+        <iframe title="Carte ${escapeHtml(state.site.propertyName)}" loading="lazy" src="https://www.google.com/maps?q=${encodeURIComponent(site.address)}&z=10&output=embed"></iframe>
+        <a class="public-contact-map-link" href="https://www.google.com/maps?q=${encodeURIComponent(site.address)}" target="_blank" rel="noopener noreferrer">
+          <span>Ouvrir dans Google Maps</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
+        </a>
+      </div>`
     : "";
   elements.contact.innerHTML = `${list}${map}`;
 }
@@ -466,6 +492,23 @@ function handleDateChange() {
       elements.departure.value = next.toISOString().slice(0, 10);
     }
   }
+  syncAvailabilityDisplay();
+}
+
+function syncAvailabilityDisplay() {
+  const updateCell = (input, display) => {
+    if (!display) return;
+    const v = input.value;
+    if (!v) {
+      display.dataset.empty = "true";
+      display.textContent = "Choisir une date";
+    } else {
+      display.dataset.empty = "false";
+      display.textContent = formatHumanDate(v);
+    }
+  };
+  if (elements.arrival && elements.arrivalDisplay) updateCell(elements.arrival, elements.arrivalDisplay);
+  if (elements.departure && elements.departureDisplay) updateCell(elements.departure, elements.departureDisplay);
 }
 
 async function handleAvailabilitySubmit(event) {
