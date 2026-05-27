@@ -56,7 +56,6 @@ const elements = {
   availabilityStatus: document.getElementById("availability-status"),
   topnav: document.getElementById("public-topnav"),
   topnavBrand: document.getElementById("public-topnav-brand"),
-  topnavCta: document.getElementById("public-topnav-cta"),
   footerBrand: document.getElementById("public-footer-brand"),
   footerYear: document.getElementById("public-footer-year"),
   rooms: document.getElementById("public-rooms"),
@@ -64,8 +63,6 @@ const elements = {
   giteTitle: document.getElementById("public-gite-title"),
   giteDescription: document.getElementById("public-gite-description"),
   giteCarousel: document.getElementById("public-gite-carousel"),
-  gallerySection: document.getElementById("public-gallery-section"),
-  gallery: document.getElementById("public-gallery"),
   contact: document.getElementById("public-contact"),
   modal: document.getElementById("request-modal"),
   requestForm: document.getElementById("booking-request-form"),
@@ -120,16 +117,10 @@ function bindEvents() {
   elements.amenitiesModal.addEventListener("click", (event) => {
     if (event.target === elements.amenitiesModal) closeAmenitiesModal();
   });
-  if (elements.topnavCta) {
-    elements.topnavCta.addEventListener("click", () => {
-      const firstAvailable = pickDefaultRoomId();
-      if (firstAvailable) openRequestModal(firstAvailable);
-      else showToast(elements, "Aucune chambre disponible pour le moment.", true);
-    });
-  }
+  // Topnav scroll listener kept to add subtle elevation shadow once scrolled
   if (elements.topnav) {
     const onScroll = () => {
-      elements.topnav.classList.toggle("is-scrolled", window.scrollY > 80);
+      elements.topnav.classList.toggle("is-scrolled", window.scrollY > 40);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
@@ -223,7 +214,6 @@ function renderPublicSite() {
   }
   renderRooms();
   renderGiteSection(site);
-  renderGallery(site.gallery || []);
   renderContact(site);
   applyFontPair(site.bodyFont, site.headingFont);
 }
@@ -413,19 +403,6 @@ function wireRoomCardEvents() {
       const room = findRoom(roomId);
       const photos = room?.photos || [];
       if (photos.length) openLightbox(photos, state.roomPhotoIndexes[roomId] || 0);
-    });
-  });
-}
-
-function renderGallery(gallery) {
-  elements.gallerySection.classList.toggle("is-hidden", !gallery.length);
-  elements.gallery.innerHTML = gallery
-    .map((photo, index) => `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.alt || state.site.propertyName)}" data-gallery-index="${index}" loading="lazy" />`)
-    .join("");
-  elements.gallery.querySelectorAll("img").forEach((img) => {
-    img.addEventListener("click", () => {
-      const index = Number(img.dataset.galleryIndex) || 0;
-      openLightbox(gallery, index);
     });
   });
 }
