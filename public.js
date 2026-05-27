@@ -345,9 +345,14 @@ function renderRoomCard(room) {
     ? `<button class="btn btn-secondary btn-md btn-full" type="button" data-amenities-room="${escapeHtml(room.id)}">Voir les équipements</button>`
     : "";
 
-  const externalLinks = (room.bookingLinks || []).map((link) => `
-    <a class="btn btn-secondary btn-md btn-full public-room-card-link" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label || "Réserver")}</a>
-  `).join("");
+  const externalLinks = (room.bookingLinks || []).length
+    ? `<div class="public-room-card-external">
+        <div class="public-room-card-external-label">Aussi disponible sur</div>
+        ${(room.bookingLinks || []).map((link) => `
+          <a class="btn btn-secondary btn-md btn-full public-room-card-link" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label || "Réserver")}</a>
+        `).join("")}
+      </div>`
+    : "";
 
   return `
     <article class="public-room-card" data-room-id="${escapeHtml(room.id)}">
