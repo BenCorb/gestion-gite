@@ -2807,6 +2807,7 @@ html { scroll-behavior: smooth; }
   font-family: inherit;
   min-width: 0;
   flex: 1;
+  transform: translateY(2px);
 }
 .availability-cell[data-empty="true"] .availability-cell-value { color: var(--ink-2); }
 .availability-cell-input {
