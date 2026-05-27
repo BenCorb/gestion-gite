@@ -2794,22 +2794,6 @@ html { scroll-behavior: smooth; }
   color: var(--accent);
   flex-shrink: 0;
 }
-.availability-cell-content {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-  line-height: 1.2;
-}
-.availability-cell-label {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--ink-3);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  line-height: 1.2;
-}
-.availability-cell[data-empty="true"] .availability-cell-label { display: none; }
 .availability-cell-value {
   display: block;
   font-size: 14px;
@@ -2820,9 +2804,10 @@ html { scroll-behavior: smooth; }
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: inherit;
+  min-width: 0;
+  flex: 1;
 }
 .availability-cell[data-empty="true"] .availability-cell-value { color: var(--ink-2); }
-.availability-cell[data-empty="false"] .availability-cell-value { margin-top: 1px; }
 .availability-cell-input {
   position: absolute;
   inset: 0;
