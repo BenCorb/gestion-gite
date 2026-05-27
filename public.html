@@ -14,6 +14,17 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body class="public-body">
+    <header class="public-topnav" id="public-topnav">
+      <a class="public-topnav-brand brand" href="#top" id="public-topnav-brand">Le Clos des Vignes</a>
+      <nav class="public-topnav-links" aria-label="Sections">
+        <a href="#rooms">Chambres</a>
+        <a href="#lieu">Le lieu</a>
+        <a href="#galerie">Galerie</a>
+        <a href="#contact">Contact</a>
+      </nav>
+      <button class="btn btn-primary btn-sm" type="button" id="public-topnav-cta">Demander un séjour</button>
+    </header>
+    <span id="top" aria-hidden="true"></span>
     <header class="public-hero" id="public-hero">
       <div class="public-hero-image" id="public-hero-image" aria-hidden="true"></div>
       <div class="public-hero-overlay" aria-hidden="true"></div>
@@ -30,13 +41,15 @@
 
     <section class="availability-strip" aria-label="Choisir les dates">
       <form id="availability-form" class="availability-card">
-        <label class="availability-cell">
+        <label class="availability-cell" for="availability-arrival">
           <span class="availability-cell-label">Arrivée</span>
+          <span class="availability-cell-value" id="availability-arrival-display" data-empty="true">Choisir une date</span>
           <input id="availability-arrival" type="date" class="availability-cell-input" required />
         </label>
         <div class="availability-divider" aria-hidden="true"></div>
-        <label class="availability-cell">
+        <label class="availability-cell" for="availability-departure">
           <span class="availability-cell-label">Départ</span>
+          <span class="availability-cell-value" id="availability-departure-display" data-empty="true">Choisir une date</span>
           <input id="availability-departure" type="date" class="availability-cell-input" required />
         </label>
         <button class="availability-submit" type="submit" aria-label="Rechercher">
@@ -47,7 +60,7 @@
     </section>
 
     <main class="public-main">
-      <section class="public-section public-rooms-section">
+      <section class="public-section public-rooms-section" id="rooms">
         <p class="eyebrow">Nos chambres</p>
         <h2 class="public-section-title" id="public-rooms-title">Choisissez votre chambre</h2>
         <p id="public-intro" class="public-section-intro"></p>
@@ -55,6 +68,7 @@
       </section>
 
       <section class="public-section public-gite-section" id="public-gite-section">
+        <a id="lieu" class="anchor-target" aria-hidden="true"></a>
         <p class="eyebrow">Le lieu</p>
         <h2 class="public-section-title" id="public-gite-title">Le gîte</h2>
         <p id="public-gite-description" class="public-section-intro"></p>
@@ -62,21 +76,27 @@
       </section>
 
       <section class="public-section public-gallery-section" id="public-gallery-section">
+        <a id="galerie" class="anchor-target" aria-hidden="true"></a>
         <p class="eyebrow">Galerie</p>
         <h2 class="public-section-title">En images</h2>
         <div id="public-gallery" class="public-gallery"></div>
       </section>
 
-      <section class="public-section public-contact-section">
+      <section class="public-section public-contact-section" id="contact">
         <p class="eyebrow">Nous trouver</p>
         <h2 class="public-section-title">Contact</h2>
         <div id="public-contact" class="public-contact"></div>
       </section>
     </main>
 
-    <div class="public-sticky-cta" id="public-sticky-cta">
-      <button class="btn btn-primary btn-lg btn-full" type="button" id="public-sticky-cta-button">Demander un séjour</button>
-    </div>
+    <footer class="public-footer">
+      <div class="public-footer-brand brand" id="public-footer-brand">Le Clos des Vignes</div>
+      <div class="public-footer-meta">© <span id="public-footer-year"></span> · Tous droits réservés</div>
+      <div class="public-footer-links">
+        <a href="#top">Retour en haut</a>
+        <a href="/gestion" class="public-footer-admin">Espace gestion</a>
+      </div>
+    </footer>
 
     <div id="request-modal" class="modal-backdrop">
       <form id="booking-request-form" class="modal-sheet">
