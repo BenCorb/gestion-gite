@@ -491,11 +491,20 @@ function syncAvailabilityDisplay() {
       }
     } else {
       if (cell) cell.dataset.empty = "false";
-      display.textContent = formatHumanDate(v);
+      display.textContent = formatCompactDate(v);
     }
   };
   if (elements.arrival && elements.arrivalDisplay) updateCell(elements.arrival, elements.arrivalDisplay);
   if (elements.departure && elements.departureDisplay) updateCell(elements.departure, elements.departureDisplay);
+}
+
+function formatCompactDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
 async function handleAvailabilitySubmit(event) {
