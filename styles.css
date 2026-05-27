@@ -2666,12 +2666,13 @@ textarea {
 
 /* Smooth anchor scroll + offset for sticky topnav (desktop) */
 html { scroll-behavior: smooth; }
-.public-section { scroll-margin-top: 80px; }
+.public-section { scroll-margin-top: 72px; }
 .anchor-target {
   display: block;
-  position: relative;
-  top: -80px;
+  scroll-margin-top: 72px;
   visibility: hidden;
+  width: 0;
+  height: 0;
 }
 
 /* ── Hero ───────────────────────────────────────────────────────────── */
@@ -3470,16 +3471,12 @@ html { scroll-behavior: smooth; }
     gap: 64px;
     align-items: center;
   }
-  .public-gite-section .eyebrow,
-  .public-gite-section .public-section-title,
-  .public-gite-section #public-gite-description {
-    grid-column: 1;
+  .public-gite-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
   }
-  .public-gite-carousel {
-    grid-column: 2;
-    grid-row: 1 / span 3;
-    margin-top: 0;
-  }
+  .public-gite-carousel { margin-top: 0; }
   .public-gite-carousel img { height: 460px; }
 
   .public-gallery {
@@ -3504,54 +3501,63 @@ html { scroll-behavior: smooth; }
    Public — Topnav, Footer, Galerie asymétrique, Map polish (Lot 2 ergo)
    ════════════════════════════════════════════════════════════════════════ */
 
-/* Top nav — desktop only */
-.public-topnav { display: none; }
+/* Top nav — visible mobile + desktop, background opaque dès le départ */
+.public-topnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: calc(env(safe-area-inset-top, 0) + 10px) 16px 10px;
+  background: rgba(250, 246, 238, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  border-bottom: 1px solid var(--rule);
+  transition: box-shadow .2s ease;
+}
+.public-topnav.is-scrolled {
+  box-shadow: 0 2px 10px rgba(29, 24, 20, .06);
+}
+.public-topnav-brand {
+  font-size: 22px;
+  color: var(--ink);
+  text-decoration: none;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.public-topnav-links {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.public-topnav-links::-webkit-scrollbar { display: none; }
+.public-topnav-links a {
+  color: var(--ink-2);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+  transition: color .12s ease;
+}
+.public-topnav-links a:hover,
+.public-topnav-links a:focus-visible { color: var(--accent-deep); }
+/* Brand du hero masquée partout (le topnav la porte déjà) */
+.public-hero-top { display: none; }
+
 @media (min-width: 1024px) {
   .public-topnav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     gap: 32px;
     padding: 14px 36px;
-    background: rgba(250, 246, 238, 0);
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    transition: background .2s ease, box-shadow .2s ease, border-color .2s ease;
-    border-bottom: 1px solid transparent;
   }
-  .public-topnav.is-scrolled {
-    background: rgba(250, 246, 238, 0.92);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom-color: var(--rule);
-    box-shadow: 0 1px 6px rgba(29, 24, 20, .04);
-  }
-  .public-topnav-brand {
-    font-size: 28px;
-    color: var(--ink);
-    text-decoration: none;
-    line-height: 1;
-  }
-  /* Hide hero top-brand on desktop (topnav already shows it) */
-  .public-hero-top { display: none; }
-  .public-topnav-links {
-    display: flex;
-    align-items: center;
-    gap: 28px;
-    margin-left: auto;
-    margin-right: 16px;
-  }
-  .public-topnav-links a {
-    color: var(--ink-2);
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: 0.1px;
-    transition: color .12s ease;
-  }
-  .public-topnav-links a:hover { color: var(--accent-deep); }
-  .public-topnav .btn { flex-shrink: 0; }
+  .public-topnav-brand { font-size: 28px; }
+  .public-topnav-links { gap: 28px; }
+  .public-topnav-links a { font-size: 14px; }
 }
 
 /* Footer */
