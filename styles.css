@@ -2762,7 +2762,7 @@ html { scroll-behavior: smooth; }
 .availability-card {
   display: grid;
   grid-template-columns: 1fr 1px 1fr auto;
-  align-items: stretch;
+  align-items: center;
   background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: 999px;
@@ -2774,12 +2774,13 @@ html { scroll-behavior: smooth; }
   max-width: 520px;
 }
 .availability-cell {
-  padding: 6px 16px;
+  padding: 0 16px;
   display: flex; flex-direction: column;
   justify-content: center;
   cursor: pointer;
   min-width: 0;
   position: relative;
+  min-height: 40px;
 }
 .availability-cell-label {
   font-size: 9px;
@@ -2837,7 +2838,7 @@ html { scroll-behavior: smooth; }
 }
 .availability-divider {
   background: var(--rule);
-  margin: 8px 0;
+  margin: 4px 0;
   width: 1px;
 }
 .availability-submit {
@@ -3447,10 +3448,10 @@ html { scroll-behavior: smooth; }
     max-width: 560px;
     padding: 6px;
   }
-  .availability-cell { padding: 6px 22px; }
+  .availability-cell { padding: 0 22px; min-height: 44px; }
   .availability-cell-label { font-size: 10px; letter-spacing: 1px; margin-bottom: 1px; }
   .availability-cell-value { font-size: 15px; }
-  .availability-divider { margin: 6px 0; height: 32px; }
+  .availability-divider { margin: 0; height: 32px; }
   .availability-submit {
     width: 44px;
     height: 44px;
