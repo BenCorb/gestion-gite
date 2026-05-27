@@ -39,15 +39,21 @@
 
     <section class="availability-strip" aria-label="Choisir les dates">
       <form id="availability-form" class="availability-card">
-        <label class="availability-cell" for="availability-arrival">
-          <span class="availability-cell-label">Arrivée</span>
-          <span class="availability-cell-value" id="availability-arrival-display" data-empty="true">Choisir une date</span>
+        <label class="availability-cell" for="availability-arrival" data-empty="true" data-placeholder="Choisir l'arrivée">
+          <svg class="availability-cell-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+          <span class="availability-cell-content">
+            <span class="availability-cell-label">Arrivée</span>
+            <span class="availability-cell-value" id="availability-arrival-display">Choisir l'arrivée</span>
+          </span>
           <input id="availability-arrival" type="date" class="availability-cell-input" required />
         </label>
         <div class="availability-divider" aria-hidden="true"></div>
-        <label class="availability-cell" for="availability-departure">
-          <span class="availability-cell-label">Départ</span>
-          <span class="availability-cell-value" id="availability-departure-display" data-empty="true">Choisir une date</span>
+        <label class="availability-cell" for="availability-departure" data-empty="true" data-placeholder="Choisir le départ">
+          <svg class="availability-cell-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+          <span class="availability-cell-content">
+            <span class="availability-cell-label">Départ</span>
+            <span class="availability-cell-value" id="availability-departure-display">Choisir le départ</span>
+          </span>
           <input id="availability-departure" type="date" class="availability-cell-input" required />
         </label>
         <button class="availability-submit" type="submit" aria-label="Rechercher">
