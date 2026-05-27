@@ -2662,7 +2662,11 @@ textarea {
   color: var(--ink);
   font-family: var(--font-body);
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
+.public-body > .public-main { flex: 1 0 auto; }
+.public-body > .public-footer { flex-shrink: 0; }
 
 /* Smooth anchor scroll + offset for sticky topnav (desktop) */
 html { scroll-behavior: smooth; }
