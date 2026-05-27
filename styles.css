@@ -2793,6 +2793,7 @@ html { scroll-behavior: smooth; }
   height: 18px;
   color: var(--accent);
   flex-shrink: 0;
+  transform: translateY(1px);
 }
 .availability-cell-value {
   display: block;
