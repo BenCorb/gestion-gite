@@ -480,12 +480,17 @@ function handleDateChange() {
 function syncAvailabilityDisplay() {
   const updateCell = (input, display) => {
     if (!display) return;
+    const cell = display.closest(".availability-cell");
     const v = input.value;
     if (!v) {
-      display.dataset.empty = "true";
-      display.textContent = "Choisir une date";
+      if (cell) {
+        cell.dataset.empty = "true";
+        display.textContent = cell.dataset.placeholder || "Choisir une date";
+      } else {
+        display.textContent = "Choisir une date";
+      }
     } else {
-      display.dataset.empty = "false";
+      if (cell) cell.dataset.empty = "false";
       display.textContent = formatHumanDate(v);
     }
   };
