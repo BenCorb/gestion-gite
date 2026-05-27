@@ -2778,13 +2778,28 @@ html { scroll-behavior: smooth; }
   max-width: 520px;
 }
 .availability-cell {
-  padding: 0 16px;
-  display: flex; flex-direction: column;
-  justify-content: center;
+  padding: 0 14px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
   cursor: pointer;
   min-width: 0;
   position: relative;
-  min-height: 40px;
+  min-height: 44px;
+}
+.availability-cell-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.availability-cell-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  line-height: 1.2;
 }
 .availability-cell-label {
   font-size: 9px;
@@ -2794,25 +2809,20 @@ html { scroll-behavior: smooth; }
   letter-spacing: 1px;
   line-height: 1.2;
 }
+.availability-cell[data-empty="true"] .availability-cell-label { display: none; }
 .availability-cell-value {
   display: block;
-  margin-top: 2px;
   font-size: 14px;
+  font-weight: 600;
   line-height: 1.25;
+  color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: inherit;
 }
-.availability-cell-value[data-empty="true"] {
-  color: var(--ink-3);
-  font-style: italic;
-  font-weight: 500;
-}
-.availability-cell-value[data-empty="false"] {
-  color: var(--ink);
-  font-weight: 600;
-}
+.availability-cell[data-empty="true"] .availability-cell-value { color: var(--ink-2); }
+.availability-cell[data-empty="false"] .availability-cell-value { margin-top: 1px; }
 .availability-cell-input {
   position: absolute;
   inset: 0;
@@ -2884,11 +2894,12 @@ html { scroll-behavior: smooth; }
 /* Sub-mobile fallback : ultra-compact paddings */
 @media (max-width: 419px) {
   .availability-card { padding: 4px; }
-  .availability-cell { padding: 0 10px; min-height: 36px; }
+  .availability-cell { padding: 0 10px; gap: 8px; min-height: 40px; }
+  .availability-cell-icon { width: 16px; height: 16px; }
   .availability-cell-label { font-size: 8px; letter-spacing: 0.6px; }
   .availability-cell-value { font-size: 13px; }
   .availability-divider { margin: 2px 0; }
-  .availability-submit { width: 36px; height: 36px; margin-left: 2px; }
+  .availability-submit { width: 40px; height: 40px; margin-left: 2px; }
 }
 
 /* ── Main / sections ───────────────────────────────────────────────── */
@@ -3453,13 +3464,14 @@ html { scroll-behavior: smooth; }
     max-width: 560px;
     padding: 6px;
   }
-  .availability-cell { padding: 0 22px; min-height: 44px; }
-  .availability-cell-label { font-size: 10px; letter-spacing: 1px; margin-bottom: 1px; }
-  .availability-cell-value { font-size: 15px; }
-  .availability-divider { margin: 0; height: 32px; }
+  .availability-cell { padding: 0 20px; gap: 12px; min-height: 52px; }
+  .availability-cell-icon { width: 20px; height: 20px; }
+  .availability-cell-label { font-size: 10px; letter-spacing: 1px; }
+  .availability-cell-value { font-size: 16px; }
+  .availability-divider { margin: 0; height: 36px; }
   .availability-submit {
-    width: 44px;
-    height: 44px;
+    width: 52px;
+    height: 52px;
     margin-left: 6px;
   }
   .availability-summary {
