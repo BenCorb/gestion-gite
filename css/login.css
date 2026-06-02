@@ -3,17 +3,24 @@
    ════════════════════════════════════════════════════════════════════════ */
 
 .login-body {
+  display: block;
   margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .login-layout {
   display: flex;
   flex-direction: column;
+  width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .login-hero {
@@ -162,12 +169,14 @@
 /* Desktop ─────────────────────────────────────────────────────────── */
 @media (min-width: 1024px) {
   .login-layout {
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: minmax(420px, 1.1fr) minmax(420px, 0.9fr);
     min-height: 100vh;
+    min-height: 100dvh;
   }
   .login-hero {
-    flex: 1.2;
     height: auto;
+    min-width: 0;
   }
   .login-hero-overlay {
     background: linear-gradient(135deg, rgba(29,24,20,.1) 0%, rgba(29,24,20,.55) 100%);
@@ -184,12 +193,12 @@
   .login-hero-eyebrow { font-size: 13px; margin-top: 14px; opacity: 0.9; }
 
   .login-main {
-    flex: 1;
     padding: 0 64px;
     margin-top: 0;
     align-items: center;
     justify-content: center;
     background: var(--paper);
+    min-width: 0;
   }
   .login-card {
     padding: 0;

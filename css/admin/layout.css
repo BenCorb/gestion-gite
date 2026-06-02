@@ -91,7 +91,7 @@
    Bottom-sheet modal (mobile)
    ════════════════════════════════════════════════════════════════════════ */
 
-.modal-backdrop {
+.admin-body .modal-backdrop {
   position: fixed; inset: 0;
   background: rgba(29, 24, 20, 0.45);
   z-index: 50;
@@ -99,12 +99,12 @@
   pointer-events: none;
   transition: opacity .25s ease;
 }
-.modal-backdrop.is-open {
+.admin-body .modal-backdrop.is-open {
   opacity: 1;
   pointer-events: auto;
 }
 
-.modal-sheet {
+.admin-body .modal-sheet {
   position: fixed;
   bottom: 0; left: 0; right: 0;
   background: var(--surface);
@@ -117,8 +117,8 @@
   transition: transform .3s cubic-bezier(.4, 0, .2, 1);
   z-index: 51;
 }
-.modal-sheet.is-open { transform: translateY(0); }
-.modal-sheet-grabber {
+.admin-body .modal-sheet.is-open { transform: translateY(0); }
+.admin-body .modal-sheet-grabber {
   width: 40px; height: 4px;
   background: var(--rule-strong);
   border-radius: 4px;
@@ -127,7 +127,7 @@
 
 /* Desktop : modale centrée au lieu de bottom-sheet */
 @media (min-width: 1024px) {
-  .modal-sheet {
+  .admin-body .modal-sheet {
     position: fixed;
     top: 50%; left: 50%;
     bottom: auto; right: auto;
@@ -137,10 +137,10 @@
     border-radius: 20px;
     padding: 28px;
   }
-  .modal-sheet.is-open {
+  .admin-body .modal-sheet.is-open {
     transform: translate(-50%, -50%) scale(1);
   }
-  .modal-sheet-grabber { display: none; }
+  .admin-body .modal-sheet-grabber { display: none; }
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -177,7 +177,7 @@
    Toast (réutilise l'existant)
    ════════════════════════════════════════════════════════════════════════ */
 
-.toast {
+.admin-body .toast {
   position: fixed;
   bottom: calc(env(safe-area-inset-bottom, 0) + 80px);
   left: 50%;
@@ -194,12 +194,12 @@
   transition: opacity .2s, transform .2s;
   z-index: 100;
 }
-.toast.is-visible {
+.admin-body .toast.is-visible {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
-.toast.is-error { background: var(--danger); }
-.toast.is-success { background: var(--positive); }
+.admin-body .toast.is-error { background: var(--danger); }
+.admin-body .toast.is-success { background: var(--positive); }
 
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -262,7 +262,7 @@ body.modal-open {
   overflow: hidden;
 }
 
-body {
+.admin-body {
   margin: 0;
   min-height: 100vh;
   font-family: "Trebuchet MS", "Gill Sans", sans-serif;
@@ -273,43 +273,27 @@ body {
     linear-gradient(180deg, #f8f4ec 0%, #f2ebdf 100%);
 }
 
-button,
-input,
-select,
-textarea {
+.admin-body button,
+.admin-body input,
+.admin-body select,
+.admin-body textarea {
   font: inherit;
 }
 
-.page-shell {
-  width: min(1380px, calc(100% - 32px));
-  margin: 14px auto 24px;
-  overflow-x: clip;
-}
-
-.login-body {
-  background: #f8f4ec;
-}
-
-#public-intro,
-#public-gite-description {
-  white-space: pre-wrap;
-}
-
-.modal-panel,
-.login-panel,
-.room-editor {
+.admin-body .modal-panel,
+.admin-body .room-editor {
   background: var(--surface-strong);
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
 }
 
-.media-preview {
+.admin-body .media-preview {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
 }
 
-.media-preview img {
+.admin-body .media-preview img {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
@@ -317,99 +301,7 @@ textarea {
   border: 1px solid var(--border);
 }
 
-.lightbox-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  background: rgba(10, 7, 4, 0.94);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: zoom-out;
-}
-
-.lightbox-backdrop img {
-  max-width: calc(100vw - 140px);
-  max-height: calc(100vh - 80px);
-  object-fit: contain;
-  border-radius: var(--radius-sm);
-  cursor: zoom-out;
-  user-select: none;
-  display: block;
-}
-
-.lightbox-close {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  display: grid;
-  place-items: center;
-  background: rgba(255, 253, 248, 0.12);
-  border: 1px solid rgba(255, 253, 248, 0.2);
-  border-radius: 50%;
-  color: #fffdf8;
-  cursor: pointer;
-  transition: background 0.18s;
-}
-
-.lightbox-close:hover {
-  background: rgba(255, 253, 248, 0.24);
-}
-
-.lightbox-nav {
-  position: absolute;
-  top: 50%;
-  translate: 0 -50%;
-  width: 48px;
-  height: 48px;
-  padding: 0;
-  display: grid;
-  place-items: center;
-  background: rgba(255, 253, 248, 0.12);
-  border: 1px solid rgba(255, 253, 248, 0.2);
-  border-radius: 50%;
-  color: #fffdf8;
-  cursor: pointer;
-  transition: background 0.18s, scale 0.18s;
-}
-
-.lightbox-nav:hover {
-  background: rgba(255, 253, 248, 0.24);
-  scale: 1.08;
-}
-
-.lightbox-prev { left: 18px; }
-.lightbox-next { right: 18px; }
-
-.lightbox-count {
-  position: absolute;
-  bottom: 22px;
-  left: 50%;
-  translate: -50% 0;
-  color: rgba(255, 253, 248, 0.65);
-  font-size: 0.84rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  pointer-events: none;
-}
-
-@media (max-width: 780px) {
-  .lightbox-backdrop img {
-    max-width: 100vw;
-    max-height: calc(100vh - 100px);
-  }
-  .lightbox-nav {
-    width: 40px;
-    height: 40px;
-  }
-  .lightbox-prev { left: 8px; }
-  .lightbox-next { right: 8px; }
-}
-
-.modal-backdrop {
+.admin-body .modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 20;
@@ -419,14 +311,13 @@ textarea {
   background: rgba(33, 27, 20, 0.42);
 }
 
-.modal-panel,
-.login-panel {
+.admin-body .modal-panel {
   width: min(520px, 100%);
   border-radius: var(--radius-lg);
   padding: 24px;
 }
 
-.modal-panel {
+.admin-body .modal-panel {
   position: relative;
   display: grid;
   gap: 14px;
@@ -435,22 +326,22 @@ textarea {
   overflow-x: hidden;
 }
 
-.reservation-modal {
+.admin-body .reservation-modal {
   z-index: 45;
 }
 
-.reservation-modal-panel {
+.admin-body .reservation-modal-panel {
   width: min(760px, 100%);
   padding: 28px;
   overflow-x: hidden;
 }
 
-.reservation-modal-heading {
+.admin-body .reservation-modal-heading {
   padding-right: 42px;
   margin-bottom: 4px;
 }
 
-.modal-close-button {
+.admin-body .modal-close-button {
   position: absolute;
   top: 14px;
   right: 14px;
@@ -469,86 +360,44 @@ textarea {
   font-weight: 700;
 }
 
-.modal-close-button:hover {
+.admin-body .modal-close-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 8px 18px rgba(139, 106, 61, 0.12);
 }
 
-.amenities-groups {
-  display: grid;
-  gap: 16px;
-}
-
-.amenities-groups ul {
-  margin: 8px 0 0;
-  padding-left: 22px;
-}
-
-.amenities-groups li {
-  margin: 5px 0;
-}
-
-.login-body {
-  display: grid;
-  place-items: center;
-  padding: 24px;
-}
-
-.room-editor {
+.admin-body .room-editor {
   display: grid;
   gap: 14px;
   padding: 16px;
   border-radius: var(--radius-md);
 }
 
-.compact-checkbox {
+.admin-body .compact-checkbox {
   min-height: 47px;
 }
 
-.media-preview figure {
+.admin-body .media-preview figure {
   margin: 0;
   display: grid;
   gap: 8px;
 }
 
-.media-preview figure[draggable="true"] {
+.admin-body .media-preview figure[draggable="true"] {
   cursor: grab;
 }
-.media-preview figure[draggable="true"].dragging {
+.admin-body .media-preview figure[draggable="true"].dragging {
   opacity: 0.35;
 }
-.media-preview figure[draggable="true"].drag-over {
+.admin-body .media-preview figure[draggable="true"].drag-over {
   outline: 2px dashed var(--accent-strong);
   outline-offset: 3px;
   border-radius: var(--radius-sm);
 }
 
-.nested-settings-section {
+.admin-body .nested-settings-section {
   padding: 12px;
   border-radius: var(--radius-sm);
   background: rgba(242, 235, 223, 0.42);
-}
-
-.hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-  gap: 14px;
-  padding: 16px 22px;
-  border-radius: 22px;
-  background:
-    linear-gradient(135deg, rgba(255, 252, 246, 0.95), rgba(243, 233, 214, 0.9)),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cg fill='none' stroke='%23c3b08d' stroke-opacity='0.25'%3E%3Cpath d='M9 62c14-25 38-37 62-37s47 12 60 37'/%3E%3Cpath d='M28 75c9 18 23 31 42 38'/%3E%3Cpath d='M111 74c-8 17-22 31-41 39'/%3E%3C/g%3E%3C/svg%3E");
-  box-shadow: var(--shadow);
-}
-
-.hero-actions {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: 12px;
-  flex-shrink: 0;
-  align-self: flex-start;
 }
 
 .eyebrow {
@@ -560,55 +409,55 @@ textarea {
   font-weight: 700;
 }
 
-h1,
-h2,
-h3 {
+.admin-body h1,
+.admin-body h2,
+.admin-body h3 {
   margin: 0;
   font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
   font-weight: 700;
   letter-spacing: 0.01em;
 }
 
-h1 {
+.admin-body h1 {
   font-size: clamp(1.7rem, 3vw, 2.55rem);
 }
 
-h2 {
+.admin-body h2 {
   font-size: 2rem;
 }
 
-h3 {
+.admin-body h3 {
   font-size: 1.35rem;
 }
 
-.subtitle,
-.panel-heading p,
-.empty-state p,
-.badge {
+.admin-body .subtitle,
+.admin-body .panel-heading p,
+.admin-body .empty-state p,
+.admin-body .badge {
   color: var(--muted);
 }
 
-.subtitle {
+.admin-body .subtitle {
   max-width: 56ch;
   margin: 4px 0 0;
   font-size: 0.84rem;
 }
 
-.sync-status {
+.admin-body .sync-status {
   margin: 8px 0 0;
   font-size: 0.78rem;
   color: var(--muted);
 }
 
-.stats-grid {
+.admin-body .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin: 12px 0 14px;
 }
 
-.stat-card,
-.card {
+.admin-body .stat-card,
+.admin-body .card {
   background: var(--surface);
   backdrop-filter: blur(14px);
   border: 1px solid var(--border);
@@ -616,27 +465,27 @@ h3 {
   box-shadow: var(--shadow);
 }
 
-.stat-card {
+.admin-body .stat-card {
   padding: 12px 14px;
 }
 
-.stat-card .label {
+.admin-body .stat-card .label {
   display: block;
   margin-bottom: 6px;
   color: var(--muted);
   font-size: 0.78rem;
 }
 
-.stat-card strong {
+.admin-body .stat-card strong {
   font-size: 1.35rem;
   font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
 }
 
-.tab-button,
-.primary-button,
-.secondary-button,
-.danger-button,
-.icon-button {
+.admin-body .tab-button,
+.admin-body .primary-button,
+.admin-body .secondary-button,
+.admin-body .danger-button,
+.admin-body .icon-button {
   border: 0;
   cursor: pointer;
   transition:
@@ -645,7 +494,7 @@ h3 {
     background 0.18s ease;
 }
 
-.tab-button {
+.admin-body .tab-button {
   padding: 10px 16px;
   border-radius: 999px;
   background: rgba(255, 252, 246, 0.7);
@@ -658,26 +507,26 @@ h3 {
   white-space: nowrap;
 }
 
-.tab-button.active {
+.admin-body .tab-button.active {
   background: var(--surface-strong);
   color: var(--accent-strong);
   border-color: rgba(139, 106, 61, 0.18);
   box-shadow: 0 8px 18px rgba(139, 106, 61, 0.12);
 }
 
-.tab-panel {
+.admin-body .tab-panel {
   display: none;
 }
 
-.tab-panel.active {
+.admin-body .tab-panel.active {
   display: block;
 }
 
-.panel {
+.admin-body .panel {
   padding: 24px;
 }
 
-.panel-heading {
+.admin-body .panel-heading {
   display: flex;
   justify-content: space-between;
   align-items: start;
@@ -685,11 +534,11 @@ h3 {
   margin-bottom: 20px;
 }
 
-.panel-heading.compact {
+.admin-body .panel-heading.compact {
   align-items: center;
 }
 
-.badge {
+.admin-body .badge {
   padding: 6px 10px;
   background: var(--accent-soft);
   border-radius: 999px;
@@ -700,13 +549,13 @@ h3 {
   align-self: flex-start;
 }
 
-.form-grid {
+.admin-body .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
-label span {
+.admin-body label span {
   display: block;
   margin-bottom: 8px;
   color: var(--muted);
@@ -714,9 +563,9 @@ label span {
   font-size: 0.88rem;
 }
 
-input,
-select,
-textarea {
+.admin-body input,
+.admin-body select,
+.admin-body textarea {
   width: 100%;
   padding: 13px 14px;
   border-radius: var(--radius-sm);
@@ -726,67 +575,67 @@ textarea {
   outline: none;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+.admin-body input:focus,
+.admin-body select:focus,
+.admin-body textarea:focus {
   border-color: rgba(139, 106, 61, 0.5);
   box-shadow: 0 0 0 4px rgba(139, 106, 61, 0.12);
 }
 
-textarea {
+.admin-body textarea {
   resize: vertical;
 }
 
-.full-width {
+.admin-body .full-width {
   grid-column: 1 / -1;
 }
 
-.primary-button,
-.secondary-button,
-.danger-button,
-.icon-button {
+.admin-body .primary-button,
+.admin-body .secondary-button,
+.admin-body .danger-button,
+.admin-body .icon-button {
   border-radius: 999px;
   padding: 11px 16px;
   font-weight: 700;
   font-size: 0.94rem;
 }
 
-.primary-button {
+.admin-body .primary-button {
   background: linear-gradient(135deg, var(--accent) 0%, #aa8450 100%);
   color: #fffdf8;
   box-shadow: 0 12px 28px rgba(139, 106, 61, 0.22);
 }
 
-.secondary-button,
-.icon-button {
+.admin-body .secondary-button,
+.admin-body .icon-button {
   background: rgba(255, 252, 246, 0.88);
   color: var(--accent-strong);
   border: 1px solid rgba(139, 106, 61, 0.16);
 }
 
-.danger-button {
+.admin-body .danger-button {
   background: rgba(138, 78, 67, 0.12);
   color: var(--danger);
 }
 
-.primary-button:hover,
-.secondary-button:hover,
-.danger-button:hover,
-.icon-button:hover,
-.tab-button:hover {
+.admin-body .primary-button:hover,
+.admin-body .secondary-button:hover,
+.admin-body .danger-button:hover,
+.admin-body .icon-button:hover,
+.admin-body .tab-button:hover {
   transform: translateY(-1px);
 }
 
-.form-actions,
-.section-header,
-.calendar-controls {
+.admin-body .form-actions,
+.admin-body .section-header,
+.admin-body .calendar-controls {
   display: flex;
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
 }
 
-.filter-chip {
+.admin-body .filter-chip {
   border: 1px solid rgba(139, 106, 61, 0.16);
   background: rgba(255, 252, 246, 0.88);
   color: var(--accent-strong);
@@ -797,12 +646,12 @@ textarea {
   cursor: pointer;
 }
 
-.filter-chip.active {
+.admin-body .filter-chip.active {
   background: linear-gradient(135deg, var(--accent) 0%, #aa8450 100%);
   color: #fffdf8;
 }
 
-.alerts-list {
+.admin-body .alerts-list {
   display: grid;
   gap: 10px;
 }
@@ -818,9 +667,6 @@ textarea {
   font-family: var(--font-body);
   min-height: 100vh;
 }
-
-/* Neutralize legacy .page-shell since admin no longer uses it */
-.admin-body .page-shell { all: revert; }
 
 .admin-shell {
   min-height: 100vh;
@@ -892,7 +738,7 @@ textarea {
   background: var(--paper);
   border-bottom: 1px solid var(--rule);
 }
-.tab-button.admin-tab {
+.admin-body .tab-button.admin-tab {
   padding: 10px 14px 12px;
   background: transparent;
   color: var(--ink-2);
@@ -908,9 +754,9 @@ textarea {
   flex-shrink: 0;
   white-space: nowrap;
 }
-.tab-button.admin-tab svg { flex-shrink: 0; }
-.tab-button.admin-tab.active,
-.tab-button.admin-tab.is-active {
+.admin-body .tab-button.admin-tab svg { flex-shrink: 0; }
+.admin-body .tab-button.admin-tab.active,
+.admin-body .tab-button.admin-tab.is-active {
   background: transparent;
   color: var(--accent-deep);
   font-weight: 700;
@@ -941,7 +787,7 @@ textarea {
 }
 
 /* Sidebar items — desktop only, but bridge .active too */
-.tab-button.admin-sidebar-item {
+.admin-body .tab-button.admin-sidebar-item {
   width: 100%;
   padding: 11px 14px;
   background: transparent;
@@ -959,9 +805,9 @@ textarea {
   box-shadow: none;
   margin-bottom: 2px;
 }
-.tab-button.admin-sidebar-item:hover { background: var(--paper-2); }
-.tab-button.admin-sidebar-item.active,
-.tab-button.admin-sidebar-item.is-active {
+.admin-body .tab-button.admin-sidebar-item:hover { background: var(--paper-2); }
+.admin-body .tab-button.admin-sidebar-item.active,
+.admin-body .tab-button.admin-sidebar-item.is-active {
   background: var(--accent-tint);
   color: var(--accent-deep);
   font-weight: 700;
@@ -1044,12 +890,12 @@ textarea {
    Admin · Alertes (Phase 6.1)
    ════════════════════════════════════════════════════════════════════════ */
 
-#tab-alerts {
+.admin-body #tab-alerts {
   display: none;
   flex-direction: column;
   gap: 16px;
 }
-#tab-alerts.active { display: flex; }
+.admin-body #tab-alerts.active { display: flex; }
 
 .alerts-greeting {
   font-size: 14px;
@@ -1067,7 +913,7 @@ textarea {
 .alerts-greeting-meta { font-size: 14px; }
 
 /* Stat strip: override legacy .stats-grid for this section */
-#tab-alerts .stats-grid {
+.admin-body #tab-alerts .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
@@ -1134,7 +980,7 @@ textarea {
 
 /* Desktop adjustments */
 @media (min-width: 1024px) {
-  #tab-alerts .stats-grid {
+  .admin-body #tab-alerts .stats-grid {
     grid-template-columns: repeat(4, 1fr);
     gap: 14px;
   }
