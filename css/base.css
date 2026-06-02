@@ -1,0 +1,42 @@
+/* ════════════════════════════════════════════════════════════════════════
+   Reset léger + base
+   ════════════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  letter-spacing: -0.2px;
+  color: var(--ink);
+}
+
+button, input, textarea, select {
+  font-family: inherit;
+}
+
+a { color: inherit; }
+
+/* ── Helpers texte ──────────────────────────────────────────────────── */
+.brand { font-family: var(--font-heading); font-weight: 400; line-height: 1; }
+.mono  { font-family: var(--font-mono); }
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+}
+
+.meta { font-size: 13px; color: var(--ink-3); }

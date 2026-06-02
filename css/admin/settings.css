@@ -1,0 +1,705 @@
+.inline-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.amenity-group-row,
+.booking-link-row {
+  grid-template-columns: minmax(120px, 160px) minmax(0, 1fr) auto;
+}
+
+.color-select {
+  min-width: 0;
+}
+
+.upload-button {
+  display: inline-flex;
+}
+
+.panel-heading > div,
+.reservation-card header > div,
+.reservation-footer > div,
+.panel-heading label,
+.calendar-controls,
+.section-header,
+.form-actions {
+  min-width: 0;
+}
+
+.calendar-controls label {
+  flex: 1 1 180px;
+}
+
+.empty-state {
+  padding: 28px 18px;
+  text-align: center;
+  border: 1px dashed rgba(117, 104, 78, 0.24);
+  border-radius: var(--radius-md);
+}
+
+.toast {
+  position: fixed;
+  right: 22px;
+  bottom: 20px;
+  max-width: 340px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(59, 51, 41, 0.95);
+  color: #fffdf8;
+  box-shadow: 0 16px 36px rgba(59, 51, 41, 0.28);
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 1160px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reservation-list {
+    max-height: none;
+  }
+}
+
+@media (max-width: 780px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  .modal-backdrop {
+    width: 100%;
+    max-width: 100vw;
+    padding: 10px;
+    overflow-x: hidden;
+  }
+
+  .modal-panel {
+    width: min(520px, 100%);
+    max-width: calc(100vw - 20px);
+    max-height: calc(100svh - 20px);
+    padding: 18px;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+
+  .modal-panel > *,
+  .modal-panel label,
+  .modal-panel .form-grid,
+  .modal-panel .section-header,
+  .modal-panel .form-actions {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .reservation-modal {
+    padding: 8px;
+    align-items: stretch;
+    justify-items: stretch;
+  }
+
+  .reservation-modal-panel {
+    width: 100%;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100svh - 16px);
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .reservation-modal-heading {
+    padding-right: 38px;
+  }
+
+  .page-shell {
+    width: min(100% - 14px, 100%);
+    margin: 10px auto 16px;
+  }
+
+  .panel-heading,
+  .panel-heading.compact {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .panel,
+  .hero {
+    padding: 16px;
+  }
+
+  .hero {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    gap: 8px;
+    border-radius: 18px;
+  }
+
+  .hero > div:first-child {
+    flex: 1 1 auto;
+  }
+
+  .hero-actions {
+    justify-content: flex-end;
+    align-self: flex-start;
+  }
+
+  h1 {
+    font-size: 1.45rem;
+  }
+
+  h2 {
+    font-size: 1.55rem;
+  }
+
+  h3 {
+    font-size: 1.08rem;
+  }
+
+  .subtitle {
+    font-size: 0.8rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 10px 0 12px;
+  }
+
+  .stat-card {
+    padding: 10px 12px;
+  }
+
+  .stat-card .label {
+    font-size: 0.72rem;
+  }
+
+  .stat-card strong {
+    font-size: 1.15rem;
+  }
+
+  .tab-button {
+    padding: 9px 12px;
+    font-size: 0.83rem;
+  }
+
+  .form-grid,
+  .reservation-details {
+    grid-template-columns: 1fr;
+  }
+
+  .checkbox-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-chip {
+    flex: 0 0 auto;
+  }
+
+  .inline-editor {
+    grid-template-columns: 1fr;
+  }
+
+  input,
+  select,
+  textarea {
+    padding: 12px 13px;
+    font-size: 16px;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .danger-button,
+  .icon-button {
+    min-height: 42px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+  }
+
+  .reservation-card header,
+  .reservation-summary-end,
+  .reservation-meta,
+  .reservation-footer,
+  .calendar-controls,
+  .section-header,
+  .form-actions {
+    align-items: stretch;
+  }
+
+  .reservation-card {
+    padding: 14px;
+  }
+
+  .reservation-card h3 {
+    font-size: 1.2rem;
+  }
+
+  .reservation-details {
+    gap: 8px;
+  }
+
+  .room-tag,
+  .platform-tag,
+  .calendar-chip,
+  .type-tag,
+  .status-tag {
+    font-size: 0.72rem;
+  }
+
+  .calendar-controls label,
+  .panel-heading label {
+    flex: 1 1 100%;
+  }
+
+  .panel-heading input,
+  .panel-heading select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #report-month,
+  #report-year {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  #tab-reports .panel-heading.compact > label {
+    width: 100%;
+    max-width: 100%;
+    align-self: stretch;
+  }
+
+  .calendar-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .calendar-month-label,
+  #calendar-month-label {
+    grid-column: 1 / -1;
+    order: -1;
+    text-align: left;
+    font-size: 1.05rem;
+  }
+
+  .calendar-grid {
+    grid-template-columns: repeat(7, minmax(92px, 1fr));
+    min-width: 680px;
+    gap: 8px;
+  }
+
+  .calendar-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .planning-grid {
+    min-width: max(920px, var(--planning-min-width, 980px));
+  }
+
+  .calendar-cell {
+    min-height: 112px;
+    padding: 8px;
+  }
+
+  .calendar-day {
+    font-size: 0.84rem;
+  }
+
+  .calendar-chip {
+    padding: 5px 7px;
+    gap: 4px;
+  }
+
+  .calendar-chip span,
+  .calendar-chip strong {
+    font-size: 0.66rem;
+  }
+
+  .breakdown-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .breakdown-card {
+    min-width: 0;
+  }
+
+  .table-wrapper {
+    overflow-x: hidden;
+  }
+
+  .report-table {
+    table-layout: auto;
+  }
+
+  .report-table th,
+  .report-table td {
+    font-size: 0.82rem;
+    padding: 8px 6px;
+  }
+
+  .toast {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-shell {
+    width: calc(100% - 10px);
+  }
+
+  .hero,
+  .panel {
+    padding: 12px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .panel-heading {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .form-grid {
+    gap: 12px;
+  }
+
+  .calendar-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-grid {
+    min-width: 630px;
+  }
+
+  .stats-grid,
+  .breakdown-grid {
+    min-width: 0;
+  }
+
+  .inline-editor {
+    gap: 8px;
+  }
+
+  .planning-grid {
+    min-width: max(880px, var(--planning-min-width, 930px));
+  }
+}
+
+.settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+}
+.settings-block { display: flex; flex-direction: column; gap: 8px; }
+.settings-block-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+.settings-block-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.settings-block-meta {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.palette-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+.palette-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color .15s ease, background .15s ease;
+}
+.palette-swatch:hover { border-color: var(--rule-strong); }
+.palette-swatch[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+.palette-swatch-chip {
+  width: 32px; height: 32px;
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,.05);
+}
+.palette-swatch-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.palette-swatch[aria-checked="true"] .palette-swatch-label { color: var(--accent-deep); }
+.palette-meta {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.45;
+}
+
+/* Override legacy .settings-section + .panel for the redesigned card */
+#tab-settings .settings-section {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+}
+#tab-settings .settings-section > .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+#tab-settings .settings-section h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Admin · Modale réservation (Phase 7)
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Mobile (default) : bottom-sheet behavior */
+#reservation-modal.modal-backdrop {
+  display: block;
+  padding: 0;
+  background: rgba(29, 24, 20, 0.5);
+  overflow: hidden;
+  z-index: 60;
+}
+#reservation-modal .modal-panel.reservation-modal-panel {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  width: 100%;
+  max-width: 100%;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  padding: 20px 18px calc(env(safe-area-inset-bottom, 0) + 24px);
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--surface);
+  box-shadow: 0 -10px 30px rgba(29, 24, 20, .25);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: modalSheetUp .28s cubic-bezier(.4, 0, .2, 1);
+}
+@keyframes modalSheetUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+#reservation-modal .modal-panel.reservation-modal-panel::before {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 4px;
+  background: var(--rule-strong);
+  border-radius: 4px;
+  margin: 0 auto 12px;
+  flex-shrink: 0;
+}
+#reservation-modal .modal-close-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  background: var(--paper-2);
+  color: var(--ink-2);
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+#reservation-modal .modal-close-button:hover { background: var(--rule-strong); color: var(--ink); }
+#reservation-modal .reservation-modal-heading {
+  padding: 0;
+  margin: 0 40px 8px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  border: 0;
+}
+#reservation-modal .reservation-modal-heading h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+#reservation-modal .reservation-modal-heading p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+#reservation-modal #form-mode-badge {
+  flex-shrink: 0;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  border: none;
+}
+#reservation-modal #reservation-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+  margin-top: 4px;
+}
+#reservation-modal #reservation-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  min-width: 0;
+}
+#reservation-modal #reservation-form label.full-width { grid-column: 1 / -1; }
+#reservation-modal #reservation-form input,
+#reservation-modal #reservation-form select,
+#reservation-modal #reservation-form textarea {
+  padding: 11px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--surface);
+  font-family: inherit;
+  font-weight: 400;
+  width: 100%;
+  min-width: 0;
+}
+#reservation-modal #reservation-form input:focus,
+#reservation-modal #reservation-form select:focus,
+#reservation-modal #reservation-form textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: var(--accent);
+}
+#reservation-modal #reservation-form textarea { min-height: 80px; resize: vertical; }
+#reservation-modal #reservation-form .form-actions {
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+#reservation-modal #reservation-form .form-actions button.primary-button {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+  padding: 11px 18px;
+  border-radius: var(--r-md);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  transition: background .15s ease;
+}
+#reservation-modal #reservation-form .form-actions button.primary-button:hover { background: var(--accent-deep); }
+#reservation-modal #reservation-form .form-actions button.secondary-button {
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px solid var(--rule-strong);
+  padding: 11px 18px;
+  border-radius: var(--r-md);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+}
+#reservation-modal #reservation-form .form-actions button.secondary-button:hover { background: var(--paper-2); }
+#reservation-modal #reservation-form .checkbox-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+#reservation-modal #reservation-form .checkbox-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  font-size: 14px;
+  background: var(--surface);
+}
+#reservation-modal #reservation-form .checkbox-card:has(input:checked) {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+}
+#reservation-modal #reservation-form .field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin-bottom: 4px;
+  display: block;
+}
+
+/* Desktop : centered modal instead of bottom-sheet */
+@media (min-width: 1024px) {
+  #reservation-modal.modal-backdrop {
+    display: grid;
+    place-items: center;
+    padding: 20px;
+  }
+  #reservation-modal .modal-panel.reservation-modal-panel {
+    position: relative;
+    left: auto; right: auto; bottom: auto;
+    width: min(760px, 90vw);
+    max-width: 90vw;
+    max-height: 85vh;
+    border-radius: 20px;
+    padding: 28px 32px;
+    animation: modalScaleIn .25s cubic-bezier(.4, 0, .2, 1);
+  }
+  #reservation-modal .modal-panel.reservation-modal-panel::before { display: none; }
+  @keyframes modalScaleIn {
+    from { opacity: 0; transform: scale(.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+}
