@@ -2,9 +2,11 @@
    Public landing — Vignes & pierre claire (Phase 3)
    ════════════════════════════════════════════════════════════════════════ */
 
-/* Override legacy .modal-backdrop (display:grid) for the new sheet pattern */
+/* Public modal sheet */
 #request-modal.modal-backdrop,
 #amenities-modal.modal-backdrop {
+  position: fixed;
+  inset: 0;
   display: block;
   padding: 0;
   background: rgba(29, 24, 20, 0.45);
@@ -17,6 +19,40 @@
 #amenities-modal.modal-backdrop.is-open {
   opacity: 1;
   pointer-events: auto;
+}
+
+#request-modal .modal-sheet,
+#amenities-modal .modal-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  padding: 12px 20px 28px;
+  box-shadow: 0 -10px 30px rgba(29, 24, 20, .2);
+  max-height: 90vh;
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform .3s cubic-bezier(.4, 0, .2, 1);
+  z-index: 71;
+}
+#request-modal .modal-sheet.is-open,
+#amenities-modal .modal-sheet.is-open {
+  transform: translateY(0);
+}
+#request-modal .modal-sheet-grabber,
+#amenities-modal .modal-sheet-grabber {
+  width: 40px;
+  height: 4px;
+  background: var(--rule-strong);
+  border-radius: 4px;
+  margin: 0 auto 16px;
+}
+
+#public-intro,
+#public-gite-description {
+  white-space: pre-wrap;
 }
 
 .public-body {
@@ -43,6 +79,31 @@ html { scroll-behavior: smooth; }
   visibility: hidden;
   width: 0;
   height: 0;
+}
+
+@media (min-width: 1024px) {
+  #request-modal .modal-sheet,
+  #amenities-modal .modal-sheet {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    width: 720px;
+    max-width: 90vw;
+    max-height: 85vh;
+    border-radius: 20px;
+    padding: 28px;
+    transform: translate(-50%, -50%) scale(.95);
+  }
+  #request-modal .modal-sheet.is-open,
+  #amenities-modal .modal-sheet.is-open {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  #request-modal .modal-sheet-grabber,
+  #amenities-modal .modal-sheet-grabber {
+    display: none;
+  }
 }
 
 /* ── Hero ───────────────────────────────────────────────────────────── */
