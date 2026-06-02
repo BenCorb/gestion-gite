@@ -1,0 +1,186 @@
+.public-rooms {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.public-room-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  min-width: 0;
+}
+.public-room-card-photo {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,.18), transparent 60%),
+    var(--public-room-fallback-0);
+  overflow: hidden;
+}
+.public-room-card-photo img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  cursor: zoom-in;
+}
+.public-room-card-status {
+  position: absolute;
+  top: 12px; right: 12px;
+  z-index: 2;
+}
+.public-room-card-status .pill-danger {
+  border-color: rgba(181, 76, 62, .28);
+}
+.public-room-card-carousel-prev,
+.public-room-card-carousel-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px; height: 32px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.92);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink);
+  z-index: 2;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+.public-room-card-photo:hover .public-room-card-carousel-prev,
+.public-room-card-photo:hover .public-room-card-carousel-next,
+.public-gite-carousel:hover .public-room-card-carousel-prev,
+.public-gite-carousel:hover .public-room-card-carousel-next { opacity: 1; }
+
+/* M3 : touch devices (mobile) — carousel arrows always visible */
+@media (hover: none) {
+  .public-room-card-carousel-prev,
+  .public-room-card-carousel-next {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+}
+.public-room-card-carousel-prev { left: 10px; }
+.public-room-card-carousel-next { right: 10px; }
+.public-room-card-body {
+  padding: 16px;
+  min-width: 0;
+}
+.public-room-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.public-room-card-header > div {
+  min-width: 0;
+}
+.public-room-card-name {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.2px;
+}
+.public-room-card-meta {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.public-room-card-price {
+  flex: 0 0 auto;
+  max-width: 42%;
+  text-align: right;
+}
+.public-room-card-price-amount {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.05;
+}
+.public-room-card-price-unit {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.public-room-card-amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.public-room-card-actions {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.public-room-card-actions .btn,
+.public-room-card-link,
+.public-footer-links a,
+.public-contact-row a,
+.public-contact-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.public-room-card-external {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--rule-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.public-room-card-external-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+  margin-bottom: 2px;
+}
+.public-room-card-link {
+  text-decoration: none;
+}
+
+/* ── No-avail state ───────────────────────────────────────────────── */
+.public-no-avail {
+  margin-top: 24px;
+  text-align: center;
+  padding: 20px 0;
+}
+.public-no-avail-icon {
+  display: inline-flex;
+  width: 56px; height: 56px;
+  border-radius: 28px;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.public-no-avail-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+.public-no-avail-meta {
+  margin: 6px auto 0;
+  max-width: 280px;
+  font-size: 14px;
+  color: var(--ink-3);
+}
+.public-no-avail-action {
+  margin-top: 14px;
+}
