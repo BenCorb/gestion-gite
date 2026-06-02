@@ -18,28 +18,28 @@
   display: inline-flex;
 }
 
-.panel-heading > div,
-.reservation-card header > div,
-.reservation-footer > div,
-.panel-heading label,
-.calendar-controls,
-.section-header,
-.form-actions {
+.admin-body .panel-heading > div,
+.admin-body .reservation-card header > div,
+.admin-body .reservation-footer > div,
+.admin-body .panel-heading label,
+.admin-body .calendar-controls,
+.admin-body .section-header,
+.admin-body .form-actions {
   min-width: 0;
 }
 
-.calendar-controls label {
+.admin-body .calendar-controls label {
   flex: 1 1 180px;
 }
 
-.empty-state {
+.admin-body .empty-state {
   padding: 28px 18px;
   text-align: center;
   border: 1px dashed rgba(117, 104, 78, 0.24);
   border-radius: var(--radius-md);
 }
 
-.toast {
+.admin-body .toast {
   position: fixed;
   right: 22px;
   bottom: 20px;
@@ -57,35 +57,35 @@
     transform 0.25s ease;
 }
 
-.toast.visible {
+.admin-body .toast.visible {
   opacity: 1;
   transform: translateY(0);
 }
 
 @media (max-width: 1160px) {
-  .stats-grid {
+  .admin-body .stats-grid {
     grid-template-columns: 1fr;
   }
 
-  .reservation-list {
+  .admin-body .reservation-list {
     max-height: none;
   }
 }
 
 @media (max-width: 780px) {
   html,
-  body {
+  .admin-body {
     overflow-x: hidden;
   }
 
-  .modal-backdrop {
+  .admin-body .modal-backdrop {
     width: 100%;
     max-width: 100vw;
     padding: 10px;
     overflow-x: hidden;
   }
 
-  .modal-panel {
+  .admin-body .modal-panel {
     width: min(520px, 100%);
     max-width: calc(100vw - 20px);
     max-height: calc(100svh - 20px);
@@ -94,22 +94,22 @@
     overscroll-behavior: contain;
   }
 
-  .modal-panel > *,
-  .modal-panel label,
-  .modal-panel .form-grid,
-  .modal-panel .section-header,
-  .modal-panel .form-actions {
+  .admin-body .modal-panel > *,
+  .admin-body .modal-panel label,
+  .admin-body .modal-panel .form-grid,
+  .admin-body .modal-panel .section-header,
+  .admin-body .modal-panel .form-actions {
     min-width: 0;
     max-width: 100%;
   }
 
-  .reservation-modal {
+  .admin-body .reservation-modal {
     padding: 8px;
     align-items: stretch;
     justify-items: stretch;
   }
 
-  .reservation-modal-panel {
+  .admin-body .reservation-modal-panel {
     width: 100%;
     max-width: calc(100vw - 16px);
     max-height: calc(100svh - 16px);
@@ -117,245 +117,221 @@
     border-radius: 16px;
   }
 
-  .reservation-modal-heading {
+  .admin-body .reservation-modal-heading {
     padding-right: 38px;
   }
 
-  .page-shell {
-    width: min(100% - 14px, 100%);
-    margin: 10px auto 16px;
-  }
-
-  .panel-heading,
-  .panel-heading.compact {
+  .admin-body .panel-heading,
+  .admin-body .panel-heading.compact {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .panel,
-  .hero {
+  .admin-body .panel {
     padding: 16px;
   }
 
-  .hero {
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: space-between;
-    flex-wrap: nowrap;
-    gap: 8px;
-    border-radius: 18px;
-  }
-
-  .hero > div:first-child {
-    flex: 1 1 auto;
-  }
-
-  .hero-actions {
-    justify-content: flex-end;
-    align-self: flex-start;
-  }
-
-  h1 {
+  .admin-body h1 {
     font-size: 1.45rem;
   }
 
-  h2 {
+  .admin-body h2 {
     font-size: 1.55rem;
   }
 
-  h3 {
+  .admin-body h3 {
     font-size: 1.08rem;
   }
 
-  .subtitle {
+  .admin-body .subtitle {
     font-size: 0.8rem;
   }
 
-  .stats-grid {
+  .admin-body .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     margin: 10px 0 12px;
   }
 
-  .stat-card {
+  .admin-body .stat-card {
     padding: 10px 12px;
   }
 
-  .stat-card .label {
+  .admin-body .stat-card .label {
     font-size: 0.72rem;
   }
 
-  .stat-card strong {
+  .admin-body .stat-card strong {
     font-size: 1.15rem;
   }
 
-  .tab-button {
+  .admin-body .tab-button {
     padding: 9px 12px;
     font-size: 0.83rem;
   }
 
-  .form-grid,
-  .reservation-details {
+  .admin-body .form-grid,
+  .admin-body .reservation-details {
     grid-template-columns: 1fr;
   }
 
-  .checkbox-grid {
+  .admin-body .checkbox-grid {
     grid-template-columns: 1fr;
   }
 
-  .filter-chip {
+  .admin-body .filter-chip {
     flex: 0 0 auto;
   }
 
-  .inline-editor {
+  .admin-body .inline-editor {
     grid-template-columns: 1fr;
   }
 
-  input,
-  select,
-  textarea {
+  .admin-body input,
+  .admin-body select,
+  .admin-body textarea {
     padding: 12px 13px;
     font-size: 16px;
   }
 
-  .primary-button,
-  .secondary-button,
-  .danger-button,
-  .icon-button {
+  .admin-body .primary-button,
+  .admin-body .secondary-button,
+  .admin-body .danger-button,
+  .admin-body .icon-button {
     min-height: 42px;
     padding: 10px 14px;
     font-size: 0.9rem;
   }
 
-  .reservation-card header,
-  .reservation-summary-end,
-  .reservation-meta,
-  .reservation-footer,
-  .calendar-controls,
-  .section-header,
-  .form-actions {
+  .admin-body .reservation-card header,
+  .admin-body .reservation-summary-end,
+  .admin-body .reservation-meta,
+  .admin-body .reservation-footer,
+  .admin-body .calendar-controls,
+  .admin-body .section-header,
+  .admin-body .form-actions {
     align-items: stretch;
   }
 
-  .reservation-card {
+  .admin-body .reservation-card {
     padding: 14px;
   }
 
-  .reservation-card h3 {
+  .admin-body .reservation-card h3 {
     font-size: 1.2rem;
   }
 
-  .reservation-details {
+  .admin-body .reservation-details {
     gap: 8px;
   }
 
-  .room-tag,
-  .platform-tag,
-  .calendar-chip,
-  .type-tag,
-  .status-tag {
+  .admin-body .room-tag,
+  .admin-body .platform-tag,
+  .admin-body .calendar-chip,
+  .admin-body .type-tag,
+  .admin-body .status-tag {
     font-size: 0.72rem;
   }
 
-  .calendar-controls label,
-  .panel-heading label {
+  .admin-body .calendar-controls label,
+  .admin-body .panel-heading label {
     flex: 1 1 100%;
   }
 
-  .panel-heading input,
-  .panel-heading select {
+  .admin-body .panel-heading input,
+  .admin-body .panel-heading select {
     width: 100%;
     min-width: 0;
   }
 
-  #report-month,
-  #report-year {
+  .admin-body #report-month,
+  .admin-body #report-year {
     display: block;
     width: 100%;
     max-width: 100%;
     min-width: 0;
   }
 
-  #tab-reports .panel-heading.compact > label {
+  .admin-body #tab-reports .panel-heading.compact > label {
     width: 100%;
     max-width: 100%;
     align-self: stretch;
   }
 
-  .calendar-controls {
+  .admin-body .calendar-controls {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
-  .calendar-month-label,
-  #calendar-month-label {
+  .admin-body .calendar-month-label,
+  .admin-body #calendar-month-label {
     grid-column: 1 / -1;
     order: -1;
     text-align: left;
     font-size: 1.05rem;
   }
 
-  .calendar-grid {
+  .admin-body .calendar-grid {
     grid-template-columns: repeat(7, minmax(92px, 1fr));
     min-width: 680px;
     gap: 8px;
   }
 
-  .calendar-scroll {
+  .admin-body .calendar-scroll {
     overflow-x: auto;
     overflow-y: hidden;
     padding-bottom: 4px;
     -webkit-overflow-scrolling: touch;
   }
 
-  .planning-grid {
+  .admin-body .planning-grid {
     min-width: max(920px, var(--planning-min-width, 980px));
   }
 
-  .calendar-cell {
+  .admin-body .calendar-cell {
     min-height: 112px;
     padding: 8px;
   }
 
-  .calendar-day {
+  .admin-body .calendar-day {
     font-size: 0.84rem;
   }
 
-  .calendar-chip {
+  .admin-body .calendar-chip {
     padding: 5px 7px;
     gap: 4px;
   }
 
-  .calendar-chip span,
-  .calendar-chip strong {
+  .admin-body .calendar-chip span,
+  .admin-body .calendar-chip strong {
     font-size: 0.66rem;
   }
 
-  .breakdown-grid {
+  .admin-body .breakdown-grid {
     grid-template-columns: 1fr;
     gap: 10px;
   }
 
-  .breakdown-card {
+  .admin-body .breakdown-card {
     min-width: 0;
   }
 
-  .table-wrapper {
+  .admin-body .table-wrapper {
     overflow-x: hidden;
   }
 
-  .report-table {
+  .admin-body .report-table {
     table-layout: auto;
   }
 
-  .report-table th,
-  .report-table td {
+  .admin-body .report-table th,
+  .admin-body .report-table td {
     font-size: 0.82rem;
     padding: 8px 6px;
   }
 
-  .toast {
+  .admin-body .toast {
     left: 12px;
     right: 12px;
     bottom: 12px;
@@ -364,46 +340,41 @@
 }
 
 @media (max-width: 480px) {
-  .page-shell {
-    width: calc(100% - 10px);
-  }
-
-  .hero,
-  .panel {
+  .admin-body .panel {
     padding: 12px;
   }
 
-  .stats-grid {
+  .admin-body .stats-grid {
     grid-template-columns: 1fr 1fr;
   }
 
-  .panel-heading {
+  .admin-body .panel-heading {
     gap: 10px;
     margin-bottom: 14px;
   }
 
-  .form-grid {
+  .admin-body .form-grid {
     gap: 12px;
   }
 
-  .calendar-controls {
+  .admin-body .calendar-controls {
     grid-template-columns: 1fr;
   }
 
-  .calendar-grid {
+  .admin-body .calendar-grid {
     min-width: 630px;
   }
 
-  .stats-grid,
-  .breakdown-grid {
+  .admin-body .stats-grid,
+  .admin-body .breakdown-grid {
     min-width: 0;
   }
 
-  .inline-editor {
+  .admin-body .inline-editor {
     gap: 8px;
   }
 
-  .planning-grid {
+  .admin-body .planning-grid {
     min-width: max(880px, var(--planning-min-width, 930px));
   }
 }
@@ -494,14 +465,20 @@
    ════════════════════════════════════════════════════════════════════════ */
 
 /* Mobile (default) : bottom-sheet behavior */
-#reservation-modal.modal-backdrop {
+.admin-body #reservation-modal.modal-backdrop {
   display: block;
   padding: 0;
   background: rgba(29, 24, 20, 0.5);
   overflow: hidden;
   z-index: 60;
 }
-#reservation-modal .modal-panel.reservation-modal-panel {
+
+.admin-body #reservation-modal.modal-backdrop:not(.is-hidden) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.admin-body #reservation-modal .modal-panel.reservation-modal-panel {
   position: absolute;
   left: 0; right: 0; bottom: 0;
   width: 100%;
@@ -521,7 +498,7 @@
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
-#reservation-modal .modal-panel.reservation-modal-panel::before {
+.admin-body #reservation-modal .modal-panel.reservation-modal-panel::before {
   content: "";
   display: block;
   width: 40px;
@@ -531,7 +508,7 @@
   margin: 0 auto 12px;
   flex-shrink: 0;
 }
-#reservation-modal .modal-close-button {
+.admin-body #reservation-modal .modal-close-button {
   position: absolute;
   top: 16px;
   right: 16px;
@@ -550,8 +527,8 @@
   justify-content: center;
   z-index: 2;
 }
-#reservation-modal .modal-close-button:hover { background: var(--rule-strong); color: var(--ink); }
-#reservation-modal .reservation-modal-heading {
+.admin-body #reservation-modal .modal-close-button:hover { background: var(--rule-strong); color: var(--ink); }
+.admin-body #reservation-modal .reservation-modal-heading {
   padding: 0;
   margin: 0 40px 8px 0;
   display: flex;
@@ -560,18 +537,18 @@
   gap: 10px;
   border: 0;
 }
-#reservation-modal .reservation-modal-heading h2 {
+.admin-body #reservation-modal .reservation-modal-heading h2 {
   margin: 0;
   font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.2px;
 }
-#reservation-modal .reservation-modal-heading p {
+.admin-body #reservation-modal .reservation-modal-heading p {
   margin: 4px 0 0;
   font-size: 13px;
   color: var(--ink-3);
 }
-#reservation-modal #form-mode-badge {
+.admin-body #reservation-modal #form-mode-badge {
   flex-shrink: 0;
   background: var(--accent-soft);
   color: var(--accent-deep);
@@ -582,13 +559,13 @@
   letter-spacing: 0.1px;
   border: none;
 }
-#reservation-modal #reservation-form {
+.admin-body #reservation-modal #reservation-form {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px 12px;
   margin-top: 4px;
 }
-#reservation-modal #reservation-form label {
+.admin-body #reservation-modal #reservation-form label {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -597,10 +574,10 @@
   color: var(--ink-2);
   min-width: 0;
 }
-#reservation-modal #reservation-form label.full-width { grid-column: 1 / -1; }
-#reservation-modal #reservation-form input,
-#reservation-modal #reservation-form select,
-#reservation-modal #reservation-form textarea {
+.admin-body #reservation-modal #reservation-form label.full-width { grid-column: 1 / -1; }
+.admin-body #reservation-modal #reservation-form input,
+.admin-body #reservation-modal #reservation-form select,
+.admin-body #reservation-modal #reservation-form textarea {
   padding: 11px 12px;
   border: 1px solid var(--rule-strong);
   border-radius: var(--r-md);
@@ -612,21 +589,21 @@
   width: 100%;
   min-width: 0;
 }
-#reservation-modal #reservation-form input:focus,
-#reservation-modal #reservation-form select:focus,
-#reservation-modal #reservation-form textarea:focus {
+.admin-body #reservation-modal #reservation-form input:focus,
+.admin-body #reservation-modal #reservation-form select:focus,
+.admin-body #reservation-modal #reservation-form textarea:focus {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
   border-color: var(--accent);
 }
-#reservation-modal #reservation-form textarea { min-height: 80px; resize: vertical; }
-#reservation-modal #reservation-form .form-actions {
+.admin-body #reservation-modal #reservation-form textarea { min-height: 80px; resize: vertical; }
+.admin-body #reservation-modal #reservation-form .form-actions {
   margin-top: 6px;
   display: flex;
   gap: 8px;
   justify-content: flex-end;
 }
-#reservation-modal #reservation-form .form-actions button.primary-button {
+.admin-body #reservation-modal #reservation-form .form-actions button.primary-button {
   background: var(--accent);
   color: #fff;
   border: 1px solid var(--accent);
@@ -638,8 +615,8 @@
   font-size: 15px;
   transition: background .15s ease;
 }
-#reservation-modal #reservation-form .form-actions button.primary-button:hover { background: var(--accent-deep); }
-#reservation-modal #reservation-form .form-actions button.secondary-button {
+.admin-body #reservation-modal #reservation-form .form-actions button.primary-button:hover { background: var(--accent-deep); }
+.admin-body #reservation-modal #reservation-form .form-actions button.secondary-button {
   background: var(--surface);
   color: var(--ink-2);
   border: 1px solid var(--rule-strong);
@@ -650,14 +627,14 @@
   font-family: inherit;
   font-size: 15px;
 }
-#reservation-modal #reservation-form .form-actions button.secondary-button:hover { background: var(--paper-2); }
-#reservation-modal #reservation-form .checkbox-grid {
+.admin-body #reservation-modal #reservation-form .form-actions button.secondary-button:hover { background: var(--paper-2); }
+.admin-body #reservation-modal #reservation-form .checkbox-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-top: 4px;
 }
-#reservation-modal #reservation-form .checkbox-card {
+.admin-body #reservation-modal #reservation-form .checkbox-card {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -668,11 +645,11 @@
   font-size: 14px;
   background: var(--surface);
 }
-#reservation-modal #reservation-form .checkbox-card:has(input:checked) {
+.admin-body #reservation-modal #reservation-form .checkbox-card:has(input:checked) {
   background: var(--accent-tint);
   border-color: var(--accent);
 }
-#reservation-modal #reservation-form .field-label {
+.admin-body #reservation-modal #reservation-form .field-label {
   font-size: 12px;
   font-weight: 600;
   color: var(--ink-2);
@@ -682,12 +659,12 @@
 
 /* Desktop : centered modal instead of bottom-sheet */
 @media (min-width: 1024px) {
-  #reservation-modal.modal-backdrop {
+  .admin-body #reservation-modal.modal-backdrop {
     display: grid;
     place-items: center;
     padding: 20px;
   }
-  #reservation-modal .modal-panel.reservation-modal-panel {
+  .admin-body #reservation-modal .modal-panel.reservation-modal-panel {
     position: relative;
     left: auto; right: auto; bottom: auto;
     width: min(760px, 90vw);
@@ -697,7 +674,7 @@
     padding: 28px 32px;
     animation: modalScaleIn .25s cubic-bezier(.4, 0, .2, 1);
   }
-  #reservation-modal .modal-panel.reservation-modal-panel::before { display: none; }
+  .admin-body #reservation-modal .modal-panel.reservation-modal-panel::before { display: none; }
   @keyframes modalScaleIn {
     from { opacity: 0; transform: scale(.96); }
     to { opacity: 1; transform: scale(1); }

@@ -146,7 +146,7 @@
    Admin · Calendrier (6.4) + Planning (6.5) + Bilans (6.6) + Paramètres (6.7)
    ════════════════════════════════════════════════════════════════════════ */
 
-.calendar-controls {
+.admin-body .calendar-controls {
   display: flex;
   align-items: center;
   gap: 8px;

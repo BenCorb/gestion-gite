@@ -543,13 +543,11 @@
     gap: 0;
   }
   .public-gite-carousel { margin-top: 0; }
-  .public-gite-carousel img { height: 460px; }
 
   .public-contact-section {
     padding-bottom: 80px;
   }
   .public-contact-map { margin-top: 0; }
-  .public-contact-map iframe { height: 460px; }
 }
 
 /* ════════════════════════════════════════════════════════════════════════

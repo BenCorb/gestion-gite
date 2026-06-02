@@ -58,3 +58,16 @@
   height: 240px;
   border: 0;
 }
+
+@media (min-width: 1024px) {
+  .public-gite-carousel,
+  .public-contact-map {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+  }
+
+  .public-gite-carousel img,
+  .public-contact-map iframe {
+    height: 100%;
+  }
+}

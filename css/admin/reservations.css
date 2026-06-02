@@ -138,7 +138,7 @@
 .breakdown-card strong,
 .empty-state h3,
 .empty-state p,
-.panel-heading p {
+.admin-body .panel-heading p {
   line-height: 1.35;
 }
 
@@ -251,7 +251,7 @@
 }
 
 /* Override legacy .filter-chip — keep .chip styling from DESIGN_TOKENS */
-.filter-chip.chip {
+.admin-body .filter-chip.chip {
   padding: 7px 14px;
   background: var(--surface);
   color: var(--ink-2);
@@ -264,8 +264,8 @@
   box-shadow: none;
   transition: background .15s ease;
 }
-.filter-chip.chip.active,
-.filter-chip.chip.is-active {
+.admin-body .filter-chip.chip.active,
+.admin-body .filter-chip.chip.is-active {
   background: var(--ink);
   color: #fff;
   border-color: var(--ink);
@@ -403,17 +403,17 @@
   border-top: 1px solid var(--rule);
   background: var(--paper);
 }
-.request-edit-form {
+.admin-body .request-edit-form {
   border-top: 1px dashed var(--rule-strong);
   padding: 14px 16px 4px;
   background: var(--paper);
 }
-.request-edit-form .form-grid {
+.admin-body .request-edit-form .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
-.request-edit-form .form-grid > label {
+.admin-body .request-edit-form .form-grid > label {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -422,10 +422,10 @@
   font-weight: 600;
   min-width: 0;
 }
-.request-edit-form .form-grid > label.full-width { grid-column: 1 / -1; }
-.request-edit-form input,
-.request-edit-form select,
-.request-edit-form textarea {
+.admin-body .request-edit-form .form-grid > label.full-width { grid-column: 1 / -1; }
+.admin-body .request-edit-form input,
+.admin-body .request-edit-form select,
+.admin-body .request-edit-form textarea {
   padding: 10px 12px;
   border: 1px solid var(--rule-strong);
   border-radius: var(--r-md);
@@ -437,13 +437,13 @@
   min-width: 0;
   font-weight: 400;
 }
-.request-edit-form .form-actions {
+.admin-body .request-edit-form .form-actions {
   display: flex;
   gap: 8px;
   margin-top: 12px;
   padding: 0 16px 14px;
 }
-.request-edit-form .form-actions button.primary-button {
+.admin-body .request-edit-form .form-actions button.primary-button {
   background: var(--positive);
   color: #fff;
   border: 1px solid var(--positive);
@@ -453,8 +453,8 @@
   cursor: pointer;
   font-family: inherit;
 }
-.request-edit-form .form-actions button.primary-button:hover { background: var(--positive-deep); }
-.request-edit-form .form-actions button.danger-button {
+.admin-body .request-edit-form .form-actions button.primary-button:hover { background: var(--positive-deep); }
+.admin-body .request-edit-form .form-actions button.danger-button {
   background: transparent;
   color: var(--danger);
   border: 1px solid rgba(181,76,62,.35);
@@ -464,4 +464,4 @@
   cursor: pointer;
   font-family: inherit;
 }
-.request-edit-form .form-actions button.danger-button:hover { background: var(--danger-tint); }
+.admin-body .request-edit-form .form-actions button.danger-button:hover { background: var(--danger-tint); }
