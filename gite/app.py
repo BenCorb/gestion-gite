@@ -7,6 +7,7 @@ import os
 import re
 import socket
 import sqlite3
+import sys
 import threading
 import time
 import uuid
@@ -1934,12 +1935,33 @@ def main() -> None:
         print(f"Accessible sur le réseau local via {lan_url}")
     else:
         print("Adresse réseau local non détectée automatiquement.")
-    if os.environ.get("GITE_OPEN_BROWSER", "1") != "0":
+    if os.environ.get("GITE_OPEN_BROWSER", "0") == "1":
         try:
             webbrowser.open(local_url)
         except Exception:
             pass
-    server.serve_forever()
+    if not sys.stdin.isatty():
+        server.serve_forever()
+        return
+
+    print("Tapez 'exit' puis Entrée pour arrêter le serveur.")
+    server_thread = threading.Thread(target=server.serve_forever, name="gite-http-server")
+    server_thread.start()
+    try:
+        while True:
+            try:
+                command = input().strip().lower()
+            except EOFError:
+                break
+            if command == "exit":
+                print("Arrêt du serveur...")
+                break
+            if command:
+                print("Commande inconnue. Tapez 'exit' pour arrêter le serveur.")
+    finally:
+        server.shutdown()
+        server.server_close()
+        server_thread.join()
 
 
 def get_lan_url(port: int) -> str | None:

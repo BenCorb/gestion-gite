@@ -34,14 +34,16 @@ Application web de gestion d'un gîte : réservations, planning, bilans financie
 python3 server.py
 ```
 
-Le serveur s'ouvre automatiquement dans le navigateur. Accès :
+Le serveur affiche les URL dans le terminal sans ouvrir le navigateur automatiquement. Accès :
 
 | URL | Description |
 |---|---|
 | `http://127.0.0.1:8080` | Vitrine publique |
 | `http://127.0.0.1:8080/gestion` | Interface admin |
 
-Les variables d'environnement `HOST` (défaut `0.0.0.0`) et `PORT` (défaut `8080`) permettent de changer l'adresse d'écoute.
+Tapez `exit` puis Entrée dans la console du serveur pour l'arrêter proprement.
+
+Les variables d'environnement `HOST` (défaut `0.0.0.0`) et `PORT` (défaut `8080`) permettent de changer l'adresse d'écoute. Définir `GITE_OPEN_BROWSER=1` permet de réactiver l'ouverture automatique du navigateur au lancement.
 
 ## Lancer avec Docker
 
