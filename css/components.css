@@ -245,3 +245,32 @@
 .stepper-value {
   min-width: 32px; text-align: center; font-size: 17px; font-weight: 600;
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Toast — base partagée (vitrine + login). L'admin surcharge via
+   `.admin-body .toast` (plus spécifique), donc son rendu reste inchangé.
+   ════════════════════════════════════════════════════════════════════════ */
+.toast {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0) + 24px);
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--ink);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: var(--r-md);
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: var(--shadow-float);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  z-index: 100;
+}
+.toast.visible,
+.toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.toast.is-error { background: var(--danger); }
+.toast.is-success { background: var(--positive); }

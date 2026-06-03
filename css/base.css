@@ -27,6 +27,10 @@ button, input, textarea, select {
 
 a { color: inherit; }
 
+/* ── Utilitaires partagés (admin + vitrine + login) ──────────────────── */
+.is-hidden { display: none !important; }
+.divider { height: 1px; background: var(--rule); }
+
 /* ── Helpers texte ──────────────────────────────────────────────────── */
 .brand { font-family: var(--font-heading); font-weight: 400; line-height: 1; }
 .mono  { font-family: var(--font-mono); }

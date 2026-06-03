@@ -107,7 +107,6 @@
 .row-spaced { display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--s-3); }
-.divider { height: 1px; background: var(--rule); }
 
 /* ════════════════════════════════════════════════════════════════════════
    Toast (réutilise l'existant)
@@ -162,10 +161,6 @@
 
 * {
   box-sizing: border-box;
-}
-
-.is-hidden {
-  display: none !important;
 }
 
 html,
