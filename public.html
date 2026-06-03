@@ -2,123 +2,199 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Gîte</title>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     <meta name="apple-mobile-web-app-title" content="Le Clos des Vignes" />
+    <script>document.documentElement.setAttribute('data-palette', localStorage.getItem('lcdv.palette') || 'vignes');</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Satisfy&family=Lato:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body class="public-body">
-    <header class="public-hero" id="public-hero">
-      <nav class="public-nav">
-        <div class="public-brand">
-          <img id="public-logo" class="public-logo is-hidden" alt="" />
-          <strong id="public-property-name">Gîte</strong>
-        </div>
+    <span id="top" aria-hidden="true"></span>
+    <header class="public-topnav" id="public-topnav">
+      <a class="public-topnav-brand brand" href="#top" id="public-topnav-brand">
+        <span id="public-topnav-brand-text">Le Clos des Vignes</span>
+      </a>
+      <nav class="public-topnav-links" aria-label="Sections">
+        <a href="#rooms">Chambres</a>
+        <a href="#lieu">Le lieu</a>
+        <a href="#contact">Contact</a>
       </nav>
+    </header>
+    <header class="public-hero" id="public-hero">
+      <div class="public-hero-image" id="public-hero-image" aria-hidden="true"></div>
+      <div class="public-hero-overlay" aria-hidden="true"></div>
       <div class="public-hero-content">
+        <p class="public-hero-eyebrow" id="public-hero-eyebrow">Chambres d'hôtes</p>
         <h1 id="public-headline">Bienvenue</h1>
         <p id="public-subtitle" class="public-subtitle"></p>
       </div>
     </header>
 
+    <section class="availability-strip" aria-label="Choisir les dates">
+      <form id="availability-form" class="availability-card">
+        <label class="availability-cell" for="availability-arrival" data-empty="true" data-placeholder="Choisir l'arrivée">
+          <svg class="availability-cell-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+          <span class="availability-cell-value" id="availability-arrival-display">Choisir l'arrivée</span>
+          <input id="availability-arrival" type="date" class="availability-cell-input" required />
+        </label>
+        <div class="availability-divider" aria-hidden="true"></div>
+        <label class="availability-cell" for="availability-departure" data-empty="true" data-placeholder="Choisir le départ">
+          <svg class="availability-cell-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+          <span class="availability-cell-value" id="availability-departure-display">Choisir le départ</span>
+          <input id="availability-departure" type="date" class="availability-cell-input" required />
+        </label>
+        <button class="availability-submit" type="submit" aria-label="Rechercher">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        </button>
+        <div class="availability-summary" id="availability-status" hidden></div>
+      </form>
+    </section>
+
     <main class="public-main">
-      <section class="public-section">
-        <div>
-          <h2>Disponibilités</h2>
-          <p id="public-intro"></p>
+      <section class="public-section public-rooms-section" id="rooms">
+        <p class="eyebrow">Nos chambres</p>
+        <h2 class="public-section-title" id="public-rooms-title">Choisissez votre chambre</h2>
+        <p id="public-intro" class="public-section-intro"></p>
+        <div id="public-rooms" class="public-rooms" data-state="before"></div>
+      </section>
+
+      <section class="public-section public-gite-section" id="public-gite-section">
+        <div class="public-gite-text">
+          <span id="lieu" class="anchor-target" aria-hidden="true"></span>
+          <p class="eyebrow">Le lieu</p>
+          <h2 class="public-section-title" id="public-gite-title">Le gîte</h2>
+          <p id="public-gite-description" class="public-section-intro"></p>
         </div>
-        <form id="availability-form" class="availability-form">
-          <label>
-            <span>Arrivée</span>
-            <input id="availability-arrival" type="date" required />
-          </label>
-          <label>
-            <span>Départ</span>
-            <input id="availability-departure" type="date" required />
-          </label>
-          <button class="primary-button" type="submit">Rechercher</button>
-        </form>
+        <div id="public-gite-carousel" class="public-gite-carousel"></div>
       </section>
 
-      <section class="public-section">
-        <div class="section-header">
-          <h2>Chambres</h2>
-          <p id="availability-status" class="sync-status"></p>
+      <section class="public-section public-contact-section" id="contact">
+        <div class="public-contact-text">
+          <p class="eyebrow">Nous trouver</p>
+          <h2 class="public-section-title">Contact</h2>
+          <div id="public-contact" class="public-contact"></div>
         </div>
-        <div id="public-rooms" class="public-room-grid"></div>
-      </section>
-
-      <section class="public-section" id="public-gite-section">
-        <div class="gite-section-layout">
-          <div>
-            <h2 id="public-gite-title">Le gîte</h2>
-            <p id="public-gite-description"></p>
-          </div>
-          <div id="public-gite-carousel" class="gite-carousel"></div>
-        </div>
-      </section>
-
-      <section class="public-section" id="public-gallery-section">
-        <h2>Galerie</h2>
-        <div id="public-gallery" class="public-gallery"></div>
-      </section>
-
-      <section class="public-section public-contact">
-        <h2>Contact</h2>
-        <div id="public-contact"></div>
+        <div id="public-contact-map-region" class="public-contact-map-region"></div>
       </section>
     </main>
 
-    <div id="request-modal" class="modal-backdrop is-hidden">
-      <form id="booking-request-form" class="modal-panel">
-        <button class="modal-close-button" type="button" id="close-request-modal" aria-label="Fermer">×</button>
-        <div class="section-header">
+    <footer class="public-footer">
+      <div class="public-footer-brand brand" id="public-footer-brand">
+        <img id="public-footer-logo" class="public-footer-logo is-hidden" alt="" />
+        <span id="public-footer-brand-text">Le Clos des Vignes</span>
+      </div>
+      <div class="public-footer-meta">© <span id="public-footer-year"></span> · Tous droits réservés</div>
+      <div class="public-footer-links">
+        <a href="#top">Retour en haut</a>
+      </div>
+    </footer>
+
+    <div id="request-modal" class="modal-backdrop">
+      <form id="booking-request-form" class="modal-sheet">
+        <div class="modal-sheet-grabber" aria-hidden="true"></div>
+        <div class="modal-sheet-header">
           <div>
-            <h2>Demande de réservation</h2>
-            <p id="request-room-label"></p>
+            <p class="eyebrow">Demande de séjour</p>
+            <h2 id="request-room-label" class="modal-sheet-title">Chambre sélectionnée</h2>
+            <p class="meta" id="request-summary"></p>
+            <p class="booking-trust-note">Demande sans paiement immédiat · réponse directe du gîte</p>
           </div>
+          <button class="modal-sheet-close" type="button" id="close-request-modal" aria-label="Fermer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
         </div>
         <input type="hidden" id="request-room-id" />
-        <label>
-          <span>Nom</span>
-          <input id="request-guest-name" type="text" required />
-        </label>
-        <div class="form-grid">
-          <label>
-            <span>Arrivée</span>
-            <input id="request-arrival-date" type="date" required />
+        <div class="modal-sheet-body">
+          <div class="booking-dates">
+            <label class="booking-date-cell" data-empty="true" data-placeholder="Choisir l'arrivée">
+              <span class="booking-date-label">Arrivée</span>
+              <span class="booking-date-placeholder">Choisir l'arrivée</span>
+              <input id="request-arrival-date" type="date" required class="booking-date-input" />
+            </label>
+            <label class="booking-date-cell" data-empty="true" data-placeholder="Choisir le départ">
+              <span class="booking-date-label">Départ</span>
+              <span class="booking-date-placeholder">Choisir le départ</span>
+              <input id="request-departure-date" type="date" required class="booking-date-input" />
+            </label>
+          </div>
+          <div class="booking-guest-row">
+            <div>
+              <div class="booking-guest-label">Voyageurs</div>
+              <div class="booking-guest-meta" id="request-capacity-hint">capacité max : 2</div>
+            </div>
+            <div class="stepper" id="request-stepper" data-min="1" data-max="2">
+              <button class="stepper-btn" type="button" data-step="-1" aria-label="Diminuer">−</button>
+              <div class="stepper-value" id="request-guest-count-display">2</div>
+              <button class="stepper-btn" type="button" data-step="1" aria-label="Augmenter">+</button>
+            </div>
+            <input type="hidden" id="request-guest-count" name="guestCount" value="2" />
+          </div>
+          <label class="field">
+            <span class="field-label">Votre nom</span>
+            <input id="request-guest-name" type="text" required class="field-input" placeholder="Jean Martin" />
           </label>
-          <label>
-            <span>Départ</span>
-            <input id="request-departure-date" type="date" required />
+          <label class="field">
+            <span class="field-label">Email ou téléphone</span>
+            <input id="request-guest-contact" type="text" required class="field-input" placeholder="jean@email.fr" />
           </label>
+          <label class="field">
+            <span class="field-label">Message (optionnel)</span>
+            <textarea id="request-message" rows="2" class="field-textarea" placeholder="Bonjour, nous serions ravis de séjourner chez vous…"></textarea>
+          </label>
+          <div class="booking-total">
+            <div>
+              <div class="booking-total-label">Total estimé</div>
+              <div class="booking-total-meta" id="request-nights-meta">—</div>
+            </div>
+            <div class="booking-total-amount" id="request-total-amount">—</div>
+          </div>
         </div>
-        <label>
-          <span>Email ou téléphone</span>
-          <input id="request-guest-contact" type="text" required />
-        </label>
-        <label>
-          <span>Nombre de voyageurs</span>
-          <input id="request-guest-count" type="number" min="1" value="2" required />
-        </label>
-        <label>
-          <span>Message</span>
-          <textarea id="request-message" rows="4"></textarea>
-        </label>
-        <button class="primary-button" type="submit">Envoyer la demande</button>
+        <button class="btn btn-primary btn-lg btn-full" type="submit">Envoyer la demande</button>
       </form>
     </div>
 
-    <div id="amenities-modal" class="modal-backdrop is-hidden">
-      <section class="modal-panel">
-        <button class="modal-close-button" type="button" id="close-amenities-modal" aria-label="Fermer">×</button>
-        <div class="section-header">
-          <div>
-            <h2 id="amenities-title">Équipements</h2>
-            <p id="amenities-room-label"></p>
+    <div id="request-confirmation" class="confirmation-overlay" aria-hidden="true">
+      <div class="confirmation-hero" aria-hidden="true"></div>
+      <div class="confirmation-check" aria-hidden="true">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>
+      </div>
+      <div class="confirmation-content">
+        <h2 class="confirmation-title">Demande envoyée</h2>
+        <p class="confirmation-meta" id="confirmation-meta">Nous vous répondrons dans les meilleurs délais.</p>
+        <article class="card confirmation-card">
+          <p class="eyebrow">Récapitulatif</p>
+          <div class="confirmation-room">
+            <div class="confirmation-room-photo" id="confirmation-room-photo" aria-hidden="true"></div>
+            <div class="confirmation-room-info">
+              <div class="confirmation-room-name" id="confirmation-room-name"></div>
+              <div class="meta" id="confirmation-guest-count"></div>
+            </div>
           </div>
+          <div class="divider"></div>
+          <div class="confirmation-row"><span>Arrivée</span><strong id="confirmation-arrival"></strong></div>
+          <div class="confirmation-row"><span>Départ</span><strong id="confirmation-departure"></strong></div>
+          <div class="confirmation-row confirmation-row-total"><span>Total estimé</span><strong id="confirmation-total"></strong></div>
+        </article>
+        <button class="btn btn-primary btn-lg btn-full" type="button" id="confirmation-back">Retour à l'accueil</button>
+      </div>
+    </div>
+
+    <div id="amenities-modal" class="modal-backdrop">
+      <section class="modal-sheet amenities-sheet">
+        <div class="modal-sheet-grabber" aria-hidden="true"></div>
+        <div class="modal-sheet-header">
+          <div>
+            <p class="eyebrow" id="amenities-title">Équipements</p>
+            <h2 id="amenities-room-label" class="modal-sheet-title"></h2>
+          </div>
+          <button class="modal-sheet-close" type="button" id="close-amenities-modal" aria-label="Fermer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
         </div>
         <div id="amenities-content" class="amenities-groups"></div>
       </section>

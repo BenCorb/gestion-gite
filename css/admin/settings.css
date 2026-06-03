@@ -1,0 +1,772 @@
+.inline-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.amenity-group-row,
+.booking-link-row {
+  grid-template-columns: minmax(120px, 160px) minmax(0, 1fr) auto;
+}
+
+.color-select {
+  min-width: 0;
+}
+
+.upload-button {
+  display: inline-flex;
+}
+
+.admin-body .panel-heading > div,
+.admin-body .reservation-card header > div,
+.admin-body .reservation-footer > div,
+.admin-body .panel-heading label,
+.admin-body .calendar-controls,
+.admin-body .section-header,
+.admin-body .form-actions {
+  min-width: 0;
+}
+
+.admin-body .calendar-controls label {
+  flex: 1 1 180px;
+}
+
+.admin-body .empty-state {
+  padding: 28px 18px;
+  text-align: center;
+  border: 1px dashed rgba(117, 104, 78, 0.24);
+  border-radius: var(--radius-md);
+}
+
+.admin-body .toast {
+  position: fixed;
+  right: 22px;
+  bottom: 20px;
+  max-width: 340px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(59, 51, 41, 0.95);
+  color: #fffdf8;
+  box-shadow: 0 16px 36px rgba(59, 51, 41, 0.28);
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.admin-body .toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 1160px) {
+  .admin-body .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-body .reservation-list {
+    max-height: none;
+  }
+}
+
+@media (max-width: 780px) {
+  html,
+  .admin-body {
+    overflow-x: hidden;
+  }
+
+  .admin-body .panel-heading,
+  .admin-body .panel-heading.compact {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-body .panel {
+    padding: 16px;
+  }
+
+  .admin-body h1 {
+    font-size: 1.45rem;
+  }
+
+  .admin-body h2 {
+    font-size: 1.55rem;
+  }
+
+  .admin-body h3 {
+    font-size: 1.08rem;
+  }
+
+  .admin-body .subtitle {
+    font-size: 0.8rem;
+  }
+
+  .admin-body .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 10px 0 12px;
+  }
+
+  .admin-body .stat-card {
+    padding: 10px 12px;
+  }
+
+  .admin-body .stat-card .label {
+    font-size: 0.72rem;
+  }
+
+  .admin-body .stat-card strong {
+    font-size: 1.15rem;
+  }
+
+  .admin-body .tab-button {
+    padding: 9px 12px;
+    font-size: 0.83rem;
+  }
+
+  .admin-body .form-grid,
+  .admin-body .reservation-details {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-body .checkbox-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-body .filter-chip {
+    flex: 0 0 auto;
+  }
+
+  .admin-body .inline-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-body input,
+  .admin-body select,
+  .admin-body textarea {
+    padding: 12px 13px;
+    font-size: 16px;
+  }
+
+  .admin-body .primary-button,
+  .admin-body .secondary-button,
+  .admin-body .danger-button,
+  .admin-body .icon-button {
+    min-height: 42px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+  }
+
+  .admin-body .reservation-card header,
+  .admin-body .reservation-summary-end,
+  .admin-body .reservation-meta,
+  .admin-body .reservation-footer,
+  .admin-body .calendar-controls,
+  .admin-body .section-header,
+  .admin-body .form-actions {
+    align-items: stretch;
+  }
+
+  .admin-body .reservation-card {
+    padding: 14px;
+  }
+
+  .admin-body .reservation-card h3 {
+    font-size: 1.2rem;
+  }
+
+  .admin-body .reservation-details {
+    gap: 8px;
+  }
+
+  .admin-body .room-tag,
+  .admin-body .platform-tag,
+  .admin-body .calendar-chip,
+  .admin-body .type-tag,
+  .admin-body .status-tag {
+    font-size: 0.72rem;
+  }
+
+  .admin-body .calendar-controls label,
+  .admin-body .panel-heading label {
+    flex: 1 1 100%;
+  }
+
+  .admin-body .panel-heading input,
+  .admin-body .panel-heading select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-body #report-month,
+  .admin-body #report-year {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .admin-body #tab-reports .panel-heading.compact > label {
+    width: 100%;
+    max-width: 100%;
+    align-self: stretch;
+  }
+
+  .admin-body .planning-grid {
+    min-width: max(920px, var(--planning-min-width, 980px));
+  }
+
+  .admin-body .breakdown-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .admin-body .breakdown-card {
+    min-width: 0;
+  }
+
+  .admin-body .table-wrapper {
+    overflow-x: hidden;
+  }
+
+  .admin-body .report-table {
+    table-layout: auto;
+  }
+
+  .admin-body .report-table th,
+  .admin-body .report-table td {
+    font-size: 0.82rem;
+    padding: 8px 6px;
+  }
+
+  .admin-body .toast {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-body .panel {
+    padding: 12px;
+  }
+
+  .admin-body .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-body .panel-heading {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .admin-body .form-grid {
+    gap: 12px;
+  }
+
+  .admin-body .stats-grid,
+  .admin-body .breakdown-grid {
+    min-width: 0;
+  }
+
+  .admin-body .inline-editor {
+    gap: 8px;
+  }
+
+  .admin-body .planning-grid {
+    min-width: max(880px, var(--planning-min-width, 930px));
+  }
+}
+
+.settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+}
+.settings-block { display: flex; flex-direction: column; gap: 8px; }
+.settings-block-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+.settings-block-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.settings-block-meta {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.palette-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+.palette-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color .15s ease, background .15s ease;
+}
+.palette-swatch:hover { border-color: var(--rule-strong); }
+.palette-swatch[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+.palette-swatch-chip {
+  width: 32px; height: 32px;
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,.05);
+}
+.palette-swatch-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.palette-swatch[aria-checked="true"] .palette-swatch-label { color: var(--accent-deep); }
+.palette-meta {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.45;
+}
+
+/* Override legacy .settings-section + .panel for the redesigned card */
+#tab-settings .settings-section {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+}
+#tab-settings .settings-section > .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+#tab-settings .settings-section h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Admin · Modale réservation finale
+   ════════════════════════════════════════════════════════════════════════ */
+
+.admin-body #reservation-modal.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: block;
+  padding: 0;
+  background: rgba(29, 24, 20, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  z-index: 70;
+  overflow: hidden;
+  overflow-x: hidden;
+  max-width: 100vw;
+  transition: opacity 0.25s ease, visibility 0s linear 0.25s;
+}
+
+.admin-body #reservation-modal.modal-backdrop.is-hidden {
+  display: none;
+}
+
+.admin-body #reservation-modal.modal-backdrop:not(.is-hidden):not(.is-visible) {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.admin-body #reservation-modal.modal-backdrop.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.admin-body #reservation-modal .modal-panel.reservation-modal-panel {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: auto;
+  max-width: 100vw;
+  max-height: 90vh;
+  padding: 12px 20px 28px;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  background: var(--surface);
+  box-shadow: 0 -10px 30px rgba(29, 24, 20, 0.2);
+  overflow-x: hidden;
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+  z-index: 71;
+  animation: none !important;
+}
+
+.admin-body #reservation-modal.is-visible .modal-panel.reservation-modal-panel {
+  transform: translateY(0);
+}
+
+.admin-body #reservation-modal .modal-panel.reservation-modal-panel::before {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 4px;
+  margin: 0 auto 12px;
+  border-radius: 4px;
+  background: var(--rule-strong);
+  flex-shrink: 0;
+}
+
+.admin-body #reservation-modal .modal-close-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--paper-2);
+  color: var(--ink-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 24px;
+  line-height: 1;
+  z-index: 2;
+}
+
+.admin-body #reservation-modal .modal-close-button:hover {
+  background: var(--rule-strong);
+  color: var(--ink);
+}
+
+.admin-body #reservation-modal .reservation-modal-heading {
+  margin: 0 40px 8px 0;
+  padding: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  border: 0;
+}
+
+.admin-body #reservation-modal .reservation-modal-heading h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  line-height: 1.15;
+}
+
+.admin-body #reservation-modal .reservation-modal-heading p {
+  max-width: 52ch;
+  margin: 4px 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.admin-body #reservation-modal #form-mode-badge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+}
+
+.admin-body #reservation-modal #reservation-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+  margin-top: 4px;
+}
+
+.admin-body #reservation-modal #reservation-form,
+.admin-body #reservation-modal #reservation-form .form-actions,
+.admin-body #reservation-modal #reservation-form .checkbox-grid,
+.admin-body #reservation-modal #reservation-form .checkbox-card {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.admin-body #reservation-modal #reservation-form label {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: visible;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-body #reservation-modal #reservation-form label.full-width,
+.admin-body #reservation-modal #reservation-form .full-width {
+  grid-column: 1 / -1;
+}
+
+.admin-body #reservation-modal #reservation-form input,
+.admin-body #reservation-modal #reservation-form select,
+.admin-body #reservation-modal #reservation-form textarea {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.admin-body #reservation-modal #reservation-form input:focus,
+.admin-body #reservation-modal #reservation-form select:focus,
+.admin-body #reservation-modal #reservation-form textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(149, 97, 61, 0.16);
+  outline: none;
+}
+
+.admin-body #reservation-modal #reservation-form textarea {
+  min-height: 58px;
+  resize: vertical;
+}
+
+.admin-body #reservation-modal #reservation-form .form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.admin-body #reservation-modal #reservation-form .form-actions button.primary-button {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+}
+
+.admin-body #reservation-modal #reservation-form .form-actions button.primary-button:hover {
+  background: var(--accent-deep);
+}
+
+.admin-body #reservation-modal #reservation-form .form-actions button.secondary-button {
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px solid var(--rule-strong);
+}
+
+.admin-body #reservation-modal #reservation-form .form-actions button.secondary-button:hover {
+  background: var(--paper-2);
+}
+
+.admin-body #reservation-modal #reservation-form .checkbox-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.admin-body #reservation-modal #reservation-form .checkbox-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.admin-body #reservation-modal #reservation-form .checkbox-card:has(input:checked) {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+}
+
+.admin-body #reservation-modal #reservation-form .field-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@media (max-width: 780px) {
+  .admin-body #reservation-modal.modal-backdrop {
+    align-items: end;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .admin-body #reservation-modal .modal-panel.reservation-modal-panel {
+    width: 100%;
+    max-width: 100%;
+    height: min(calc(100dvh - 10px), 760px);
+    max-height: calc(100dvh - 10px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px 0;
+    border-radius: 16px 16px 0 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .admin-body #reservation-modal .reservation-modal-heading {
+    margin: 0 44px 4px 0;
+  }
+
+  .admin-body #reservation-modal .reservation-modal-heading h2 {
+    font-size: 21px;
+  }
+
+  .admin-body #reservation-modal .reservation-modal-heading p {
+    display: none;
+  }
+
+  .admin-body #reservation-modal #form-mode-badge {
+    align-self: flex-start;
+  }
+
+  .admin-body #reservation-modal #reservation-form {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px 12px;
+    flex: initial;
+    min-height: initial;
+    margin-top: 4px;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .admin-body #reservation-modal #reservation-form label {
+    width: auto;
+    gap: 4px;
+    overflow: visible;
+    color: var(--ink-2);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .admin-body #reservation-modal #reservation-form input,
+  .admin-body #reservation-modal #reservation-form select,
+  .admin-body #reservation-modal #reservation-form textarea {
+    width: 100%;
+    max-width: 100%;
+    min-height: 42px;
+    height: auto;
+    padding: 9px 11px;
+    border-radius: 8px;
+    font-size: 15px;
+    line-height: normal;
+    overflow: visible;
+  }
+
+  .admin-body #reservation-modal #reservation-form select,
+  .admin-body #reservation-modal #reservation-form input[type="date"] {
+    height: 42px;
+  }
+
+  .admin-body #reservation-modal #reservation-form textarea {
+    min-height: 58px;
+  }
+
+  .admin-body #reservation-modal #reservation-form .form-actions {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 8px 0 0;
+    padding: 8px 0 calc(env(safe-area-inset-bottom, 0px) + 18px);
+    border-top: 1px solid var(--rule);
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .admin-body #reservation-modal #reservation-form .form-actions button {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-body #reservation-modal .modal-panel.reservation-modal-panel {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .admin-body #reservation-modal .modal-panel.reservation-modal-panel {
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    width: min(840px, calc(100vw - 48px));
+    max-width: calc(100vw - 48px);
+    max-height: calc(100dvh - 48px);
+    padding: 24px;
+    border-radius: 20px;
+    box-shadow: 0 18px 60px rgba(29, 24, 20, 0.22);
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+
+  .admin-body #reservation-modal.is-visible .modal-panel.reservation-modal-panel {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .admin-body #reservation-modal .modal-panel.reservation-modal-panel::before {
+    display: none;
+  }
+
+  .admin-body #reservation-modal #reservation-form {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px 12px;
+  }
+
+  .admin-body #reservation-modal #reservation-form .form-actions {
+    position: static;
+    justify-content: flex-end;
+    margin: 0;
+    padding: 6px 0 0;
+    border-top: none;
+    background: transparent;
+  }
+}

@@ -1,0 +1,125 @@
+.breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.report-section {
+  margin-top: 18px;
+}
+
+.report-section .breakdown-grid {
+  margin-top: 12px;
+}
+
+.breakdown-card {
+  padding: 18px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--border);
+}
+
+.breakdown-card .label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.breakdown-card p,
+.report-table,
+.table-wrapper {
+  color: var(--muted);
+}
+
+.table-wrapper {
+  margin-top: 18px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.report-table th,
+.report-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(117, 104, 78, 0.12);
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.report-table th {
+  color: var(--text);
+}
+
+.stack-list {
+  display: grid;
+  gap: 12px;
+}
+
+/* Reports */
+.reports-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 4px;
+}
+.report-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+}
+.report-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.report-card-header .eyebrow { margin: 0; }
+.report-card-title {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.1px;
+}
+.report-card-select { display: flex; flex-direction: column; gap: 4px; }
+.report-card-select .field-label { font-size: 11px; margin-bottom: 0; }
+.report-card-select .field-select { padding: 8px 12px; font-size: 13px; }
+.report-card-actions { display: flex; gap: 8px; align-items: flex-end; }
+
+.report-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.report-section { display: flex; flex-direction: column; gap: 10px; }
+.report-section-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.breakdown-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+@media (min-width: 1024px) {
+  .reports-grid { grid-template-columns: 1fr 1fr; gap: 20px; }
+  .report-stats { grid-template-columns: repeat(4, 1fr); }
+  .breakdown-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* Settings */
