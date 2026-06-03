@@ -76,6 +76,8 @@ export function renderReservationsList(ctx) {
   const { actions, elements, state } = ctx;
   const roomFilter = elements.reservationFilterRoom.value;
   const search = elements.reservationSearch.value.trim().toLowerCase();
+  const allReservationIds = new Set(state.reservations.map((reservation) => String(reservation.id)));
+  state.expandedReservationIds = (state.expandedReservationIds || []).filter((id) => allReservationIds.has(String(id)));
 
   elements.quickFilters.forEach((button) => {
     button.classList.toggle("active", button.dataset.filter === state.quickFilter);
@@ -112,20 +114,23 @@ export function renderReservationsList(ctx) {
 
   elements.reservationsList.innerHTML = filtered
     .map((reservation) => {
+      const reservationId = String(reservation.id);
       const roomName = getRoomName(state, reservation.roomId);
       const detailsId = `reservation-details-${escapeHtml(reservation.id)}`;
       const cardTitle = getReservationCardTitle(reservation);
+      const isExpanded = state.expandedReservationIds.includes(reservationId);
       return `
         <article
-          class="reservation-card is-collapsed"
+          class="reservation-card ${isExpanded ? "is-expanded" : "is-collapsed"}"
           role="button"
           tabindex="0"
-          aria-expanded="false"
+          aria-expanded="${String(isExpanded)}"
           aria-controls="${detailsId}"
           data-action="toggle-details"
+          data-id="${escapeHtml(reservationId)}"
         >
-          <header>
-            <div>
+          <header class="reservation-card-summary">
+            <div class="reservation-summary-main">
               <h3>${escapeHtml(cardTitle)}</h3>
               <div class="reservation-meta">
                 <span class="room-tag custom-color" ${getRoomStyle(state, reservation.roomId)}>${escapeHtml(roomName)}</span>
@@ -133,13 +138,22 @@ export function renderReservationsList(ctx) {
                 <span class="status-tag status-${escapeHtml(reservation.status || "confirmed")}">${getStatusLabel(reservation.status)}</span>
                 <span class="platform-tag">${escapeHtml(getDisplayPlatform(reservation))}</span>
               </div>
-              <span class="reservation-date-range">${formatDate(reservation.arrivalDate)} au ${formatDate(reservation.departureDate)}</span>
+              <div class="reservation-summary-facts">
+                <span>${formatDate(reservation.arrivalDate)} au ${formatDate(reservation.departureDate)}</span>
+                <span>${calculateNights(reservation.arrivalDate, reservation.departureDate)} nuit(s)</span>
+              </div>
             </div>
             <div class="reservation-summary-end">
-              <span class="reservation-toggle-indicator" aria-hidden="true">⌄</span>
+              ${
+                getEntryType(reservation) === "reservation"
+                  ? `<strong class="reservation-summary-amount">${formatCurrency(state, Number(reservation.amount || 0))}</strong>`
+                  : `<strong class="reservation-summary-amount">Blocage</strong>`
+              }
+              <span class="reservation-toggle-text">Détails</span>
+              <span class="reservation-toggle-indicator" aria-hidden="true">${icon("chevronDown", 18)}</span>
             </div>
           </header>
-          <div class="reservation-collapsible is-hidden" id="${detailsId}">
+          <div class="reservation-collapsible ${isExpanded ? "" : "is-hidden"}" id="${detailsId}">
             <div class="reservation-details">
               <div>
                 <strong>Client</strong>
@@ -182,7 +196,15 @@ export function renderReservationsList(ctx) {
   elements.reservationsList.querySelectorAll("[data-action='toggle-details']").forEach((card) => {
     const toggleDetails = () => {
       const details = card.querySelector(".reservation-collapsible");
+      const reservationId = String(card.dataset.id || "");
       const isExpanded = card.getAttribute("aria-expanded") === "true";
+      if (reservationId) {
+        if (isExpanded) {
+          state.expandedReservationIds = (state.expandedReservationIds || []).filter((id) => String(id) !== reservationId);
+        } else if (!state.expandedReservationIds.includes(reservationId)) {
+          state.expandedReservationIds = [...(state.expandedReservationIds || []), reservationId];
+        }
+      }
       card.classList.toggle("is-collapsed", isExpanded);
       card.classList.toggle("is-expanded", !isExpanded);
       card.setAttribute("aria-expanded", String(!isExpanded));

@@ -35,93 +35,117 @@ export function renderBookingRequests(ctx) {
   }
   elements.bookingRequestsList.innerHTML = requests
     .map(
-      (request) => `
-        <article class="reservation-card">
-          <header>
-            <div>
-              <h3>${escapeHtml(request.guestName)}</h3>
-              <div class="reservation-meta">
-                <span class="room-tag custom-color" ${getRoomStyle(state, request.roomId)}>${escapeHtml(getRoomName(state, request.roomId))}</span>
-                <span class="status-tag status-${escapeHtml(request.status)}">${getBookingRequestStatusLabel(request.status)}</span>
-                <span>${formatDate(request.arrivalDate)} au ${formatDate(request.departureDate)}</span>
+      (request) => {
+        const isDraftOpen = state.requestDraftId === request.id;
+        return `
+          <article class="request-card">
+            <header class="request-card-header">
+              <div class="request-card-title">
+                <h3>${escapeHtml(request.guestName)}</h3>
+                <div class="request-card-meta">
+                  <span class="room-tag custom-color" ${getRoomStyle(state, request.roomId)}>${escapeHtml(getRoomName(state, request.roomId))}</span>
+                  <span class="status-tag status-${escapeHtml(request.status)}">${getBookingRequestStatusLabel(request.status)}</span>
+                  <span>${formatDate(request.arrivalDate)} au ${formatDate(request.departureDate)}</span>
+                </div>
+              </div>
+              <span class="request-guest-count">${request.guestCount} voyageur(s)</span>
+            </header>
+            <div class="request-summary-grid">
+              <div>
+                <strong>Séjour</strong>
+                <span>${calculateNights(request.arrivalDate, request.departureDate)} nuit(s)</span>
+              </div>
+              <div>
+                <strong>Contact</strong>
+                <span>${escapeHtml(request.guestContact)}</span>
+              </div>
+              <div>
+                <strong>Créée</strong>
+                <span>${formatDateTime(request.createdAt)}</span>
+              </div>
+              <div>
+                <strong>Message</strong>
+                <span>${escapeHtml(request.message || "Aucun message")}</span>
               </div>
             </div>
-            <span class="platform-tag">${request.guestCount} voyageur(s)</span>
-          </header>
-          <div class="reservation-details">
-            <div>
-              <strong>Arrivée</strong>
-              <span>${formatDate(request.arrivalDate)}</span>
-            </div>
-            <div>
-              <strong>Départ</strong>
-              <span>${formatDate(request.departureDate)}</span>
-            </div>
-            <div>
-              <strong>Contact</strong>
-              <span>${escapeHtml(request.guestContact)}</span>
-            </div>
-            <div>
-              <strong>Créée</strong>
-              <span>${formatDateTime(request.createdAt)}</span>
-            </div>
-            <div class="full-width">
-              <strong>Message</strong>
-              <span>${escapeHtml(request.message || "Aucun message")}</span>
-            </div>
-          </div>
-          ${
-            request.status === "new"
-              ? `<div class="request-edit-form" data-request-edit-form="${request.id}">
-                  <div class="form-grid">
-                    <label>
-                      <span>Chambre</span>
-                      <select data-request-room-id>
-                        ${state.settings.rooms
-                          .map(
-                            (room) =>
-                              `<option value="${room.id}" ${room.id === request.roomId ? "selected" : ""}>${escapeHtml(room.name)}</option>`,
-                          )
-                          .join("")}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Arrivée</span>
-                      <input data-request-arrival-date type="date" value="${escapeHtml(request.arrivalDate)}" />
-                    </label>
-                    <label>
-                      <span>Départ</span>
-                      <input data-request-departure-date type="date" value="${escapeHtml(request.departureDate)}" />
-                    </label>
-                    <label>
-                      <span>Client</span>
-                      <input data-request-client-name type="text" value="${escapeHtml(request.guestName)}" />
-                    </label>
-                    <label>
-                      <span>Contact</span>
-                      <input data-request-client-contact type="text" value="${escapeHtml(request.guestContact)}" />
-                    </label>
-                    <label>
-                      <span>Montant</span>
-                      <input data-request-amount type="number" min="0" step="0.01" value="0" />
-                    </label>
-                    <label class="full-width">
-                      <span>Commentaire réservation</span>
-                      <textarea data-request-comment rows="3">${escapeHtml(request.message || "")}</textarea>
-                    </label>
-                  </div>
-                </div>
-                <div class="form-actions">
-                  <button class="primary-button" type="button" data-request-action="accept" data-request-id="${request.id}">Accepter</button>
-                  <button class="danger-button" type="button" data-request-action="reject" data-request-id="${request.id}">Refuser</button>
-                </div>`
-              : ""
-          }
-        </article>
-      `,
+            ${
+              isDraftOpen
+                ? renderRequestDraftPanel(state, request)
+                : `<div class="request-action-row">
+                    <button class="btn btn-positive btn-md" type="button" data-request-action="prepare-accept" data-request-id="${escapeHtml(request.id)}">Accepter</button>
+                    <button class="btn btn-secondary btn-md" type="button" data-request-action="prepare-edit" data-request-id="${escapeHtml(request.id)}">Modifier avant d'accepter</button>
+                    <button class="btn btn-danger btn-md" type="button" data-request-action="reject" data-request-id="${escapeHtml(request.id)}">Refuser</button>
+                  </div>`
+            }
+          </article>
+        `;
+      },
     )
     .join("");
   elements.bookingRequestsList.querySelectorAll("[data-request-action]").forEach((button) => {
     button.addEventListener("click", () => actions.handleBookingRequestAction(button.dataset.requestId, button.dataset.requestAction));
   });
+}
+
+function renderRequestDraftPanel(state, request) {
+  const isEditMode = state.requestDraftMode === "edit";
+  const roomOptions = state.settings.rooms
+    .map(
+      (room) =>
+        `<option value="${room.id}" ${room.id === request.roomId ? "selected" : ""}>${escapeHtml(room.name)}</option>`,
+    )
+    .join("");
+
+  return `
+    <div class="request-decision-panel" data-request-edit-form="${escapeHtml(request.id)}">
+      <div class="request-decision-header">
+        <div>
+          <h4>Créer la réservation</h4>
+          <p>${escapeHtml(getRoomName(state, request.roomId))}, ${formatDate(request.arrivalDate)} au ${formatDate(request.departureDate)}</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" type="button" data-request-action="${isEditMode ? "prepare-accept" : "prepare-edit"}" data-request-id="${escapeHtml(request.id)}">
+          ${isEditMode ? "Mode simple" : "Modifier les détails"}
+        </button>
+      </div>
+      <div class="request-draft-grid ${isEditMode ? "is-edit-mode" : ""}">
+        ${
+          isEditMode
+            ? `<label>
+                <span>Chambre</span>
+                <select data-request-room-id>${roomOptions}</select>
+              </label>
+              <label>
+                <span>Arrivée</span>
+                <input data-request-arrival-date type="date" value="${escapeHtml(request.arrivalDate)}" />
+              </label>
+              <label>
+                <span>Départ</span>
+                <input data-request-departure-date type="date" value="${escapeHtml(request.departureDate)}" />
+              </label>
+              <label>
+                <span>Client</span>
+                <input data-request-client-name type="text" value="${escapeHtml(request.guestName)}" />
+              </label>
+              <label>
+                <span>Contact</span>
+                <input data-request-client-contact type="text" value="${escapeHtml(request.guestContact)}" />
+              </label>`
+            : ""
+        }
+        <label>
+          <span>Montant</span>
+          <input data-request-amount type="number" min="0" step="0.01" value="0" />
+        </label>
+        <label class="full-width">
+          <span>Commentaire réservation</span>
+          <textarea data-request-comment rows="2">${escapeHtml(request.message || "")}</textarea>
+        </label>
+      </div>
+      <div class="request-action-row request-action-row-final">
+        <button class="btn btn-positive btn-md" type="button" data-request-action="accept" data-request-id="${escapeHtml(request.id)}">Créer la réservation</button>
+        <button class="btn btn-secondary btn-md" type="button" data-request-action="cancel-draft" data-request-id="${escapeHtml(request.id)}">Annuler</button>
+        <button class="btn btn-danger btn-md" type="button" data-request-action="reject" data-request-id="${escapeHtml(request.id)}">Refuser</button>
+      </div>
+    </div>
+  `;
 }
