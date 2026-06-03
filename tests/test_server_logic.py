@@ -517,6 +517,22 @@ class SettingsPersistenceTests(unittest.TestCase):
         self.assertEqual(stored["site"]["giteDescription"], "Un grand jardin et une terrasse.")
         self.assertEqual(stored["site"]["gitePhotos"], [{"url": "/uploads/gite.jpg", "alt": "Terrasse"}])
 
+    def test_sync_site_settings_removes_obsolete_gallery_key(self):
+        settings = make_settings()
+        upsert_settings_db(self.conn, settings)
+        sync_rooms_db(self.conn, settings["rooms"])
+        sync_platforms_db(self.conn, settings["platforms"])
+        self.conn.execute(
+            "INSERT INTO site_settings(key, value) VALUES('gallery', '[]')",
+        )
+
+        sync_site_settings_db(self.conn, settings["site"])
+        keys = {row["key"] for row in self.conn.execute("SELECT key FROM site_settings").fetchall()}
+        stored = fetch_settings(self.conn)
+
+        self.assertNotIn("gallery", keys)
+        self.assertNotIn("gallery", stored["site"])
+
 
 if __name__ == "__main__":
     unittest.main()

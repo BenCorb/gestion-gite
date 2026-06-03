@@ -15,3 +15,7 @@ favicon.png
 # Caches
 __pycache__/
 *.py[cod]
+
+# Notes locales Codex
+docs/
+AGENTS.md
