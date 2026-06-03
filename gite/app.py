@@ -249,6 +249,10 @@ def migrate_database(conn: sqlite3.Connection) -> None:
         # Expire existing sessions immediately so re-login is required after upgrade.
         conn.execute("UPDATE admin_sessions SET expires_at = ?", (datetime.now().isoformat(timespec="seconds"),))
 
+    # Purge des enfants orphelins laissés par les cascades FK historiquement inertes.
+    conn.execute("DELETE FROM room_photos WHERE room_id NOT IN (SELECT id FROM rooms)")
+    conn.execute("DELETE FROM booking_requests WHERE room_id NOT IN (SELECT id FROM rooms)")
+
 
 def initialize_site_settings(conn: sqlite3.Connection) -> None:
     conn.executemany(
@@ -282,7 +286,21 @@ def initialize_admin_auth(conn: sqlite3.Connection) -> None:
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
+    # WAL + busy_timeout : meilleure concurrence lecture/écriture sous ThreadingHTTPServer.
+    # foreign_keys : sans ce PRAGMA, les "ON DELETE CASCADE" du schéma sont inertes.
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 5000")
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+def _table_exists(conn: sqlite3.Connection, name: str) -> bool:
+    return (
+        conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (name,)
+        ).fetchone()
+        is not None
+    )
 
 
 def import_initial_data(conn: sqlite3.Connection) -> None:
@@ -292,11 +310,19 @@ def import_initial_data(conn: sqlite3.Connection) -> None:
     write_reservations_db(conn, reservations)
 
 
+def redact_settings_for_client(settings: dict) -> dict:
+    """Ne jamais renvoyer le mot de passe SMTP au navigateur ; exposer seulement un booléen."""
+    notifications = dict(settings.get("notifications", {}))
+    notifications["smtpConfigured"] = bool(str(notifications.get("smtpPassword", "")).strip())
+    notifications["smtpPassword"] = ""
+    return {**settings, "notifications": notifications}
+
+
 def load_state() -> dict:
     ensure_database()
     with get_connection() as conn:
         return {
-            "settings": fetch_settings(conn),
+            "settings": redact_settings_for_client(fetch_settings(conn)),
             "reservations": fetch_reservations(conn),
             "bookingRequests": fetch_booking_requests(conn),
             "versions": get_versions(conn),
@@ -594,9 +620,20 @@ def fetch_notification_settings(conn: sqlite3.Connection) -> dict:
 
 
 def sync_notification_settings_db(conn: sqlite3.Connection, notif: dict) -> None:
+    normalized = normalize_notification_settings(notif)
+    # « Laisser vide pour conserver » : un smtpPassword vide ne doit pas écraser le secret stocké.
+    if not normalized["smtpPassword"]:
+        row = conn.execute(
+            "SELECT value FROM notification_settings WHERE key = 'smtpPassword'"
+        ).fetchone()
+        if row:
+            try:
+                normalized["smtpPassword"] = json.loads(row["value"])
+            except json.JSONDecodeError:
+                normalized["smtpPassword"] = row["value"]
     conn.executemany(
         "INSERT OR REPLACE INTO notification_settings(key, value) VALUES(?, ?)",
-        [(k, json.dumps(v, ensure_ascii=False)) for k, v in normalize_notification_settings(notif).items()],
+        [(k, json.dumps(v, ensure_ascii=False)) for k, v in normalized.items()],
     )
 
 
@@ -826,6 +863,11 @@ def validate_date_range(arrival_date: str, departure_date: str) -> None:
         raise ValueError("La date de départ doit être après la date d'arrivée.")
 
 
+def periods_overlap(arrival1, departure1, arrival2, departure2) -> bool:
+    """Vrai si [arrival1, departure1) et [arrival2, departure2) se chevauchent."""
+    return arrival1 < departure2 and departure1 > arrival2
+
+
 def is_room_available(room_id: str, arrival_date: str, departure_date: str, reservations: list[dict]) -> bool:
     arrival = datetime.strptime(arrival_date, "%Y-%m-%d")
     departure = datetime.strptime(departure_date, "%Y-%m-%d")
@@ -836,7 +878,7 @@ def is_room_available(room_id: str, arrival_date: str, departure_date: str, rese
             continue
         existing_arrival = datetime.strptime(reservation["arrivalDate"], "%Y-%m-%d")
         existing_departure = datetime.strptime(reservation["departureDate"], "%Y-%m-%d")
-        if arrival < existing_departure and departure > existing_arrival:
+        if periods_overlap(arrival, departure, existing_arrival, existing_departure):
             return False
     return True
 
@@ -944,10 +986,20 @@ def sync_rooms_db(conn: sqlite3.Connection, rooms: list[dict]) -> None:
         ],
     )
     sync_room_photos_db(conn, rooms)
-    conn.executemany(
-        "DELETE FROM rooms WHERE id = ?",
-        [(row["id"],) for row in conn.execute("SELECT id FROM rooms").fetchall() if row["id"] not in {room["id"] for room in rooms}],
-    )
+    keep_ids = {room["id"] for room in rooms}
+    removed_ids = [
+        row["id"]
+        for row in conn.execute("SELECT id FROM rooms").fetchall()
+        if row["id"] not in keep_ids
+    ]
+    has_requests = _table_exists(conn, "booking_requests")
+    for room_id in removed_ids:
+        # Supprimer explicitement les enfants avant la chambre : room_photos (sinon orphelins)
+        # et booking_requests (FK RESTRICT → bloquerait la suppression avec foreign_keys = ON).
+        conn.execute("DELETE FROM room_photos WHERE room_id = ?", (room_id,))
+        if has_requests:
+            conn.execute("DELETE FROM booking_requests WHERE room_id = ?", (room_id,))
+        conn.execute("DELETE FROM rooms WHERE id = ?", (room_id,))
 
 
 def sync_room_photos_db(conn: sqlite3.Connection, rooms: list[dict]) -> None:
@@ -1220,7 +1272,7 @@ def validate_reservation(payload: dict, settings: dict, reservations: list[dict]
             continue
         existing_arrival = datetime.strptime(reservation["arrivalDate"], "%Y-%m-%d")
         existing_departure = datetime.strptime(reservation["departureDate"], "%Y-%m-%d")
-        if arrival < existing_departure and departure > existing_arrival:
+        if periods_overlap(arrival, departure, existing_arrival, existing_departure):
             raise ValueError(
                 f'Chevauchement avec la reservation "{reservation["bookingName"]}" pour cette chambre.'
             )
@@ -1748,7 +1800,10 @@ class AppHandler(SimpleHTTPRequestHandler):
                         write_settings_db(conn, settings)
                         bump_version(conn, "settings_revision")
                         conn.commit()
-                        self.send_json({"settings": settings, "versions": get_versions(conn)})
+                        self.send_json({
+                            "settings": redact_settings_for_client(fetch_settings(conn)),
+                            "versions": get_versions(conn),
+                        })
                         return
 
             if parsed.path == "/api/restore":
@@ -1767,7 +1822,7 @@ class AppHandler(SimpleHTTPRequestHandler):
                         conn.commit()
                         self.send_json(
                             {
-                                "settings": settings,
+                                "settings": redact_settings_for_client(fetch_settings(conn)),
                                 "reservations": reservations,
                                 "bookingRequests": fetch_booking_requests(conn),
                                 "versions": get_versions(conn),
