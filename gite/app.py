@@ -12,13 +12,13 @@ import threading
 import time
 import uuid
 import webbrowser
-import cgi
 import hashlib
 import hmac
 import secrets
-import shutil
 import smtplib
+from email import policy
 from email.message import EmailMessage
+from email.parser import BytesParser
 from datetime import datetime, timedelta
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -45,6 +45,9 @@ ALLOWED_IMAGE_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
 logger = logging.getLogger("gite")
 
+# Rate-limit anti-brute-force du login, stocké en mémoire process : adapté à un déploiement
+# mono-instance. Remis à zéro au redémarrage et non partagé entre plusieurs processus/répliques
+# (pour un scale horizontal, basculer ce compteur vers une table SQLite ou un store partagé).
 _login_attempts: dict[str, list[float]] = collections.defaultdict(list)
 _login_lock = threading.Lock()
 
@@ -1408,6 +1411,24 @@ def detect_image_type(data: bytes) -> str | None:
     return None
 
 
+def parse_multipart_file(body: bytes, content_type: str, field_name: str = "file"):
+    """Extrait (filename, content_type, data) du champ `field_name` d'un corps
+    multipart/form-data, en stdlib pure (remplace cgi.FieldStorage, retiré en Python 3.13)."""
+    if "multipart/form-data" not in (content_type or "").lower():
+        return None
+    prologue = b"Content-Type: " + content_type.encode("utf-8") + b"\r\nMIME-Version: 1.0\r\n\r\n"
+    message = BytesParser(policy=policy.default).parsebytes(prologue + body)
+    if not message.is_multipart():
+        return None
+    for part in message.iter_parts():
+        disposition = part.get("content-disposition")
+        if disposition is None or disposition.params.get("name") != field_name:
+            continue
+        data = part.get_payload(decode=True) or b""
+        return part.get_filename(), part.get_content_type(), data
+    return None
+
+
 def hash_password(password: str, salt: str | None = None) -> str:
     salt = salt or secrets.token_hex(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 120_000)
@@ -1965,28 +1986,22 @@ class AppHandler(SimpleHTTPRequestHandler):
 
     def handle_upload(self) -> None:
         content_length = int(self.headers.get("Content-Length", "0"))
+        if content_length <= 0:
+            self.send_error_json("Fichier manquant.", HTTPStatus.BAD_REQUEST)
+            return
         if content_length > MAX_UPLOAD_SIZE:
             self.send_error_json("Image trop lourde.", HTTPStatus.BAD_REQUEST)
             return
-        form = cgi.FieldStorage(
-            fp=self.rfile,
-            headers=self.headers,
-            environ={
-                "REQUEST_METHOD": "POST",
-                "CONTENT_TYPE": self.headers.get("Content-Type", ""),
-                "CONTENT_LENGTH": str(content_length),
-            },
-        )
-        file_item = form["file"] if "file" in form else None
-        if file_item is None or not getattr(file_item, "file", None):
+        body = self.rfile.read(content_length)
+        parsed = parse_multipart_file(body, self.headers.get("Content-Type", ""), "file")
+        if parsed is None:
             self.send_error_json("Fichier manquant.", HTTPStatus.BAD_REQUEST)
             return
-        content_type = file_item.type
+        _filename, content_type, file_data = parsed
         extension = ALLOWED_IMAGE_TYPES.get(content_type)
-        if not extension:
+        if not extension or not file_data:
             self.send_error_json("Format d'image non supporté.", HTTPStatus.BAD_REQUEST)
             return
-        file_data = file_item.file.read()
         if detect_image_type(file_data) != content_type:
             self.send_error_json("Format d'image non supporté.", HTTPStatus.BAD_REQUEST)
             return
