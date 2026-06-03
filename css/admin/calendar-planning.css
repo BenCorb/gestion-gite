@@ -170,3 +170,225 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Calendrier mensuel mobile et planning final
+   ════════════════════════════════════════════════════════════════════════ */
+
+.calendar-card {
+  padding: 12px;
+}
+
+.calendar-mobile-agenda {
+  display: none;
+}
+
+.calendar-grid {
+  gap: 8px;
+}
+
+.calendar-weekday {
+  border-radius: 8px;
+  background: var(--paper-2);
+  color: var(--ink-2);
+}
+
+.calendar-cell {
+  min-height: 118px;
+  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.calendar-cell.today {
+  outline: 2px solid rgba(149, 97, 61, 0.38);
+}
+
+.calendar-cell.selected {
+  border-color: var(--accent);
+}
+
+.calendar-cell:focus-visible {
+  outline: 3px solid rgba(149, 97, 61, 0.28);
+  outline-offset: 2px;
+}
+
+.calendar-day-entries {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.calendar-chip {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+
+.calendar-chip-more {
+  justify-content: center;
+  background: var(--paper-2);
+  color: var(--ink-2);
+  border-color: var(--rule);
+  font-weight: 800;
+}
+
+.calendar-scroll {
+  overflow-x: hidden;
+}
+
+.calendar-agenda-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.calendar-agenda-meta div {
+  min-width: 0;
+}
+
+.calendar-agenda-meta dt {
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.calendar-agenda-meta dd {
+  margin: 3px 0 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+@media (max-width: 780px) {
+  .admin-body .calendar-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 48px 48px;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+  }
+
+  .admin-body #calendar-month-label,
+  .admin-body #planning-month-label,
+  .calendar-month-label {
+    grid-column: 1 / -1;
+    order: -1;
+    min-width: 0;
+    margin-bottom: 2px;
+    text-align: left;
+    font-size: 18px;
+  }
+
+  .admin-body #calendar-today,
+  .admin-body #planning-today {
+    min-width: 0;
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .admin-body .calendar-scroll {
+    display: block;
+    width: 100%;
+    overflow-x: hidden;
+    padding-bottom: 0;
+  }
+
+  .admin-body .calendar-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-body .calendar-weekday {
+    padding: 8px 2px;
+    border-radius: 6px;
+    font-size: 11px;
+  }
+
+  .admin-body .calendar-cell {
+    min-height: 76px;
+    padding: 6px 4px;
+    border-radius: 7px;
+    gap: 3px;
+    line-height: 1.1;
+  }
+
+  .admin-body .calendar-day {
+    font-size: 13px;
+    line-height: 1;
+  }
+
+  .admin-body .calendar-day-entries {
+    gap: 2px;
+    margin-top: 2px;
+  }
+
+  .admin-body .calendar-chip {
+    min-height: 16px;
+    padding: 1px 4px;
+    border-radius: 5px;
+    gap: 0;
+  }
+
+  .admin-body .calendar-chip span {
+    width: 100%;
+    font-size: 9.5px;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+  }
+
+  .admin-body .calendar-chip strong {
+    display: none;
+  }
+
+  .admin-body .calendar-chip-more {
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  .admin-body .calendar-mobile-agenda {
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .admin-body .calendar-agenda-item {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .admin-body .calendar-agenda-main {
+    min-width: 0;
+  }
+
+  .admin-body .calendar-agenda-meta {
+    grid-column: 2;
+    grid-template-columns: 1fr 1fr;
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-body .calendar-cell {
+    min-height: 68px;
+    padding: 5px 3px;
+  }
+
+  .admin-body .calendar-chip {
+    padding: 1px 3px;
+  }
+
+  .admin-body .calendar-chip span {
+    font-size: 8.8px;
+  }
+}
