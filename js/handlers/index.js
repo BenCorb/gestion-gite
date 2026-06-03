@@ -14,6 +14,7 @@ import {
 import { initializeReportControls, renderApp, renderReservationFormOptions } from "../render.js";
 import {
   downloadTextFile,
+  dateToIso,
   formatCurrency,
   formatDate,
   getDefaultRoomColor,
@@ -33,6 +34,7 @@ export function createActions(ctx) {
   let autoRefreshIntervalId = null;
   let settingsDirty = false;
   let reservationModalTrigger = null;
+  let reservationModalCloseTimer = null;
 
   function rerender() {
     initializeReportControls(state, elements);
@@ -215,16 +217,22 @@ export function createActions(ctx) {
   }
 
   function openReservationModal({ resetForm = false, trigger = null } = {}) {
+    window.clearTimeout(reservationModalCloseTimer);
     reservationModalTrigger = trigger || document.activeElement;
     if (resetForm) {
       resetReservationForm();
     }
+    elements.reservationModal.classList.remove("is-visible");
     elements.reservationModal.classList.remove("is-hidden");
     elements.reservationModal.setAttribute("aria-hidden", "false");
     document.documentElement.classList.add("modal-open");
     document.body.classList.add("modal-open");
+    void elements.reservationModal.offsetWidth;
     requestAnimationFrame(() => {
-      elements.bookingType.focus();
+      elements.reservationModal.classList.add("is-visible");
+      requestAnimationFrame(() => {
+        elements.bookingType.focus();
+      });
     });
   }
 
@@ -232,15 +240,19 @@ export function createActions(ctx) {
     if (elements.reservationModal.classList.contains("is-hidden")) {
       return;
     }
-    elements.reservationModal.classList.add("is-hidden");
+    window.clearTimeout(reservationModalCloseTimer);
+    elements.reservationModal.classList.remove("is-visible");
     elements.reservationModal.setAttribute("aria-hidden", "true");
-    document.documentElement.classList.remove("modal-open");
-    document.body.classList.remove("modal-open");
-    resetReservationForm();
-    if (reservationModalTrigger && document.contains(reservationModalTrigger)) {
-      reservationModalTrigger.focus();
-    }
-    reservationModalTrigger = null;
+    reservationModalCloseTimer = window.setTimeout(() => {
+      elements.reservationModal.classList.add("is-hidden");
+      document.documentElement.classList.remove("modal-open");
+      document.body.classList.remove("modal-open");
+      resetReservationForm();
+      if (reservationModalTrigger && document.contains(reservationModalTrigger)) {
+        reservationModalTrigger.focus();
+      }
+      reservationModalTrigger = null;
+    }, 260);
   }
 
   function handleReservationModalKeydown(event) {
@@ -706,6 +718,20 @@ export function createActions(ctx) {
   }
 
   async function handleBookingRequestAction(id, action) {
+    if (action === "prepare-accept" || action === "prepare-edit") {
+      state.requestDraftId = id;
+      state.requestDraftMode = action === "prepare-edit" ? "edit" : "quick";
+      rerender();
+      return;
+    }
+
+    if (action === "cancel-draft") {
+      state.requestDraftId = "";
+      state.requestDraftMode = "quick";
+      rerender();
+      return;
+    }
+
     try {
       const data = await updateBookingRequest(id, action, action === "accept" ? getEditedRequestReservation(id) : undefined);
       if (data.reservations) {
@@ -714,6 +740,8 @@ export function createActions(ctx) {
       setBookingRequests(data.bookingRequests);
       setVersions(data.versions);
       setApiVersions(data.versions);
+      state.requestDraftId = "";
+      state.requestDraftMode = "quick";
       rerender();
       showToast(elements, action === "accept" ? "Demande acceptée." : "Demande refusée.");
     } catch (error) {
@@ -722,18 +750,19 @@ export function createActions(ctx) {
   }
 
   function getEditedRequestReservation(id) {
+    const request = state.bookingRequests.find((item) => item.id === id);
     const form = elements.bookingRequestsList.querySelector(`[data-request-edit-form="${id}"]`);
-    if (!form) {
+    if (!form || !request) {
       return undefined;
     }
     return {
-      roomId: form.querySelector("[data-request-room-id]")?.value || "",
-      arrivalDate: form.querySelector("[data-request-arrival-date]")?.value || "",
-      departureDate: form.querySelector("[data-request-departure-date]")?.value || "",
-      clientName: form.querySelector("[data-request-client-name]")?.value.trim() || "",
-      clientContact: form.querySelector("[data-request-client-contact]")?.value.trim() || "",
+      roomId: form.querySelector("[data-request-room-id]")?.value || request.roomId,
+      arrivalDate: form.querySelector("[data-request-arrival-date]")?.value || request.arrivalDate,
+      departureDate: form.querySelector("[data-request-departure-date]")?.value || request.departureDate,
+      clientName: form.querySelector("[data-request-client-name]")?.value.trim() || request.guestName,
+      clientContact: form.querySelector("[data-request-client-contact]")?.value.trim() || request.guestContact,
       amount: Number(form.querySelector("[data-request-amount]")?.value || 0),
-      comment: form.querySelector("[data-request-comment]")?.value.trim() || "",
+      comment: form.querySelector("[data-request-comment]")?.value.trim() || request.message || "",
     };
   }
 
@@ -790,6 +819,12 @@ export function createActions(ctx) {
     elements.tabPanels.forEach((panel) => {
       panel.classList.toggle("active", panel.id === `tab-${tabName}`);
     });
+    document.querySelectorAll(".admin-mobile-more").forEach((details) => {
+      details.classList.toggle("has-active-tab", Boolean(details.querySelector(`.tab-button[data-tab="${tabName}"]`)));
+    });
+    document.querySelectorAll(".admin-mobile-more[open]").forEach((details) => {
+      details.removeAttribute("open");
+    });
   }
 
   function handleBookingTypeChange() {
@@ -827,14 +862,25 @@ export function createActions(ctx) {
   }
 
   function changeCalendarMonth(delta) {
-    state.calendarDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth() + delta, 1);
+    const nextDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth() + delta, 1);
+    state.calendarDate = nextDate;
+    state.calendarSelectedDate = dateToIso(getDefaultCalendarSelectedDate(nextDate));
     rerender();
   }
 
   function goToCurrentMonth() {
     const today = new Date();
     state.calendarDate = new Date(today.getFullYear(), today.getMonth(), 1);
+    state.calendarSelectedDate = dateToIso(today);
     rerender();
+  }
+
+  function getDefaultCalendarSelectedDate(monthDate) {
+    const today = new Date();
+    if (today.getFullYear() === monthDate.getFullYear() && today.getMonth() === monthDate.getMonth()) {
+      return today;
+    }
+    return monthDate;
   }
 
   function changePlanningMonth(delta) {
@@ -859,7 +905,11 @@ export function createActions(ctx) {
   }
 
   function shouldPauseAutoRefresh() {
-    return state.activeTab === "settings" || settingsDirty;
+    return state.activeTab !== "alerts" || settingsDirty || isReservationModalOpen() || Boolean(state.requestDraftId);
+  }
+
+  function isReservationModalOpen() {
+    return !elements.reservationModal.classList.contains("is-hidden");
   }
 
   const actions = {
