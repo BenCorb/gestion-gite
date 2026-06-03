@@ -257,6 +257,7 @@ function renderRoomCard(room) {
   const showStatus = status !== null;
   const isAvail = status === "avail";
   const isUnavail = status === "full";
+  const canRequestDirectly = room.bookingRequestsEnabled !== false;
 
   const dots = photos.length > 1
     ? `<div class="public-room-card-dots" aria-label="Photo ${selectedIndex + 1} sur ${photos.length}">${photos.map((_, i) => `<span class="public-room-card-dot${i === selectedIndex ? " is-active" : ""}" aria-hidden="true"></span>`).join("")}</div>`
@@ -278,9 +279,12 @@ function renderRoomCard(room) {
     ? `<span class="pill pill-outline">+${(room.amenities || []).length - 3}</span>`
     : "";
 
-  const ctaLabel = isUnavail ? "Voir d'autres dates" : (state.filterState === "before" ? "Demander cette chambre" : "Demander cette chambre");
+  const ctaLabel = isUnavail ? "Voir d'autres dates" : "Demander cette chambre";
   const ctaVariant = isUnavail ? "btn-secondary" : "btn-primary";
   const ctaAction = isUnavail ? "scroll-dates" : "request";
+  const directRequestButton = canRequestDirectly
+    ? `<button class="btn ${ctaVariant} btn-md btn-full" type="button" data-action="${ctaAction}" data-request-room="${escapeHtml(room.id)}">${ctaLabel}</button>`
+    : "";
 
   const photoBg = photo?.url
     ? `<img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.alt || room.name)}" loading="lazy" />`
@@ -324,7 +328,7 @@ function renderRoomCard(room) {
         </div>
         ${amenities || extra ? `<div class="public-room-card-amenities">${amenities}${extra}</div>` : ""}
         <div class="public-room-card-actions">
-          <button class="btn ${ctaVariant} btn-md btn-full" type="button" data-action="${ctaAction}" data-request-room="${escapeHtml(room.id)}">${ctaLabel}</button>
+          ${directRequestButton}
           ${amenityButton}
           ${externalLinks}
         </div>
@@ -517,7 +521,7 @@ function hasOpenOverlay() {
 
 export function openRequestModal(roomId) {
   const room = findRoom(roomId);
-  if (!room) return;
+  if (!room || room.bookingRequestsEnabled === false) return;
   state.pendingRequest = { room };
   elements.requestRoomId.value = roomId;
   elements.requestRoomLabel.textContent = room.name;
