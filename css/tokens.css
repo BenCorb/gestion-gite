@@ -1,0 +1,98 @@
+/* ════════════════════════════════════════════════════════════════════════
+   Maison des Érables — Design tokens & base styles
+   À coller en haut de styles.css.
+   Palette par défaut : "Vignes & pierre claire" (terre cuite).
+   ════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Surfaces ─────────────────────────────────────────────────────── */
+  --paper:        #faf6ee;
+  --paper-2:      #f3ecdb;
+  --surface:      #ffffff;
+
+  /* ── Ink (texte) ──────────────────────────────────────────────────── */
+  --ink:          #1d1814;
+  --ink-2:        #5d5346;
+  --ink-3:        #98907e;
+
+  /* ── Structure ────────────────────────────────────────────────────── */
+  --rule:         rgba(29, 24, 20, 0.08);
+  --rule-strong:  rgba(29, 24, 20, 0.16);
+
+  /* ── Accent — terre cuite (palette vignes par défaut) ────────────── */
+  --accent:        #b06d3d;
+  --accent-deep:   #8b5128;
+  --accent-soft:   #f1e0cc;
+  --accent-tint:   #f7ead9;
+
+  /* ── Signaux ──────────────────────────────────────────────────────── */
+  --positive:       #6a8a5f;
+  --positive-deep:  #446a3b;
+  --positive-tint:  #e8efe1;
+  --pending:        #c08f3a;
+  --pending-deep:   #7a5a18;
+  --pending-tint:   #f7ecd5;
+  --danger:         #b54c3e;
+  --danger-deep:    #7e2d22;
+  --danger-tint:    #f4dad6;
+
+  /* ── Ombres ───────────────────────────────────────────────────────── */
+  --shadow-card:    0 1px 2px rgba(29, 24, 20, .05), 0 4px 14px rgba(29, 24, 20, .05);
+  --shadow-float:   0 4px 22px rgba(29, 24, 20, .14);
+  --shadow-sticky:  0 -4px 14px rgba(29, 24, 20, .06);
+
+  /* ── Rayons ───────────────────────────────────────────────────────── */
+  --r-sm:    8px;
+  --r-md:   10px;
+  --r-lg:   14px;
+  --r-xl:   24px;
+  --r-pill: 999px;
+
+  /* ── Typographie ──────────────────────────────────────────────────── */
+  --font-heading: 'Satisfy', 'Brush Script MT', cursive;
+  --font-body:    'Lato', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:    ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  /* ── Espacements (grille 4 px) ────────────────────────────────────── */
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  20px;
+  --s-6:  24px;
+  --s-7:  32px;
+  --s-8:  40px;
+  --s-9:  48px;
+  --s-10: 64px;
+
+  --public-hero-fallback:
+    linear-gradient(135deg, var(--accent-soft) 0%, var(--accent-deep) 100%);
+  --public-room-fallback-0:
+    linear-gradient(135deg, var(--accent-soft) 0%, var(--accent) 100%);
+  --public-room-fallback-1:
+    linear-gradient(135deg, var(--paper-2) 0%, var(--accent-soft) 100%);
+  --public-room-fallback-2:
+    linear-gradient(135deg, var(--accent-tint) 0%, var(--accent-deep) 100%);
+  --public-room-fallback-3:
+    linear-gradient(135deg, var(--surface) 0%, var(--accent-soft) 100%);
+  --public-room-fallback-4:
+    linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+  --public-gite-fallback:
+    linear-gradient(135deg, var(--paper-2) 0%, var(--accent-soft) 100%);
+  --public-confirmation-fallback:
+    linear-gradient(135deg, var(--accent-tint) 0%, var(--accent) 100%);
+}
+
+/* ── Palettes alternatives (Paramètres → Design vitrine) ─────────────── */
+[data-palette="cognac"] {
+  --accent: #8a5532; --accent-deep: #6e3d1c;
+  --accent-soft: #e6cdb2; --accent-tint: #f1e3d3;
+}
+[data-palette="sauge"] {
+  --accent: #7a9572; --accent-deep: #566f50;
+  --accent-soft: #d6e0cf; --accent-tint: #e9efe5;
+}
+[data-palette="lin"] {
+  --accent: #a37d4e; --accent-deep: #7a5a35;
+  --accent-soft: #e7d4b6; --accent-tint: #f3e8d6;
+}
