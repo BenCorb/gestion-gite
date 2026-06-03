@@ -90,7 +90,15 @@ DIRECT_BOOKING_PLATFORM = "Réservation directe"
 DATA_LOCK = threading.RLock()
 
 
+_DB_READY = False
+
+
 def ensure_database() -> None:
+    # Idempotent et coûteux (executescript + migrations + initialize_*) : ne l'exécuter
+    # qu'une fois. main() l'appelle au démarrage ; les appels par-requête deviennent no-op.
+    global _DB_READY
+    if _DB_READY:
+        return
     DATA_DIR.mkdir(exist_ok=True)
     DB_FILE.parent.mkdir(parents=True, exist_ok=True)
     with get_connection() as conn:
@@ -212,7 +220,9 @@ def ensure_database() -> None:
         initialize_site_settings(conn)
         initialize_notification_settings(conn)
         initialize_admin_auth(conn)
+        purge_expired_sessions(conn)
         conn.commit()
+    _DB_READY = True
 
 
 def initialize_meta(conn: sqlite3.Connection) -> None:
@@ -1419,6 +1429,7 @@ def hash_session_token(token: str) -> str:
 
 
 def create_session(conn: sqlite3.Connection) -> str:
+    purge_expired_sessions(conn)
     token = secrets.token_urlsafe(32)
     expires_at = (datetime.now() + timedelta(days=SESSION_DAYS)).isoformat(timespec="seconds")
     auth = conn.execute("SELECT session_revision FROM admin_auth WHERE id = 1").fetchone()
@@ -1429,14 +1440,20 @@ def create_session(conn: sqlite3.Connection) -> str:
     return token
 
 
+def purge_expired_sessions(conn: sqlite3.Connection) -> None:
+    now = datetime.now().isoformat(timespec="seconds")
+    conn.execute("DELETE FROM admin_sessions WHERE expires_at IS NOT NULL AND expires_at <= ?", (now,))
+
+
 def is_valid_session(conn: sqlite3.Connection, token: str | None) -> bool:
     if not token:
         return False
+    # Lecture seule : l'expiration est filtrée dans le SELECT (plus d'écriture sur chaque GET).
     now = datetime.now().isoformat(timespec="seconds")
-    conn.execute("DELETE FROM admin_sessions WHERE expires_at IS NOT NULL AND expires_at <= ?", (now,))
     session = conn.execute(
-        "SELECT session_revision FROM admin_sessions WHERE token_hash = ?",
-        (hash_session_token(token),),
+        "SELECT session_revision FROM admin_sessions "
+        "WHERE token_hash = ? AND (expires_at IS NULL OR expires_at > ?)",
+        (hash_session_token(token), now),
     ).fetchone()
     auth = conn.execute("SELECT session_revision FROM admin_auth WHERE id = 1").fetchone()
     return bool(session and auth and session["session_revision"] == auth["session_revision"])
@@ -1903,6 +1920,9 @@ class AppHandler(SimpleHTTPRequestHandler):
         path = getattr(self, "path", "") or ""
         if path.startswith("/api/"):
             self.send_header("Cache-Control", "no-store")
+        elif path.startswith("/uploads/"):
+            # Noms de fichiers = uuid → contenu immuable, cache agressif sûr.
+            self.send_header("Cache-Control", "public, max-age=31536000, immutable")
         else:
             self.send_header("Cache-Control", "no-cache")
         super().end_headers()
