@@ -368,6 +368,8 @@ export function createActions(ctx) {
         color:
           elements.roomsEditor.querySelector(`[data-room-color="${input.dataset.roomName}"]`)?.value || "#98c7a3",
         publicVisible: elements.roomsEditor.querySelector(`[data-room-visible="${input.dataset.roomName}"]`)?.checked ?? true,
+        bookingRequestsEnabled:
+          elements.roomsEditor.querySelector(`[data-room-booking-requests="${input.dataset.roomName}"]`)?.checked ?? true,
         summary: elements.roomsEditor.querySelector(`[data-room-summary="${input.dataset.roomName}"]`)?.value.trim() || "",
         description: elements.roomsEditor.querySelector(`[data-room-description="${input.dataset.roomName}"]`)?.value.trim() || "",
         capacity: Number(elements.roomsEditor.querySelector(`[data-room-capacity="${input.dataset.roomName}"]`)?.value || 2),
@@ -537,6 +539,7 @@ export function createActions(ctx) {
         name: `Nouvelle chambre ${state.settings.rooms.length + 1}`,
         color: getDefaultRoomColor(state.settings.rooms.length),
         publicVisible: true,
+        bookingRequestsEnabled: true,
         summary: "",
         description: "",
         capacity: 2,

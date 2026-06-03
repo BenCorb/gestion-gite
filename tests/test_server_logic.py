@@ -178,6 +178,21 @@ class PublicBookingRequestTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "plus disponible"):
             validate_booking_request(payload, make_settings(), existing)
 
+    def test_validate_booking_request_rejects_room_with_direct_requests_disabled(self):
+        settings = make_settings()
+        settings["rooms"][0]["bookingRequestsEnabled"] = False
+        payload = {
+            "roomId": "chambre-1",
+            "arrivalDate": "2026-06-10",
+            "departureDate": "2026-06-12",
+            "guestName": "Client Web",
+            "guestContact": "client@example.com",
+            "guestCount": 2,
+        }
+
+        with self.assertRaisesRegex(ValueError, "disponible à la demande"):
+            validate_booking_request(payload, settings, [])
+
     def test_validate_booking_request_creates_new_request_for_available_room(self):
         payload = {
             "roomId": "chambre-1",
@@ -381,6 +396,7 @@ class SettingsPersistenceTests(unittest.TestCase):
                 name TEXT NOT NULL,
                 color TEXT NOT NULL,
                 public_visible INTEGER NOT NULL DEFAULT 1,
+                booking_requests_enabled INTEGER NOT NULL DEFAULT 1,
                 summary TEXT NOT NULL DEFAULT '',
                 description TEXT NOT NULL DEFAULT '',
                 capacity INTEGER NOT NULL DEFAULT 2,
@@ -446,6 +462,28 @@ class SettingsPersistenceTests(unittest.TestCase):
 
         self.assertEqual([room["id"] for room in stored["rooms"]], ["chambre-2", "chambre-4"])
         self.assertEqual(stored["rooms"][0]["name"], "Suite Jardin")
+        self.assertTrue(stored["rooms"][0]["bookingRequestsEnabled"])
+
+    def test_validate_settings_defaults_booking_requests_enabled(self):
+        settings = validate_settings(
+            {
+                **DEFAULT_SETTINGS,
+                "rooms": [{"id": "test-room", "name": "Chambre Test", "color": "#98c7a3"}],
+            }
+        )
+
+        self.assertTrue(settings["rooms"][0]["bookingRequestsEnabled"])
+
+    def test_sync_rooms_persists_booking_requests_enabled(self):
+        settings = make_settings()
+        upsert_settings_db(self.conn, settings)
+        updated_rooms = [{**settings["rooms"][0], "bookingRequestsEnabled": False}]
+
+        sync_rooms_db(self.conn, updated_rooms)
+
+        stored = fetch_settings(self.conn)
+
+        self.assertFalse(stored["rooms"][0]["bookingRequestsEnabled"])
 
     def test_sync_rooms_persists_booking_links(self):
         settings = make_settings()
