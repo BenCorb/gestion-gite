@@ -54,9 +54,9 @@ DEFAULT_SETTINGS = {
     "description": "",
     "currency": "EUR",
     "rooms": [
-        {"id": "chambre-1", "name": "Chambre 1", "color": "#98c7a3"},
-        {"id": "chambre-2", "name": "Chambre 2", "color": "#e6c28b"},
-        {"id": "chambre-3", "name": "Chambre 3", "color": "#9dbdd7"},
+        {"id": "chambre-1", "name": "Chambre 1", "color": "#98c7a3", "bookingRequestsEnabled": True},
+        {"id": "chambre-2", "name": "Chambre 2", "color": "#e6c28b", "bookingRequestsEnabled": True},
+        {"id": "chambre-3", "name": "Chambre 3", "color": "#9dbdd7", "bookingRequestsEnabled": True},
     ],
     "platforms": ["Airbnb", "Booking", "GreenGo"],
     "site": {
@@ -113,6 +113,7 @@ def ensure_database() -> None:
                 name TEXT NOT NULL,
                 color TEXT NOT NULL,
                 public_visible INTEGER NOT NULL DEFAULT 1,
+                booking_requests_enabled INTEGER NOT NULL DEFAULT 1,
                 summary TEXT NOT NULL DEFAULT '',
                 description TEXT NOT NULL DEFAULT '',
                 capacity INTEGER NOT NULL DEFAULT 2,
@@ -229,6 +230,7 @@ def migrate_database(conn: sqlite3.Connection) -> None:
     columns = {row["name"] for row in conn.execute("PRAGMA table_info(rooms)").fetchall()}
     migrations = {
         "public_visible": "ALTER TABLE rooms ADD COLUMN public_visible INTEGER NOT NULL DEFAULT 1",
+        "booking_requests_enabled": "ALTER TABLE rooms ADD COLUMN booking_requests_enabled INTEGER NOT NULL DEFAULT 1",
         "summary": "ALTER TABLE rooms ADD COLUMN summary TEXT NOT NULL DEFAULT ''",
         "description": "ALTER TABLE rooms ADD COLUMN description TEXT NOT NULL DEFAULT ''",
         "capacity": "ALTER TABLE rooms ADD COLUMN capacity INTEGER NOT NULL DEFAULT 2",
@@ -370,6 +372,7 @@ def normalize_settings(settings: dict) -> dict:
                 "name": room.get("name", f"Chambre {index + 1}"),
                 "color": room.get("color") or DEFAULT_ROOM_COLORS[index % len(DEFAULT_ROOM_COLORS)],
                 "publicVisible": bool(room.get("publicVisible", True)),
+                "bookingRequestsEnabled": bool(room.get("bookingRequestsEnabled", True)),
                 "summary": str(room.get("summary", "")).strip(),
                 "description": str(room.get("description", "")).strip(),
                 "capacity": max(1, int(room.get("capacity", 2) or 2)),
@@ -505,7 +508,7 @@ def fetch_settings(conn: sqlite3.Connection) -> dict:
     ).fetchone()
     rooms = conn.execute(
         """
-        SELECT id, name, color, public_visible, summary, description, capacity, price,
+        SELECT id, name, color, public_visible, booking_requests_enabled, summary, description, capacity, price,
                amenities, amenity_groups, booking_links
         FROM rooms
         ORDER BY sort_order, name
@@ -530,6 +533,7 @@ def fetch_settings(conn: sqlite3.Connection) -> dict:
                     "name": room["name"],
                     "color": room["color"],
                     "publicVisible": bool(room["public_visible"]),
+                    "bookingRequestsEnabled": bool(room["booking_requests_enabled"]),
                     "summary": room["summary"],
                     "description": room["description"],
                     "capacity": room["capacity"],
@@ -708,7 +712,16 @@ def validate_booking_request(payload: dict, settings: dict, reservations: list[d
     except (TypeError, ValueError):
         guest_count = 1
 
-    room = next((item for item in settings["rooms"] if item["id"] == room_id and item.get("publicVisible", True)), None)
+    room = next(
+        (
+            item
+            for item in settings["rooms"]
+            if item["id"] == room_id
+            and item.get("publicVisible", True)
+            and item.get("bookingRequestsEnabled", True)
+        ),
+        None,
+    )
     if not room:
         raise ValueError("La chambre sélectionnée n'est pas disponible à la demande.")
     if not guest_name or not guest_contact:
@@ -893,14 +906,15 @@ def sync_rooms_db(conn: sqlite3.Connection, rooms: list[dict]) -> None:
     conn.executemany(
         """
         INSERT INTO rooms(
-            id, name, color, public_visible, summary, description, capacity, price,
+            id, name, color, public_visible, booking_requests_enabled, summary, description, capacity, price,
             amenities, amenity_groups, booking_links, sort_order
         )
-        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             name = excluded.name,
             color = excluded.color,
             public_visible = excluded.public_visible,
+            booking_requests_enabled = excluded.booking_requests_enabled,
             summary = excluded.summary,
             description = excluded.description,
             capacity = excluded.capacity,
@@ -916,6 +930,7 @@ def sync_rooms_db(conn: sqlite3.Connection, rooms: list[dict]) -> None:
                 room["name"],
                 room["color"],
                 1 if room.get("publicVisible", True) else 0,
+                1 if room.get("bookingRequestsEnabled", True) else 0,
                 room.get("summary", ""),
                 room.get("description", ""),
                 int(room.get("capacity", 2) or 2),
@@ -1100,6 +1115,7 @@ def validate_settings(payload: dict) -> dict:
                 "name": room_name,
                 "color": room_color,
                 "publicVisible": bool(room.get("publicVisible", True)),
+                "bookingRequestsEnabled": bool(room.get("bookingRequestsEnabled", True)),
                 "summary": str(room.get("summary", "")).strip(),
                 "description": str(room.get("description", "")).strip(),
                 "capacity": capacity,
@@ -1423,6 +1439,7 @@ def public_room_summary(room: dict) -> dict:
             "id",
             "name",
             "color",
+            "bookingRequestsEnabled",
             "summary",
             "description",
             "capacity",

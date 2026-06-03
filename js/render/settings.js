@@ -73,6 +73,10 @@ export function renderSettingsForm(ctx) {
               <input type="checkbox" data-room-visible="${room.id}" ${room.publicVisible !== false ? "checked" : ""} />
               <span>Visible vitrine</span>
             </label>
+            <label class="checkbox-card compact-checkbox">
+              <input type="checkbox" data-room-booking-requests="${room.id}" ${room.bookingRequestsEnabled !== false ? "checked" : ""} />
+              <span>Demandes directes</span>
+            </label>
             <button class="danger-button" type="button" data-delete-room="${room.id}">Supprimer</button>
           </div>
           <div class="form-grid">
