@@ -16,20 +16,20 @@ import hashlib
 import hmac
 import secrets
 import smtplib
-from email import policy
 from email.message import EmailMessage
-from email.parser import BytesParser
 from datetime import datetime, timedelta
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from .images import detect_image_type, parse_multipart_file
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 DB_FILE = Path(os.environ.get("GITE_DB", DATA_DIR / "reservations.sqlite3"))
-UPLOADS_DIR = DATA_DIR / "uploads"
+UPLOADS_DIR = Path(os.environ.get("GITE_UPLOADS", DATA_DIR / "uploads"))
 HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "8080"))
 SESSION_COOKIE_NAME = "gite_admin_session"
@@ -91,6 +91,10 @@ DEFAULT_ROOM_COLORS = ["#98c7a3", "#e6c28b", "#9dbdd7", "#d8a7a7", "#b8abd8", "#
 ALLOWED_RESERVATION_STATUSES = {"pending", "confirmed", "paid", "cancelled"}
 DIRECT_BOOKING_PLATFORM = "Réservation directe"
 DATA_LOCK = threading.RLock()
+
+
+class ConflictError(ValueError):
+    """Conflit de version optimiste : les données ont changé entre-temps."""
 
 
 _DB_READY = False
@@ -1399,34 +1403,49 @@ def get_next_booking_name(reservations: list[dict], booking_type: str) -> str:
     return f"{label} n°{highest_number + 1}"
 
 
-def detect_image_type(data: bytes) -> str | None:
-    if data[:3] == b"\xff\xd8\xff":
-        return "image/jpeg"
-    if data[:8] == b"\x89PNG\r\n\x1a\n":
-        return "image/png"
-    if len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
-        return "image/webp"
-    if data[:6] in (b"GIF87a", b"GIF89a"):
-        return "image/gif"
-    return None
+UPLOAD_NAME_RE = re.compile(r"[0-9a-f]{32}\.(?:jpg|jpeg|png|webp|gif)$")
 
 
-def parse_multipart_file(body: bytes, content_type: str, field_name: str = "file"):
-    """Extrait (filename, content_type, data) du champ `field_name` d'un corps
-    multipart/form-data, en stdlib pure (remplace cgi.FieldStorage, retiré en Python 3.13)."""
-    if "multipart/form-data" not in (content_type or "").lower():
-        return None
-    prologue = b"Content-Type: " + content_type.encode("utf-8") + b"\r\nMIME-Version: 1.0\r\n\r\n"
-    message = BytesParser(policy=policy.default).parsebytes(prologue + body)
-    if not message.is_multipart():
-        return None
-    for part in message.iter_parts():
-        disposition = part.get("content-disposition")
-        if disposition is None or disposition.params.get("name") != field_name:
+def referenced_upload_paths(conn: sqlite3.Connection) -> set[str]:
+    """Ensemble des URLs /uploads/... référencées par les réglages
+    (logo, image héro, photos du gîte, photos des chambres)."""
+    settings = fetch_settings(conn)
+    site = settings.get("site", {})
+    refs: set[str] = set()
+    for key in ("logoUrl", "heroImageUrl"):
+        url = str(site.get(key, "")).strip()
+        if url:
+            refs.add(url)
+    for photo in site.get("gitePhotos", []):
+        url = str(photo.get("url", "")).strip()
+        if url:
+            refs.add(url)
+    for room in settings.get("rooms", []):
+        for photo in room.get("photos", []):
+            url = str(photo.get("url", "")).strip()
+            if url:
+                refs.add(url)
+    return refs
+
+
+def cleanup_orphan_uploads(conn: sqlite3.Connection) -> None:
+    """Supprime du disque les fichiers d'upload qui ne sont plus référencés.
+    Garde-fous : ne touche qu'aux fichiers au motif uuid.ext, et épargne ceux
+    de moins d'1 h (upload en cours, pas encore enregistré dans les réglages)."""
+    if not UPLOADS_DIR.exists():
+        return
+    referenced = {Path(u).name for u in referenced_upload_paths(conn) if u.startswith("/uploads/")}
+    cutoff = time.time() - 3600
+    for path in UPLOADS_DIR.iterdir():
+        if not path.is_file() or not UPLOAD_NAME_RE.fullmatch(path.name):
             continue
-        data = part.get_payload(decode=True) or b""
-        return part.get_filename(), part.get_content_type(), data
-    return None
+        if path.name in referenced:
+            continue
+        try:
+            if path.stat().st_mtime < cutoff:
+                path.unlink()
+        except OSError:
+            pass
 
 
 def hash_password(password: str, salt: str | None = None) -> str:
@@ -1838,6 +1857,7 @@ class AppHandler(SimpleHTTPRequestHandler):
                         write_settings_db(conn, settings)
                         bump_version(conn, "settings_revision")
                         conn.commit()
+                        cleanup_orphan_uploads(conn)
                         self.send_json({
                             "settings": redact_settings_for_client(fetch_settings(conn)),
                             "versions": get_versions(conn),
@@ -1858,6 +1878,7 @@ class AppHandler(SimpleHTTPRequestHandler):
                         bump_version(conn, "settings_revision")
                         bump_version(conn, "reservations_revision")
                         conn.commit()
+                        cleanup_orphan_uploads(conn)
                         self.send_json(
                             {
                                 "settings": redact_settings_for_client(fetch_settings(conn)),
@@ -2084,10 +2105,6 @@ def get_lan_url(port: int) -> str | None:
     if not local_ip or local_ip.startswith("127."):
         return None
     return f"http://{local_ip}:{port}"
-
-
-class ConflictError(ValueError):
-    pass
 
 
 if __name__ == "__main__":
