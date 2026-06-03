@@ -107,7 +107,7 @@ Ce mot de passe peut être changé dans l'espace admin → Paramètres → Chang
 ├── index.html         Interface admin
 ├── public.html        Vitrine publique
 ├── login.html         Page de connexion
-├── styles.css         Styles partagés (admin + public)
+├── css/               Styles par page (chargés directement, sans agrégateur)
 ├── app.js             Point d'entrée JS admin
 ├── public.js          JS vitrine publique
 ├── js/
