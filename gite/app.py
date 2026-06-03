@@ -12,11 +12,9 @@ import threading
 import time
 import uuid
 import webbrowser
-import cgi
 import hashlib
 import hmac
 import secrets
-import shutil
 import smtplib
 from email.message import EmailMessage
 from datetime import datetime, timedelta
@@ -25,11 +23,13 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from .images import detect_image_type, parse_multipart_file
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 DB_FILE = Path(os.environ.get("GITE_DB", DATA_DIR / "reservations.sqlite3"))
-UPLOADS_DIR = DATA_DIR / "uploads"
+UPLOADS_DIR = Path(os.environ.get("GITE_UPLOADS", DATA_DIR / "uploads"))
 HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "8080"))
 SESSION_COOKIE_NAME = "gite_admin_session"
@@ -45,6 +45,9 @@ ALLOWED_IMAGE_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
 logger = logging.getLogger("gite")
 
+# Rate-limit anti-brute-force du login, stocké en mémoire process : adapté à un déploiement
+# mono-instance. Remis à zéro au redémarrage et non partagé entre plusieurs processus/répliques
+# (pour un scale horizontal, basculer ce compteur vers une table SQLite ou un store partagé).
 _login_attempts: dict[str, list[float]] = collections.defaultdict(list)
 _login_lock = threading.Lock()
 
@@ -90,7 +93,19 @@ DIRECT_BOOKING_PLATFORM = "Réservation directe"
 DATA_LOCK = threading.RLock()
 
 
+class ConflictError(ValueError):
+    """Conflit de version optimiste : les données ont changé entre-temps."""
+
+
+_DB_READY = False
+
+
 def ensure_database() -> None:
+    # Idempotent et coûteux (executescript + migrations + initialize_*) : ne l'exécuter
+    # qu'une fois. main() l'appelle au démarrage ; les appels par-requête deviennent no-op.
+    global _DB_READY
+    if _DB_READY:
+        return
     DATA_DIR.mkdir(exist_ok=True)
     DB_FILE.parent.mkdir(parents=True, exist_ok=True)
     with get_connection() as conn:
@@ -212,7 +227,9 @@ def ensure_database() -> None:
         initialize_site_settings(conn)
         initialize_notification_settings(conn)
         initialize_admin_auth(conn)
+        purge_expired_sessions(conn)
         conn.commit()
+    _DB_READY = True
 
 
 def initialize_meta(conn: sqlite3.Connection) -> None:
@@ -249,6 +266,10 @@ def migrate_database(conn: sqlite3.Connection) -> None:
         # Expire existing sessions immediately so re-login is required after upgrade.
         conn.execute("UPDATE admin_sessions SET expires_at = ?", (datetime.now().isoformat(timespec="seconds"),))
 
+    # Purge des enfants orphelins laissés par les cascades FK historiquement inertes.
+    conn.execute("DELETE FROM room_photos WHERE room_id NOT IN (SELECT id FROM rooms)")
+    conn.execute("DELETE FROM booking_requests WHERE room_id NOT IN (SELECT id FROM rooms)")
+
 
 def initialize_site_settings(conn: sqlite3.Connection) -> None:
     conn.executemany(
@@ -282,7 +303,21 @@ def initialize_admin_auth(conn: sqlite3.Connection) -> None:
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
+    # WAL + busy_timeout : meilleure concurrence lecture/écriture sous ThreadingHTTPServer.
+    # foreign_keys : sans ce PRAGMA, les "ON DELETE CASCADE" du schéma sont inertes.
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 5000")
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+def _table_exists(conn: sqlite3.Connection, name: str) -> bool:
+    return (
+        conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (name,)
+        ).fetchone()
+        is not None
+    )
 
 
 def import_initial_data(conn: sqlite3.Connection) -> None:
@@ -292,11 +327,19 @@ def import_initial_data(conn: sqlite3.Connection) -> None:
     write_reservations_db(conn, reservations)
 
 
+def redact_settings_for_client(settings: dict) -> dict:
+    """Ne jamais renvoyer le mot de passe SMTP au navigateur ; exposer seulement un booléen."""
+    notifications = dict(settings.get("notifications", {}))
+    notifications["smtpConfigured"] = bool(str(notifications.get("smtpPassword", "")).strip())
+    notifications["smtpPassword"] = ""
+    return {**settings, "notifications": notifications}
+
+
 def load_state() -> dict:
     ensure_database()
     with get_connection() as conn:
         return {
-            "settings": fetch_settings(conn),
+            "settings": redact_settings_for_client(fetch_settings(conn)),
             "reservations": fetch_reservations(conn),
             "bookingRequests": fetch_booking_requests(conn),
             "versions": get_versions(conn),
@@ -594,9 +637,20 @@ def fetch_notification_settings(conn: sqlite3.Connection) -> dict:
 
 
 def sync_notification_settings_db(conn: sqlite3.Connection, notif: dict) -> None:
+    normalized = normalize_notification_settings(notif)
+    # « Laisser vide pour conserver » : un smtpPassword vide ne doit pas écraser le secret stocké.
+    if not normalized["smtpPassword"]:
+        row = conn.execute(
+            "SELECT value FROM notification_settings WHERE key = 'smtpPassword'"
+        ).fetchone()
+        if row:
+            try:
+                normalized["smtpPassword"] = json.loads(row["value"])
+            except json.JSONDecodeError:
+                normalized["smtpPassword"] = row["value"]
     conn.executemany(
         "INSERT OR REPLACE INTO notification_settings(key, value) VALUES(?, ?)",
-        [(k, json.dumps(v, ensure_ascii=False)) for k, v in normalize_notification_settings(notif).items()],
+        [(k, json.dumps(v, ensure_ascii=False)) for k, v in normalized.items()],
     )
 
 
@@ -826,6 +880,11 @@ def validate_date_range(arrival_date: str, departure_date: str) -> None:
         raise ValueError("La date de départ doit être après la date d'arrivée.")
 
 
+def periods_overlap(arrival1, departure1, arrival2, departure2) -> bool:
+    """Vrai si [arrival1, departure1) et [arrival2, departure2) se chevauchent."""
+    return arrival1 < departure2 and departure1 > arrival2
+
+
 def is_room_available(room_id: str, arrival_date: str, departure_date: str, reservations: list[dict]) -> bool:
     arrival = datetime.strptime(arrival_date, "%Y-%m-%d")
     departure = datetime.strptime(departure_date, "%Y-%m-%d")
@@ -836,7 +895,7 @@ def is_room_available(room_id: str, arrival_date: str, departure_date: str, rese
             continue
         existing_arrival = datetime.strptime(reservation["arrivalDate"], "%Y-%m-%d")
         existing_departure = datetime.strptime(reservation["departureDate"], "%Y-%m-%d")
-        if arrival < existing_departure and departure > existing_arrival:
+        if periods_overlap(arrival, departure, existing_arrival, existing_departure):
             return False
     return True
 
@@ -944,10 +1003,20 @@ def sync_rooms_db(conn: sqlite3.Connection, rooms: list[dict]) -> None:
         ],
     )
     sync_room_photos_db(conn, rooms)
-    conn.executemany(
-        "DELETE FROM rooms WHERE id = ?",
-        [(row["id"],) for row in conn.execute("SELECT id FROM rooms").fetchall() if row["id"] not in {room["id"] for room in rooms}],
-    )
+    keep_ids = {room["id"] for room in rooms}
+    removed_ids = [
+        row["id"]
+        for row in conn.execute("SELECT id FROM rooms").fetchall()
+        if row["id"] not in keep_ids
+    ]
+    has_requests = _table_exists(conn, "booking_requests")
+    for room_id in removed_ids:
+        # Supprimer explicitement les enfants avant la chambre : room_photos (sinon orphelins)
+        # et booking_requests (FK RESTRICT → bloquerait la suppression avec foreign_keys = ON).
+        conn.execute("DELETE FROM room_photos WHERE room_id = ?", (room_id,))
+        if has_requests:
+            conn.execute("DELETE FROM booking_requests WHERE room_id = ?", (room_id,))
+        conn.execute("DELETE FROM rooms WHERE id = ?", (room_id,))
 
 
 def sync_room_photos_db(conn: sqlite3.Connection, rooms: list[dict]) -> None:
@@ -1220,7 +1289,7 @@ def validate_reservation(payload: dict, settings: dict, reservations: list[dict]
             continue
         existing_arrival = datetime.strptime(reservation["arrivalDate"], "%Y-%m-%d")
         existing_departure = datetime.strptime(reservation["departureDate"], "%Y-%m-%d")
-        if arrival < existing_departure and departure > existing_arrival:
+        if periods_overlap(arrival, departure, existing_arrival, existing_departure):
             raise ValueError(
                 f'Chevauchement avec la reservation "{reservation["bookingName"]}" pour cette chambre.'
             )
@@ -1334,16 +1403,49 @@ def get_next_booking_name(reservations: list[dict], booking_type: str) -> str:
     return f"{label} n°{highest_number + 1}"
 
 
-def detect_image_type(data: bytes) -> str | None:
-    if data[:3] == b"\xff\xd8\xff":
-        return "image/jpeg"
-    if data[:8] == b"\x89PNG\r\n\x1a\n":
-        return "image/png"
-    if len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
-        return "image/webp"
-    if data[:6] in (b"GIF87a", b"GIF89a"):
-        return "image/gif"
-    return None
+UPLOAD_NAME_RE = re.compile(r"[0-9a-f]{32}\.(?:jpg|jpeg|png|webp|gif)$")
+
+
+def referenced_upload_paths(conn: sqlite3.Connection) -> set[str]:
+    """Ensemble des URLs /uploads/... référencées par les réglages
+    (logo, image héro, photos du gîte, photos des chambres)."""
+    settings = fetch_settings(conn)
+    site = settings.get("site", {})
+    refs: set[str] = set()
+    for key in ("logoUrl", "heroImageUrl"):
+        url = str(site.get(key, "")).strip()
+        if url:
+            refs.add(url)
+    for photo in site.get("gitePhotos", []):
+        url = str(photo.get("url", "")).strip()
+        if url:
+            refs.add(url)
+    for room in settings.get("rooms", []):
+        for photo in room.get("photos", []):
+            url = str(photo.get("url", "")).strip()
+            if url:
+                refs.add(url)
+    return refs
+
+
+def cleanup_orphan_uploads(conn: sqlite3.Connection) -> None:
+    """Supprime du disque les fichiers d'upload qui ne sont plus référencés.
+    Garde-fous : ne touche qu'aux fichiers au motif uuid.ext, et épargne ceux
+    de moins d'1 h (upload en cours, pas encore enregistré dans les réglages)."""
+    if not UPLOADS_DIR.exists():
+        return
+    referenced = {Path(u).name for u in referenced_upload_paths(conn) if u.startswith("/uploads/")}
+    cutoff = time.time() - 3600
+    for path in UPLOADS_DIR.iterdir():
+        if not path.is_file() or not UPLOAD_NAME_RE.fullmatch(path.name):
+            continue
+        if path.name in referenced:
+            continue
+        try:
+            if path.stat().st_mtime < cutoff:
+                path.unlink()
+        except OSError:
+            pass
 
 
 def hash_password(password: str, salt: str | None = None) -> str:
@@ -1367,6 +1469,7 @@ def hash_session_token(token: str) -> str:
 
 
 def create_session(conn: sqlite3.Connection) -> str:
+    purge_expired_sessions(conn)
     token = secrets.token_urlsafe(32)
     expires_at = (datetime.now() + timedelta(days=SESSION_DAYS)).isoformat(timespec="seconds")
     auth = conn.execute("SELECT session_revision FROM admin_auth WHERE id = 1").fetchone()
@@ -1377,14 +1480,20 @@ def create_session(conn: sqlite3.Connection) -> str:
     return token
 
 
+def purge_expired_sessions(conn: sqlite3.Connection) -> None:
+    now = datetime.now().isoformat(timespec="seconds")
+    conn.execute("DELETE FROM admin_sessions WHERE expires_at IS NOT NULL AND expires_at <= ?", (now,))
+
+
 def is_valid_session(conn: sqlite3.Connection, token: str | None) -> bool:
     if not token:
         return False
+    # Lecture seule : l'expiration est filtrée dans le SELECT (plus d'écriture sur chaque GET).
     now = datetime.now().isoformat(timespec="seconds")
-    conn.execute("DELETE FROM admin_sessions WHERE expires_at IS NOT NULL AND expires_at <= ?", (now,))
     session = conn.execute(
-        "SELECT session_revision FROM admin_sessions WHERE token_hash = ?",
-        (hash_session_token(token),),
+        "SELECT session_revision FROM admin_sessions "
+        "WHERE token_hash = ? AND (expires_at IS NULL OR expires_at > ?)",
+        (hash_session_token(token), now),
     ).fetchone()
     auth = conn.execute("SELECT session_revision FROM admin_auth WHERE id = 1").fetchone()
     return bool(session and auth and session["session_revision"] == auth["session_revision"])
@@ -1748,7 +1857,11 @@ class AppHandler(SimpleHTTPRequestHandler):
                         write_settings_db(conn, settings)
                         bump_version(conn, "settings_revision")
                         conn.commit()
-                        self.send_json({"settings": settings, "versions": get_versions(conn)})
+                        cleanup_orphan_uploads(conn)
+                        self.send_json({
+                            "settings": redact_settings_for_client(fetch_settings(conn)),
+                            "versions": get_versions(conn),
+                        })
                         return
 
             if parsed.path == "/api/restore":
@@ -1765,9 +1878,10 @@ class AppHandler(SimpleHTTPRequestHandler):
                         bump_version(conn, "settings_revision")
                         bump_version(conn, "reservations_revision")
                         conn.commit()
+                        cleanup_orphan_uploads(conn)
                         self.send_json(
                             {
-                                "settings": settings,
+                                "settings": redact_settings_for_client(fetch_settings(conn)),
                                 "reservations": reservations,
                                 "bookingRequests": fetch_booking_requests(conn),
                                 "versions": get_versions(conn),
@@ -1848,6 +1962,9 @@ class AppHandler(SimpleHTTPRequestHandler):
         path = getattr(self, "path", "") or ""
         if path.startswith("/api/"):
             self.send_header("Cache-Control", "no-store")
+        elif path.startswith("/uploads/"):
+            # Noms de fichiers = uuid → contenu immuable, cache agressif sûr.
+            self.send_header("Cache-Control", "public, max-age=31536000, immutable")
         else:
             self.send_header("Cache-Control", "no-cache")
         super().end_headers()
@@ -1890,28 +2007,22 @@ class AppHandler(SimpleHTTPRequestHandler):
 
     def handle_upload(self) -> None:
         content_length = int(self.headers.get("Content-Length", "0"))
+        if content_length <= 0:
+            self.send_error_json("Fichier manquant.", HTTPStatus.BAD_REQUEST)
+            return
         if content_length > MAX_UPLOAD_SIZE:
             self.send_error_json("Image trop lourde.", HTTPStatus.BAD_REQUEST)
             return
-        form = cgi.FieldStorage(
-            fp=self.rfile,
-            headers=self.headers,
-            environ={
-                "REQUEST_METHOD": "POST",
-                "CONTENT_TYPE": self.headers.get("Content-Type", ""),
-                "CONTENT_LENGTH": str(content_length),
-            },
-        )
-        file_item = form["file"] if "file" in form else None
-        if file_item is None or not getattr(file_item, "file", None):
+        body = self.rfile.read(content_length)
+        parsed = parse_multipart_file(body, self.headers.get("Content-Type", ""), "file")
+        if parsed is None:
             self.send_error_json("Fichier manquant.", HTTPStatus.BAD_REQUEST)
             return
-        content_type = file_item.type
+        _filename, content_type, file_data = parsed
         extension = ALLOWED_IMAGE_TYPES.get(content_type)
-        if not extension:
+        if not extension or not file_data:
             self.send_error_json("Format d'image non supporté.", HTTPStatus.BAD_REQUEST)
             return
-        file_data = file_item.file.read()
         if detect_image_type(file_data) != content_type:
             self.send_error_json("Format d'image non supporté.", HTTPStatus.BAD_REQUEST)
             return
@@ -1994,10 +2105,6 @@ def get_lan_url(port: int) -> str | None:
     if not local_ip or local_ip.startswith("127."):
         return None
     return f"http://{local_ip}:{port}"
-
-
-class ConflictError(ValueError):
-    pass
 
 
 if __name__ == "__main__":

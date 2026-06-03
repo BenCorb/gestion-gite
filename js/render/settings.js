@@ -39,7 +39,10 @@ export function renderSettingsForm(ctx) {
   elements.smtpHostInput.value     = state.settings.notifications?.smtpHost     || "";
   elements.smtpPortInput.value     = state.settings.notifications?.smtpPort     || "587";
   elements.smtpUserInput.value     = state.settings.notifications?.smtpUser     || "";
-  elements.smtpPasswordInput.value = state.settings.notifications?.smtpPassword || "";
+  elements.smtpPasswordInput.value = "";
+  elements.smtpPasswordInput.placeholder = state.settings.notifications?.smtpConfigured
+    ? "•••••••• (laisser vide pour conserver)"
+    : "Mot de passe SMTP";
   elements.siteBodyFontSelect.value = state.settings.site?.bodyFont || "lato";
   elements.siteHeadingFontSelect.value = state.settings.site?.headingFont || "playfair";
   elements.siteLogoUrl.value = state.settings.site?.logoUrl || "";
