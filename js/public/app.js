@@ -486,7 +486,8 @@ function initializeAvailabilityCalendar() {
 }
 
 function setAvailabilityCalendarSelectionMode(mode) {
-  const nextMode = mode === "departure" ? "departure" : "arrival";
+  let nextMode = mode === "departure" ? "departure" : "arrival";
+  if (nextMode === "departure" && !elements.arrival.value) nextMode = "arrival";
   const calendar = state.availabilityCalendar;
   const shouldCollapse = calendar.isOpen && calendar.selectionMode === nextMode;
   calendar.selectionMode = nextMode;
@@ -523,7 +524,7 @@ function renderAvailabilityCalendar() {
   const arrival = elements.arrival.value;
   const departure = elements.departure.value;
   const todayIso = dateToIso(new Date());
-  const isDepartureMode = calendar.selectionMode === "departure" && arrival && !departure;
+  const isDepartureMode = calendar.selectionMode === "departure" && arrival;
 
   elements.availabilityCalendarGrid.innerHTML = Array.from({ length: totalCells }, (_, index) => {
     const dayNumber = index - startOffset + 1;
@@ -573,9 +574,8 @@ function handleAvailabilityCalendarClick(event) {
 
   const iso = button.dataset.availabilityCalendarDate;
   const arrival = elements.arrival.value;
-  const departure = elements.departure.value;
   const isAvailable = button.dataset.available === "true";
-  const wantsDeparture = state.availabilityCalendar.selectionMode === "departure" && arrival && !departure;
+  const wantsDeparture = state.availabilityCalendar.selectionMode === "departure" && arrival;
   const canSelectAsDeparture = wantsDeparture && compareIsoDates(iso, arrival) > 0;
 
   if (!isAvailable) {
@@ -586,7 +586,6 @@ function handleAvailabilityCalendarClick(event) {
   if (
     state.availabilityCalendar.selectionMode === "arrival"
     || !arrival
-    || departure
     || compareIsoDates(iso, arrival) <= 0
   ) {
     selectAvailabilityArrival(iso);
@@ -640,7 +639,7 @@ function syncAvailabilityDisplay() {
   if (elements.departure && elements.departureDisplay) updateCell(elements.departure, elements.departureDisplay);
   elements.availabilityDateFields.forEach((button) => {
     const mode = button.dataset.availabilityDateField === "departure" ? "departure" : "arrival";
-    button.classList.toggle("is-active", state.availabilityCalendar.selectionMode === mode);
+    button.classList.toggle("is-active", state.availabilityCalendar.isOpen && state.availabilityCalendar.selectionMode === mode);
     button.setAttribute("aria-expanded", state.availabilityCalendar.isOpen && state.availabilityCalendar.selectionMode === mode ? "true" : "false");
   });
 }
@@ -773,7 +772,8 @@ function initializeRequestCalendar(roomId) {
 }
 
 function setRequestCalendarSelectionMode(mode) {
-  const nextMode = mode === "departure" ? "departure" : "arrival";
+  let nextMode = mode === "departure" ? "departure" : "arrival";
+  if (nextMode === "departure" && !elements.requestArrivalDate.value) nextMode = "arrival";
   const shouldCollapse = state.requestCalendar.isOpen && state.requestCalendar.selectionMode === nextMode;
   state.requestCalendar.selectionMode = nextMode;
   state.requestCalendar.isOpen = !shouldCollapse;
@@ -838,7 +838,7 @@ function renderRequestCalendar() {
   const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
   const arrival = elements.requestArrivalDate.value;
   const departure = elements.requestDepartureDate.value;
-  const isDepartureMode = calendar.selectionMode === "departure" && arrival && !departure;
+  const isDepartureMode = calendar.selectionMode === "departure" && arrival;
   const todayIso = dateToIso(new Date());
 
   elements.requestCalendarGrid.innerHTML = Array.from({ length: totalCells }, (_, index) => {
@@ -896,9 +896,8 @@ function handleRequestCalendarClick(event) {
 
   const iso = button.dataset.requestCalendarDate;
   const arrival = elements.requestArrivalDate.value;
-  const departure = elements.requestDepartureDate.value;
   const isAvailable = button.dataset.available === "true";
-  const wantsDeparture = state.requestCalendar.selectionMode === "departure" && arrival && !departure;
+  const wantsDeparture = state.requestCalendar.selectionMode === "departure" && arrival;
   const canSelectAsDeparture = wantsDeparture && compareIsoDates(iso, arrival) > 0 && isRequestRangeAvailable(arrival, iso);
 
   if (!isAvailable && !canSelectAsDeparture) {
@@ -909,7 +908,6 @@ function handleRequestCalendarClick(event) {
   if (
     state.requestCalendar.selectionMode === "arrival"
     || !arrival
-    || departure
     || compareIsoDates(iso, arrival) <= 0
   ) {
     if (!isAvailable) {
@@ -997,7 +995,7 @@ function syncRequestDatePlaceholders() {
   fields.forEach(({ input, display, button, mode, placeholder }) => {
     if (!input || !display || !button) return;
     button.toggleAttribute("data-empty", !input.value);
-    button.classList.toggle("is-active", state.requestCalendar.selectionMode === mode);
+    button.classList.toggle("is-active", state.requestCalendar.isOpen && state.requestCalendar.selectionMode === mode);
     button.setAttribute("aria-expanded", state.requestCalendar.isOpen && state.requestCalendar.selectionMode === mode ? "true" : "false");
     display.textContent = input.value ? formatCompactDate(input.value) : placeholder;
   });
