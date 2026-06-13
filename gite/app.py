@@ -781,6 +781,9 @@ def validate_booking_request(payload: dict, settings: dict, reservations: list[d
     if not guest_name or not guest_contact:
         raise ValueError("Nom et contact sont requis pour envoyer une demande.")
     validate_date_range(arrival_date, departure_date)
+    arrival = datetime.strptime(arrival_date, "%Y-%m-%d").date()
+    if arrival < datetime.now().date():
+        raise ValueError("La date d'arrivée ne peut pas être passée.")
     if not is_room_available(room_id, arrival_date, departure_date, reservations):
         raise ValueError("Cette chambre n'est plus disponible pour ces dates.")
 
@@ -933,6 +936,44 @@ def build_availability(conn: sqlite3.Connection, arrival_date: str, departure_da
         and is_room_available_db(conn, room["id"], arrival_date, departure_date)
     ]
     return {"arrivalDate": arrival_date, "departureDate": departure_date, "rooms": available_rooms}
+
+
+def build_room_availability(conn: sqlite3.Connection, room_id: str, year: str, month: str) -> dict:
+    room_id = str(room_id or "").strip()
+    try:
+        year_number = int(str(year or "").strip())
+        month_number = int(str(month or "").strip())
+        first_day = datetime(year_number, month_number, 1)
+    except ValueError as exc:
+        raise ValueError("Mois invalide.") from exc
+
+    settings = fetch_settings(conn)
+    room = next(
+        (item for item in settings["rooms"] if item["id"] == room_id and item.get("publicVisible", True)),
+        None,
+    )
+    if room is None:
+        raise ValueError("Chambre introuvable.")
+
+    next_month = (
+        datetime(year_number + 1, 1, 1)
+        if month_number == 12
+        else datetime(year_number, month_number + 1, 1)
+    )
+    days = []
+    current = first_day
+    while current < next_month:
+        next_day = current + timedelta(days=1)
+        date_iso = current.strftime("%Y-%m-%d")
+        days.append(
+            {
+                "date": date_iso,
+                "available": is_room_available_db(conn, room_id, date_iso, next_day.strftime("%Y-%m-%d")),
+            }
+        )
+        current = next_day
+
+    return {"roomId": room_id, "year": year_number, "month": month_number, "days": days}
 
 
 def write_settings_db(conn: sqlite3.Connection, settings: dict) -> None:
@@ -1645,6 +1686,22 @@ class AppHandler(SimpleHTTPRequestHandler):
             ensure_database()
             with get_connection() as conn:
                 self.send_json(build_public_site(conn))
+            return
+        if parsed.path == "/api/room-availability":
+            params = parse_qs(parsed.query)
+            try:
+                ensure_database()
+                with get_connection() as conn:
+                    self.send_json(
+                        build_room_availability(
+                            conn,
+                            params.get("roomId", [""])[0],
+                            params.get("year", [""])[0],
+                            params.get("month", [""])[0],
+                        )
+                    )
+            except ValueError as exc:
+                self.send_error_json(str(exc), HTTPStatus.BAD_REQUEST)
             return
         if parsed.path == "/api/availability":
             params = parse_qs(parsed.query)

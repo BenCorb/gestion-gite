@@ -1,6 +1,7 @@
 import sqlite3
 import unittest
 import uuid
+from datetime import datetime, timedelta
 from http import HTTPStatus
 
 from server import (
@@ -9,6 +10,7 @@ from server import (
     AppHandler,
     DEFAULT_SETTINGS,
     DIRECT_BOOKING_PLATFORM,
+    build_room_availability,
     build_reservation_payload_from_request,
     build_reservations,
     delete_reservation_db,
@@ -34,6 +36,10 @@ from server import (
 
 def make_settings():
     return validate_settings(DEFAULT_SETTINGS)
+
+
+def relative_iso(days):
+    return (datetime.now().date() + timedelta(days=days)).isoformat()
 
 
 def make_reservation(
@@ -165,11 +171,14 @@ class PublicBookingRequestTests(unittest.TestCase):
         self.assertTrue(is_room_available("chambre-3", "2026-05-11", "2026-05-12", reservations))
 
     def test_validate_booking_request_rejects_unavailable_room(self):
-        existing = [make_reservation(arrival="2026-06-01", departure="2026-06-03")]
+        arrival = relative_iso(7)
+        conflicting_departure = relative_iso(9)
+        departure = relative_iso(10)
+        existing = [make_reservation(arrival=arrival, departure=conflicting_departure)]
         payload = {
             "roomId": "chambre-1",
-            "arrivalDate": "2026-06-02",
-            "departureDate": "2026-06-04",
+            "arrivalDate": relative_iso(8),
+            "departureDate": departure,
             "guestName": "Client Web",
             "guestContact": "client@example.com",
             "guestCount": 2,
@@ -183,8 +192,8 @@ class PublicBookingRequestTests(unittest.TestCase):
         settings["rooms"][0]["bookingRequestsEnabled"] = False
         payload = {
             "roomId": "chambre-1",
-            "arrivalDate": "2026-06-10",
-            "departureDate": "2026-06-12",
+            "arrivalDate": relative_iso(7),
+            "departureDate": relative_iso(9),
             "guestName": "Client Web",
             "guestContact": "client@example.com",
             "guestCount": 2,
@@ -193,11 +202,38 @@ class PublicBookingRequestTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "disponible à la demande"):
             validate_booking_request(payload, settings, [])
 
+    def test_validate_booking_request_rejects_past_arrival(self):
+        payload = {
+            "roomId": "chambre-1",
+            "arrivalDate": relative_iso(-1),
+            "departureDate": relative_iso(1),
+            "guestName": "Client Web",
+            "guestContact": "client@example.com",
+            "guestCount": 2,
+        }
+
+        with self.assertRaisesRegex(ValueError, "ne peut pas être passée"):
+            validate_booking_request(payload, make_settings(), [])
+
+    def test_validate_booking_request_allows_today_arrival(self):
+        payload = {
+            "roomId": "chambre-1",
+            "arrivalDate": relative_iso(0),
+            "departureDate": relative_iso(1),
+            "guestName": "Client Web",
+            "guestContact": "client@example.com",
+            "guestCount": 2,
+        }
+
+        request = validate_booking_request(payload, make_settings(), [])
+
+        self.assertEqual(request["arrivalDate"], relative_iso(0))
+
     def test_validate_booking_request_creates_new_request_for_available_room(self):
         payload = {
             "roomId": "chambre-1",
-            "arrivalDate": "2026-06-10",
-            "departureDate": "2026-06-12",
+            "arrivalDate": relative_iso(7),
+            "departureDate": relative_iso(9),
             "guestName": "Client Web",
             "guestContact": "client@example.com",
             "guestCount": 2,
@@ -241,6 +277,123 @@ class PublicBookingRequestTests(unittest.TestCase):
         groups = normalize_amenity_groups(None, ["Wifi", "Serviettes"])
 
         self.assertEqual(groups, [{"name": "Équipements", "items": ["Wifi", "Serviettes"]}])
+
+
+class RoomAvailabilityCalendarTests(unittest.TestCase):
+    def setUp(self):
+        self.conn = sqlite3.connect(":memory:")
+        self.conn.row_factory = sqlite3.Row
+        self.conn.executescript(
+            """
+            CREATE TABLE settings (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                property_name TEXT NOT NULL,
+                description TEXT NOT NULL,
+                currency TEXT NOT NULL
+            );
+            CREATE TABLE rooms (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                color TEXT NOT NULL,
+                public_visible INTEGER NOT NULL DEFAULT 1,
+                booking_requests_enabled INTEGER NOT NULL DEFAULT 1,
+                summary TEXT NOT NULL DEFAULT '',
+                description TEXT NOT NULL DEFAULT '',
+                capacity INTEGER NOT NULL DEFAULT 2,
+                price TEXT NOT NULL DEFAULT '',
+                amenities TEXT NOT NULL DEFAULT '[]',
+                amenity_groups TEXT NOT NULL DEFAULT '[]',
+                booking_links TEXT NOT NULL DEFAULT '[]',
+                sort_order INTEGER NOT NULL
+            );
+            CREATE TABLE room_photos (
+                id TEXT PRIMARY KEY,
+                room_id TEXT NOT NULL,
+                url TEXT NOT NULL,
+                alt TEXT NOT NULL,
+                sort_order INTEGER NOT NULL
+            );
+            CREATE TABLE site_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+            CREATE TABLE notification_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+            CREATE TABLE platforms (
+                name TEXT PRIMARY KEY,
+                sort_order INTEGER NOT NULL
+            );
+            CREATE TABLE reservations (
+                id TEXT PRIMARY KEY,
+                group_id TEXT,
+                booking_type TEXT NOT NULL,
+                status TEXT NOT NULL,
+                booking_name TEXT NOT NULL,
+                room_id TEXT NOT NULL,
+                arrival_date TEXT NOT NULL,
+                departure_date TEXT NOT NULL,
+                client_name TEXT NOT NULL,
+                client_contact TEXT NOT NULL,
+                platform TEXT NOT NULL,
+                amount REAL NOT NULL,
+                comment TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            """
+        )
+        settings = make_settings()
+        upsert_settings_db(self.conn, settings)
+        sync_rooms_db(self.conn, settings["rooms"])
+        sync_platforms_db(self.conn, settings["platforms"])
+
+    def tearDown(self):
+        self.conn.close()
+
+    def day(self, payload, iso):
+        return next(item for item in payload["days"] if item["date"] == iso)
+
+    def test_monthly_room_availability_marks_booked_nights(self):
+        upsert_reservations_db(
+            self.conn,
+            [make_reservation(arrival="2026-08-10", departure="2026-08-12")],
+        )
+
+        payload = build_room_availability(self.conn, "chambre-1", "2026", "8")
+
+        self.assertEqual(payload["year"], 2026)
+        self.assertEqual(payload["month"], 8)
+        self.assertFalse(self.day(payload, "2026-08-10")["available"])
+        self.assertFalse(self.day(payload, "2026-08-11")["available"])
+        self.assertTrue(self.day(payload, "2026-08-12")["available"])
+
+    def test_monthly_room_availability_ignores_cancelled_reservations(self):
+        upsert_reservations_db(
+            self.conn,
+            [make_reservation(arrival="2026-08-10", departure="2026-08-12", status="cancelled")],
+        )
+
+        payload = build_room_availability(self.conn, "chambre-1", "2026", "8")
+
+        self.assertTrue(self.day(payload, "2026-08-10")["available"])
+        self.assertTrue(self.day(payload, "2026-08-11")["available"])
+
+    def test_monthly_room_availability_rejects_unknown_or_hidden_room(self):
+        with self.assertRaisesRegex(ValueError, "Chambre introuvable"):
+            build_room_availability(self.conn, "missing-room", "2026", "8")
+
+        settings = make_settings()
+        settings["rooms"][0]["publicVisible"] = False
+        sync_rooms_db(self.conn, settings["rooms"])
+
+        with self.assertRaisesRegex(ValueError, "Chambre introuvable"):
+            build_room_availability(self.conn, "chambre-1", "2026", "8")
+
+    def test_monthly_room_availability_rejects_invalid_month(self):
+        with self.assertRaisesRegex(ValueError, "Mois invalide"):
+            build_room_availability(self.conn, "chambre-1", "2026", "13")
 
 
 class BuildReservationsTests(unittest.TestCase):

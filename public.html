@@ -115,18 +115,32 @@
           </button>
         </div>
         <input type="hidden" id="request-room-id" />
+        <input type="hidden" id="request-arrival-date" />
+        <input type="hidden" id="request-departure-date" />
         <div class="modal-sheet-body">
           <div class="booking-dates">
-            <label class="booking-date-cell" data-empty="true" data-placeholder="Choisir l'arrivée">
+            <button class="booking-date-cell" type="button" data-empty="true" data-request-date-field="arrival" aria-controls="request-calendar" aria-expanded="false">
               <span class="booking-date-label">Arrivée</span>
               <span class="booking-date-placeholder">Choisir l'arrivée</span>
-              <input id="request-arrival-date" type="date" required class="booking-date-input" />
-            </label>
-            <label class="booking-date-cell" data-empty="true" data-placeholder="Choisir le départ">
+              <span class="booking-date-value" id="request-arrival-display"></span>
+            </button>
+            <button class="booking-date-cell" type="button" data-empty="true" data-request-date-field="departure" aria-controls="request-calendar" aria-expanded="false">
               <span class="booking-date-label">Départ</span>
               <span class="booking-date-placeholder">Choisir le départ</span>
-              <input id="request-departure-date" type="date" required class="booking-date-input" />
-            </label>
+              <span class="booking-date-value" id="request-departure-display"></span>
+            </button>
+          </div>
+          <div class="booking-calendar is-collapsed" id="request-calendar" aria-label="Calendrier de disponibilité">
+            <div class="booking-calendar-header">
+              <button class="booking-calendar-nav" type="button" id="request-calendar-prev" aria-label="Mois précédent">‹</button>
+              <div class="booking-calendar-month" id="request-calendar-month"></div>
+              <button class="booking-calendar-nav" type="button" id="request-calendar-next" aria-label="Mois suivant">›</button>
+            </div>
+            <div class="booking-calendar-weekdays" aria-hidden="true">
+              <span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span><span>Dim</span>
+            </div>
+            <div class="booking-calendar-grid" id="request-calendar-grid"></div>
+            <p class="booking-calendar-status" id="request-calendar-status"></p>
           </div>
           <div class="booking-guest-row">
             <div>
