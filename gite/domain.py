@@ -5,6 +5,7 @@ from .app import (
     build_availability,
     build_cancelled_reservation_from_request,
     build_public_site,
+    build_room_availability,
     build_reservation_payload_from_request,
     build_reservations,
     get_next_booking_name,
@@ -17,4 +18,3 @@ from .app import (
     validate_reservation,
     validate_settings,
 )
-

@@ -46,9 +46,9 @@
 }
 
 #request-modal .modal-sheet-body {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow: visible;
   overscroll-behavior: contain;
 }
 
@@ -70,6 +70,15 @@
   border-radius: var(--r-md);
   cursor: pointer;
   background: var(--surface);
+  color: var(--ink);
+  display: block;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+}
+.booking-date-cell.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 .booking-date-label {
   display: block;
@@ -89,6 +98,17 @@
 }
 .booking-date-cell[data-empty] .booking-date-placeholder {
   display: block;
+}
+.booking-date-value {
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.booking-date-cell[data-empty] .booking-date-value {
+  display: none;
 }
 .booking-date-input {
   margin-top: 4px;
@@ -111,6 +131,120 @@
   cursor: pointer;
 }
 .booking-date-input:focus { outline: none; }
+.booking-calendar {
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  padding: 12px;
+  background: var(--surface);
+}
+.booking-calendar.is-collapsed {
+  display: none;
+}
+.booking-calendar-header {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 8px;
+}
+.booking-calendar-month {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.booking-calendar-nav {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 17px;
+  background: var(--paper-2);
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 22px;
+  line-height: 1;
+}
+.booking-calendar-nav:hover {
+  background: var(--rule-strong);
+}
+.booking-calendar-weekdays,
+.booking-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+.booking-calendar-weekdays {
+  margin-top: 12px;
+  color: var(--ink-3);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.booking-calendar-grid {
+  margin-top: 6px;
+}
+.booking-calendar-day {
+  aspect-ratio: 1;
+  min-width: 0;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--paper-2);
+  color: var(--ink-3);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+.booking-calendar-day.is-empty {
+  border: none;
+  background: transparent;
+  pointer-events: none;
+}
+.booking-calendar-day.is-loading {
+  cursor: wait;
+  opacity: 0.55;
+}
+.booking-calendar-day.is-available {
+  background: var(--surface);
+  border-color: rgba(72, 130, 89, 0.32);
+  color: var(--positive-deep);
+}
+.booking-calendar-day.is-unavailable {
+  background: var(--danger-tint);
+  border-color: rgba(181, 76, 62, 0.35);
+  color: var(--danger-deep);
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+.booking-calendar-day.is-checkout-option {
+  background: var(--surface);
+  border-color: rgba(72, 130, 89, 0.32);
+  color: var(--positive-deep);
+  cursor: pointer;
+  text-decoration: none;
+  border-style: dashed;
+}
+.booking-calendar-day.is-in-range {
+  background: var(--accent-soft);
+  border-color: var(--accent-tint);
+  color: var(--accent-deep);
+}
+.booking-calendar-day.is-arrival,
+.booking-calendar-day.is-departure {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  text-decoration: none;
+}
+.booking-calendar-status {
+  min-height: 17px;
+  margin: 9px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+  text-align: center;
+}
 .booking-guest-row {
   padding: 14px;
   border: 1px solid var(--rule-strong);
@@ -210,9 +344,19 @@
   }
 
   #request-modal .booking-date-input,
+  #request-modal .booking-date-value,
   #request-modal .field-input,
   #request-modal .field-textarea {
     font-size: 14px;
+  }
+
+  #request-modal .booking-calendar {
+    padding: 9px;
+  }
+
+  #request-modal .booking-calendar-day {
+    font-size: 12px;
+    border-radius: 7px;
   }
 
   #request-modal .field-input,
@@ -256,10 +400,10 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 10px 12px;
     margin-top: 12px;
-    overflow: visible;
   }
 
   #request-modal .booking-dates,
+  #request-modal .booking-calendar,
   #request-modal .booking-guest-row,
   #request-modal .booking-total,
   #request-modal .modal-sheet-body .field:nth-of-type(3) {

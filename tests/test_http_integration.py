@@ -139,6 +139,27 @@ class HttpIntegrationTests(unittest.TestCase):
         self.assertNotIn("chambre-1", room_ids)
         self.assertIn("chambre-2", room_ids)
 
+    def test_room_availability_returns_monthly_days(self):
+        with srv.get_connection() as conn:
+            reservation = {
+                "id": "res1", "groupId": None, "bookingType": "reservation",
+                "status": "confirmed", "bookingName": "R1", "roomId": "chambre-1",
+                "arrivalDate": "2026-08-10", "departureDate": "2026-08-12",
+                "clientName": "C", "clientContact": "c@e.com", "platform": "Airbnb",
+                "amount": 100.0, "comment": "", "createdAt": "2026-06-01T00:00:00",
+                "updatedAt": "2026-06-01T00:00:00",
+            }
+            srv.upsert_reservations_db(conn, [reservation])
+            conn.commit()
+
+        status, _, data = self.request("GET", "/api/room-availability?roomId=chambre-1&year=2026&month=8")
+
+        self.assertEqual(status, 200)
+        by_date = {item["date"]: item["available"] for item in data["days"]}
+        self.assertFalse(by_date["2026-08-10"])
+        self.assertFalse(by_date["2026-08-11"])
+        self.assertTrue(by_date["2026-08-12"])
+
     def test_booking_request_then_accept_creates_reservation(self):
         payload = {
             "roomId": "chambre-1", "arrivalDate": "2026-09-01", "departureDate": "2026-09-03",
