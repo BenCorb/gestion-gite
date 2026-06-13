@@ -33,6 +33,7 @@
   box-shadow: 0 -10px 30px rgba(29, 24, 20, .2);
   max-height: 90vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   transform: translateY(100%);
   transition: transform .3s cubic-bezier(.4, 0, .2, 1);
   z-index: 71;
@@ -66,6 +67,11 @@
   flex-direction: column;
   overflow-x: hidden;
   padding-top: var(--public-topnav-offset);
+}
+html.modal-open,
+body.modal-open {
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 .public-body > .public-main { flex: 1 0 auto; }
 .public-body > .public-footer { flex-shrink: 0; }
@@ -200,6 +206,14 @@ html { scroll-behavior: smooth; }
   position: relative;
   min-height: 44px;
   height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+}
+.availability-cell.is-active {
+  background: var(--paper-2);
+  border-radius: 999px;
 }
 .availability-cell-icon {
   width: 18px;
@@ -251,6 +265,11 @@ html { scroll-behavior: smooth; }
   background: var(--paper-2);
   border-radius: 999px;
 }
+.availability-cell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 999px;
+}
 .availability-divider {
   background: var(--rule);
   margin: 4px 0;
@@ -292,6 +311,118 @@ html { scroll-behavior: smooth; }
   line-height: 1.35;
 }
 .availability-summary strong { color: var(--ink); }
+.availability-calendar {
+  position: absolute;
+  top: calc(100% + 42px);
+  left: 50%;
+  z-index: 12;
+  width: min(520px, calc(100vw - 28px));
+  padding: 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  transform: translateX(-50%);
+}
+.availability-calendar.is-collapsed {
+  display: none;
+}
+.availability-calendar-header {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 8px;
+}
+.availability-calendar-month {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.availability-calendar-nav {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 17px;
+  background: var(--paper-2);
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 22px;
+  line-height: 1;
+}
+.availability-calendar-nav:hover {
+  background: var(--rule-strong);
+}
+.availability-calendar-weekdays,
+.availability-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+.availability-calendar-weekdays {
+  margin-top: 12px;
+  color: var(--ink-3);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.availability-calendar-grid {
+  margin-top: 6px;
+}
+.availability-calendar-day {
+  aspect-ratio: 1;
+  min-width: 0;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--paper-2);
+  color: var(--ink-3);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+.availability-calendar-day.is-empty {
+  border: none;
+  background: transparent;
+  pointer-events: none;
+}
+.availability-calendar-day.is-available {
+  background: var(--surface);
+  border-color: rgba(72, 130, 89, 0.32);
+  color: var(--positive-deep);
+}
+.availability-calendar-day.is-unavailable {
+  background: var(--danger-tint);
+  border-color: rgba(181, 76, 62, 0.35);
+  color: var(--danger-deep);
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+.availability-calendar-day.is-checkout-option {
+  border-style: dashed;
+}
+.availability-calendar-day.is-in-range {
+  background: var(--accent-soft);
+  border-color: var(--accent-tint);
+  color: var(--accent-deep);
+}
+.availability-calendar-day.is-arrival,
+.availability-calendar-day.is-departure {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  text-decoration: none;
+}
+.availability-calendar-status {
+  min-height: 17px;
+  margin: 9px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+  text-align: center;
+}
 
 /* Sub-mobile fallback : ultra-compact paddings */
 @media (max-width: 419px) {
@@ -301,6 +432,15 @@ html { scroll-behavior: smooth; }
   .availability-cell-value { font-size: 13px; line-height: 1; }
   .availability-divider { margin: 2px 0; }
   .availability-submit { width: 40px; height: 40px; margin-left: 2px; }
+  .availability-calendar {
+    top: calc(100% + 36px);
+    width: min(360px, calc(100vw - 20px));
+    padding: 9px;
+  }
+  .availability-calendar-day {
+    border-radius: 7px;
+    font-size: 12px;
+  }
 }
 
 /* ── Main / sections ───────────────────────────────────────────────── */

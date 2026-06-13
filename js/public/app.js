@@ -1,4 +1,4 @@
-import { calculateNights, escapeHtml, formatCurrency, showToast } from "../utils.js";
+import { calculateNights, dateToIso, escapeHtml, formatCurrency, parseIsoDate, showToast } from "../utils.js";
 import { icon } from "../icons.js";
 import { BODY_FONTS, HEADING_FONTS, HERO_FALLBACK_GRADIENTS } from "./config.js";
 import { elements } from "./elements.js";
@@ -15,15 +15,28 @@ function bindEvents() {
   elements.availabilityForm.addEventListener("submit", handleAvailabilitySubmit);
   elements.arrival.addEventListener("change", handleDateChange);
   elements.departure.addEventListener("change", handleDateChange);
+  elements.availabilityDateFields.forEach((button) => {
+    button.addEventListener("click", () => setAvailabilityCalendarSelectionMode(button.dataset.availabilityDateField));
+  });
+  elements.availabilityCalendarPrev.addEventListener("click", () => changeAvailabilityCalendarMonth(-1));
+  elements.availabilityCalendarNext.addEventListener("click", () => changeAvailabilityCalendarMonth(1));
+  elements.availabilityCalendarGrid.addEventListener("click", handleAvailabilityCalendarClick);
   elements.requestForm.addEventListener("submit", submitBookingRequest);
   elements.closeModal.addEventListener("click", closeModal);
   elements.modal.addEventListener("click", (event) => {
     if (event.target === elements.modal) closeModal();
   });
+  elements.requestDateFields.forEach((button) => {
+    button.addEventListener("click", () => setRequestCalendarSelectionMode(button.dataset.requestDateField));
+  });
+  elements.requestCalendarPrev.addEventListener("click", () => changeRequestCalendarMonth(-1));
+  elements.requestCalendarNext.addEventListener("click", () => changeRequestCalendarMonth(1));
+  elements.requestCalendarGrid.addEventListener("click", handleRequestCalendarClick);
   elements.closeAmenitiesModal.addEventListener("click", closeAmenitiesModal);
   elements.amenitiesModal.addEventListener("click", (event) => {
     if (event.target === elements.amenitiesModal) closeAmenitiesModal();
   });
+  document.addEventListener("click", handleDocumentClick);
   // Topnav scroll listener kept to add subtle elevation shadow once scrolled
   if (elements.topnav) {
     const onScroll = () => {
@@ -34,6 +47,8 @@ function bindEvents() {
   }
   elements.confirmationBack.addEventListener("click", hideConfirmation);
   bindStepper();
+  setAvailabilityDateMinimums();
+  initializeAvailabilityCalendar();
   // Render footer year + initial date display
   if (elements.footerYear) elements.footerYear.textContent = String(new Date().getFullYear());
   syncAvailabilityDisplay();
@@ -50,6 +65,12 @@ function bindEvents() {
     if (elements.amenitiesModal.classList.contains("is-open")) return closeAmenitiesModal();
     if (elements.modal.classList.contains("is-open")) closeModal();
   });
+}
+
+function handleDocumentClick(event) {
+  if (!state.availabilityCalendar.isOpen) return;
+  if (event.target.closest("#availability-form")) return;
+  closeAvailabilityCalendar();
 }
 
 export function buildLightbox() {
@@ -175,6 +196,17 @@ function nightsForRequest() {
   const d = elements.requestDepartureDate.value;
   if (!a || !d) return 0;
   return calculateNights(a, d);
+}
+
+function isPastIsoDate(iso) {
+  return Boolean(iso) && compareIsoDates(iso, dateToIso(new Date())) < 0;
+}
+
+function setAvailabilityDateMinimums() {
+  const todayIso = dateToIso(new Date());
+  [elements.arrival, elements.departure].forEach((input) => {
+    if (input) input.min = todayIso;
+  });
 }
 
 function parseNightlyPrice(value) {
@@ -441,6 +473,151 @@ function handleDateChange() {
   syncAvailabilityDisplay();
 }
 
+function initializeAvailabilityCalendar() {
+  const selectedArrival = elements.arrival.value;
+  const baseDate = selectedArrival ? parseIsoDate(selectedArrival) : new Date();
+  state.availabilityCalendar = {
+    monthDate: new Date(baseDate.getFullYear(), baseDate.getMonth(), 1),
+    isOpen: false,
+    selectionMode: selectedArrival && !elements.departure.value ? "departure" : "arrival",
+  };
+  syncAvailabilityDisplay();
+  renderAvailabilityCalendar();
+}
+
+function setAvailabilityCalendarSelectionMode(mode) {
+  let nextMode = mode === "departure" ? "departure" : "arrival";
+  if (nextMode === "departure" && !elements.arrival.value) nextMode = "arrival";
+  const calendar = state.availabilityCalendar;
+  const shouldCollapse = calendar.isOpen && calendar.selectionMode === nextMode;
+  calendar.selectionMode = nextMode;
+  calendar.isOpen = !shouldCollapse;
+  if (!calendar.monthDate) {
+    const baseDate = elements.arrival.value ? parseIsoDate(elements.arrival.value) : new Date();
+    calendar.monthDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+  }
+  syncAvailabilityDisplay();
+  renderAvailabilityCalendar();
+}
+
+function changeAvailabilityCalendarMonth(direction) {
+  const calendar = state.availabilityCalendar;
+  const current = calendar.monthDate || new Date();
+  calendar.monthDate = new Date(current.getFullYear(), current.getMonth() + direction, 1);
+  renderAvailabilityCalendar();
+}
+
+function renderAvailabilityCalendar() {
+  const calendar = state.availabilityCalendar;
+  if (!calendar.monthDate || !elements.availabilityCalendarGrid) return;
+
+  elements.availabilityCalendar?.classList.toggle("is-collapsed", !calendar.isOpen);
+  elements.availabilityCalendar?.setAttribute("aria-hidden", calendar.isOpen ? "false" : "true");
+
+  const baseDate = calendar.monthDate;
+  const monthLabel = baseDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  elements.availabilityCalendarMonth.textContent = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+
+  const daysInMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0).getDate();
+  const startOffset = (baseDate.getDay() + 6) % 7;
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+  const arrival = elements.arrival.value;
+  const departure = elements.departure.value;
+  const todayIso = dateToIso(new Date());
+  const isDepartureMode = calendar.selectionMode === "departure" && arrival;
+
+  elements.availabilityCalendarGrid.innerHTML = Array.from({ length: totalCells }, (_, index) => {
+    const dayNumber = index - startOffset + 1;
+    if (dayNumber < 1 || dayNumber > daysInMonth) {
+      return `<span class="availability-calendar-day is-empty" aria-hidden="true"></span>`;
+    }
+
+    const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), dayNumber);
+    const iso = dateToIso(date);
+    const isPast = compareIsoDates(iso, todayIso) < 0;
+    const isArrival = iso === arrival;
+    const isDeparture = iso === departure;
+    const isInRange = arrival && departure && compareIsoDates(iso, arrival) > 0 && compareIsoDates(iso, departure) < 0;
+    const canBeDeparture = isDepartureMode && !isPast && compareIsoDates(iso, arrival) > 0;
+    const classes = ["availability-calendar-day"];
+    if (isPast) classes.push("is-unavailable");
+    if (!isPast) classes.push("is-available");
+    if (canBeDeparture) classes.push("is-checkout-option");
+    if (isArrival) classes.push("is-arrival");
+    if (isDeparture) classes.push("is-departure");
+    if (isInRange) classes.push("is-in-range");
+
+    return `
+      <button
+        class="${classes.join(" ")}"
+        type="button"
+        data-availability-calendar-date="${iso}"
+        data-available="${!isPast ? "true" : "false"}"
+        aria-pressed="${isArrival || isDeparture ? "true" : "false"}"
+        aria-label="${date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}"
+      >${dayNumber}</button>
+    `;
+  }).join("");
+
+  if (!arrival) {
+    elements.availabilityCalendarStatus.textContent = "Choisissez une arrivée.";
+  } else if (!departure) {
+    elements.availabilityCalendarStatus.textContent = "Choisissez un départ après l'arrivée.";
+  } else {
+    elements.availabilityCalendarStatus.textContent = "Dates sélectionnées.";
+  }
+}
+
+function handleAvailabilityCalendarClick(event) {
+  const button = event.target.closest("[data-availability-calendar-date]");
+  if (!button) return;
+
+  const iso = button.dataset.availabilityCalendarDate;
+  const arrival = elements.arrival.value;
+  const isAvailable = button.dataset.available === "true";
+  const wantsDeparture = state.availabilityCalendar.selectionMode === "departure" && arrival;
+  const canSelectAsDeparture = wantsDeparture && compareIsoDates(iso, arrival) > 0;
+
+  if (!isAvailable) {
+    showToast(elements, "Cette date est déjà passée.", true);
+    return;
+  }
+
+  if (
+    state.availabilityCalendar.selectionMode === "arrival"
+    || !arrival
+    || compareIsoDates(iso, arrival) <= 0
+  ) {
+    selectAvailabilityArrival(iso);
+    return;
+  }
+
+  if (!canSelectAsDeparture) {
+    selectAvailabilityArrival(iso);
+    return;
+  }
+
+  elements.departure.value = iso;
+  state.availabilityCalendar.selectionMode = "arrival";
+  state.availabilityCalendar.isOpen = false;
+  handleDateChange();
+  renderAvailabilityCalendar();
+}
+
+function selectAvailabilityArrival(iso) {
+  elements.arrival.value = iso;
+  elements.departure.value = "";
+  state.availabilityCalendar.selectionMode = "departure";
+  handleDateChange();
+  renderAvailabilityCalendar();
+}
+
+function closeAvailabilityCalendar() {
+  state.availabilityCalendar.isOpen = false;
+  syncAvailabilityDisplay();
+  renderAvailabilityCalendar();
+}
+
 function syncAvailabilityDisplay() {
   const updateCell = (input, display) => {
     if (!display) return;
@@ -460,6 +637,11 @@ function syncAvailabilityDisplay() {
   };
   if (elements.arrival && elements.arrivalDisplay) updateCell(elements.arrival, elements.arrivalDisplay);
   if (elements.departure && elements.departureDisplay) updateCell(elements.departure, elements.departureDisplay);
+  elements.availabilityDateFields.forEach((button) => {
+    const mode = button.dataset.availabilityDateField === "departure" ? "departure" : "arrival";
+    button.classList.toggle("is-active", state.availabilityCalendar.isOpen && state.availabilityCalendar.selectionMode === mode);
+    button.setAttribute("aria-expanded", state.availabilityCalendar.isOpen && state.availabilityCalendar.selectionMode === mode ? "true" : "false");
+  });
 }
 
 function formatCompactDate(iso) {
@@ -473,6 +655,7 @@ function formatCompactDate(iso) {
 
 export async function handleAvailabilitySubmit(event) {
   event.preventDefault();
+  closeAvailabilityCalendar();
   await fetchAvailability();
 }
 
@@ -520,6 +703,7 @@ function hasOpenOverlay() {
 }
 
 export function openRequestModal(roomId) {
+  closeAvailabilityCalendar();
   const room = findRoom(roomId);
   if (!room || room.bookingRequestsEnabled === false) return;
   state.pendingRequest = { room };
@@ -531,7 +715,12 @@ export function openRequestModal(roomId) {
   setStepperValue(Math.min(2, max));
   elements.requestArrivalDate.value = elements.arrival.value || state.availability?.arrivalDate || "";
   elements.requestDepartureDate.value = elements.departure.value || state.availability?.departureDate || "";
+  if (isPastIsoDate(elements.requestArrivalDate.value)) {
+    elements.requestArrivalDate.value = "";
+    elements.requestDepartureDate.value = "";
+  }
   updateRequestTotals();
+  initializeRequestCalendar(roomId);
   elements.modal.classList.add("is-open");
   document.querySelector(".modal-sheet")?.classList.add("is-open");
   elements.modal.querySelectorAll(".modal-sheet").forEach((s) => s.classList.add("is-open"));
@@ -565,6 +754,208 @@ function setStepperValue(value) {
   if (buttons[1]) buttons[1].disabled = clamped >= max;
 }
 
+function initializeRequestCalendar(roomId) {
+  const selectedArrival = elements.requestArrivalDate.value;
+  const baseDate = selectedArrival ? parseIsoDate(selectedArrival) : new Date();
+  state.requestCalendar = {
+    roomId,
+    monthDate: new Date(baseDate.getFullYear(), baseDate.getMonth(), 1),
+    availabilityByDate: {},
+    isLoading: false,
+    isOpen: false,
+    error: "",
+    selectionMode: selectedArrival && !elements.requestDepartureDate.value ? "departure" : "arrival",
+  };
+  syncRequestDatePlaceholders();
+  renderRequestCalendar();
+  loadRequestCalendarMonth();
+}
+
+function setRequestCalendarSelectionMode(mode) {
+  let nextMode = mode === "departure" ? "departure" : "arrival";
+  if (nextMode === "departure" && !elements.requestArrivalDate.value) nextMode = "arrival";
+  const shouldCollapse = state.requestCalendar.isOpen && state.requestCalendar.selectionMode === nextMode;
+  state.requestCalendar.selectionMode = nextMode;
+  state.requestCalendar.isOpen = !shouldCollapse;
+  syncRequestDatePlaceholders();
+  renderRequestCalendar();
+}
+
+function changeRequestCalendarMonth(direction) {
+  const current = state.requestCalendar.monthDate || new Date();
+  state.requestCalendar.monthDate = new Date(current.getFullYear(), current.getMonth() + direction, 1);
+  renderRequestCalendar();
+  loadRequestCalendarMonth();
+}
+
+async function loadRequestCalendarMonth() {
+  const calendar = state.requestCalendar;
+  if (!calendar.roomId || !calendar.monthDate) return;
+
+  const year = calendar.monthDate.getFullYear();
+  const month = calendar.monthDate.getMonth() + 1;
+  const requestKey = `${calendar.roomId}-${year}-${month}`;
+  calendar.requestKey = requestKey;
+  calendar.isLoading = true;
+  calendar.error = "";
+  renderRequestCalendar();
+
+  try {
+    const params = new URLSearchParams({
+      roomId: calendar.roomId,
+      year: String(year),
+      month: String(month),
+    });
+    const data = await fetchJson(`/api/room-availability?${params.toString()}`, {}, "Disponibilités impossibles.");
+    if (state.requestCalendar.requestKey !== requestKey) return;
+    data.days.forEach((day) => {
+      state.requestCalendar.availabilityByDate[day.date] = Boolean(day.available);
+    });
+  } catch (error) {
+    if (state.requestCalendar.requestKey !== requestKey) return;
+    state.requestCalendar.error = error.message;
+  } finally {
+    if (state.requestCalendar.requestKey === requestKey) {
+      state.requestCalendar.isLoading = false;
+      renderRequestCalendar();
+    }
+  }
+}
+
+function renderRequestCalendar() {
+  const calendar = state.requestCalendar;
+  if (!calendar.monthDate || !elements.requestCalendarGrid) return;
+
+  elements.requestCalendar?.classList.toggle("is-collapsed", !calendar.isOpen);
+  elements.requestCalendar?.setAttribute("aria-hidden", calendar.isOpen ? "false" : "true");
+
+  const baseDate = calendar.monthDate;
+  const monthLabel = baseDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  elements.requestCalendarMonth.textContent = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+
+  const daysInMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0).getDate();
+  const startOffset = (baseDate.getDay() + 6) % 7;
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+  const arrival = elements.requestArrivalDate.value;
+  const departure = elements.requestDepartureDate.value;
+  const isDepartureMode = calendar.selectionMode === "departure" && arrival;
+  const todayIso = dateToIso(new Date());
+
+  elements.requestCalendarGrid.innerHTML = Array.from({ length: totalCells }, (_, index) => {
+    const dayNumber = index - startOffset + 1;
+    if (dayNumber < 1 || dayNumber > daysInMonth) {
+      return `<span class="booking-calendar-day is-empty" aria-hidden="true"></span>`;
+    }
+
+    const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), dayNumber);
+    const iso = dateToIso(date);
+    const known = Object.prototype.hasOwnProperty.call(calendar.availabilityByDate, iso);
+    const isPast = compareIsoDates(iso, todayIso) < 0;
+    const available = calendar.availabilityByDate[iso] === true && !isPast;
+    const isArrival = iso === arrival;
+    const isDeparture = iso === departure;
+    const isInRange = arrival && departure && compareIsoDates(iso, arrival) > 0 && compareIsoDates(iso, departure) < 0;
+    const canBeDeparture = isDepartureMode && !isPast && compareIsoDates(iso, arrival) > 0 && isRequestRangeAvailable(arrival, iso);
+    const classes = ["booking-calendar-day"];
+    if (!known || calendar.isLoading) classes.push("is-loading");
+    if (known && available) classes.push("is-available");
+    if (known && !available && !canBeDeparture) classes.push("is-unavailable");
+    if (canBeDeparture && !available) classes.push("is-checkout-option");
+    if (isArrival) classes.push("is-arrival");
+    if (isDeparture) classes.push("is-departure");
+    if (isInRange) classes.push("is-in-range");
+
+    return `
+      <button
+        class="${classes.join(" ")}"
+        type="button"
+        data-request-calendar-date="${iso}"
+        data-available="${known && available ? "true" : "false"}"
+        aria-pressed="${isArrival || isDeparture ? "true" : "false"}"
+        aria-label="${date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}"
+      >${dayNumber}</button>
+    `;
+  }).join("");
+
+  if (calendar.error) {
+    elements.requestCalendarStatus.textContent = calendar.error;
+  } else if (calendar.isLoading) {
+    elements.requestCalendarStatus.textContent = "Chargement des disponibilités...";
+  } else if (!arrival) {
+    elements.requestCalendarStatus.textContent = "Choisissez une arrivée disponible.";
+  } else if (!departure) {
+    elements.requestCalendarStatus.textContent = "Choisissez un départ après l'arrivée.";
+  } else {
+    elements.requestCalendarStatus.textContent = "Séjour sélectionné.";
+  }
+}
+
+function handleRequestCalendarClick(event) {
+  const button = event.target.closest("[data-request-calendar-date]");
+  if (!button || state.requestCalendar.isLoading) return;
+
+  const iso = button.dataset.requestCalendarDate;
+  const arrival = elements.requestArrivalDate.value;
+  const isAvailable = button.dataset.available === "true";
+  const wantsDeparture = state.requestCalendar.selectionMode === "departure" && arrival;
+  const canSelectAsDeparture = wantsDeparture && compareIsoDates(iso, arrival) > 0 && isRequestRangeAvailable(arrival, iso);
+
+  if (!isAvailable && !canSelectAsDeparture) {
+    showToast(elements, "Cette nuit n'est pas disponible pour cette chambre.", true);
+    return;
+  }
+
+  if (
+    state.requestCalendar.selectionMode === "arrival"
+    || !arrival
+    || compareIsoDates(iso, arrival) <= 0
+  ) {
+    if (!isAvailable) {
+      showToast(elements, "Cette nuit n'est pas disponible pour une arrivée.", true);
+      return;
+    }
+    selectRequestArrival(iso);
+    return;
+  }
+
+  if (!isRequestRangeAvailable(arrival, iso)) {
+    selectRequestArrival(iso);
+    showToast(elements, "Cette plage contient une nuit indisponible. Nouvelle arrivée sélectionnée.", true);
+    return;
+  }
+
+  elements.requestDepartureDate.value = iso;
+  state.requestCalendar.selectionMode = "arrival";
+  state.requestCalendar.isOpen = false;
+  updateRequestTotals();
+  renderRequestCalendar();
+}
+
+function selectRequestArrival(iso) {
+  elements.requestArrivalDate.value = iso;
+  elements.requestDepartureDate.value = "";
+  state.requestCalendar.selectionMode = "departure";
+  updateRequestTotals();
+  renderRequestCalendar();
+}
+
+function compareIsoDates(left, right) {
+  return parseIsoDate(left).getTime() - parseIsoDate(right).getTime();
+}
+
+function isRequestRangeAvailable(arrivalIso, departureIso) {
+  let current = parseIsoDate(arrivalIso);
+  const departure = parseIsoDate(departureIso);
+  const todayIso = dateToIso(new Date());
+  while (current < departure) {
+    const iso = dateToIso(current);
+    if (compareIsoDates(iso, todayIso) < 0) return false;
+    if (state.requestCalendar.availabilityByDate[iso] !== true) return false;
+    current.setDate(current.getDate() + 1);
+  }
+  return true;
+}
+
 function updateRequestTotals() {
   const nights = nightsForRequest();
   const room = state.pendingRequest?.room;
@@ -584,8 +975,29 @@ function updateRequestTotals() {
 }
 
 function syncRequestDatePlaceholders() {
-  [elements.requestArrivalDate, elements.requestDepartureDate].forEach((input) => {
-    input?.closest(".booking-date-cell")?.toggleAttribute("data-empty", !input.value);
+  const fields = [
+    {
+      input: elements.requestArrivalDate,
+      display: elements.requestArrivalDisplay,
+      button: elements.modal.querySelector('[data-request-date-field="arrival"]'),
+      mode: "arrival",
+      placeholder: "Choisir l'arrivée",
+    },
+    {
+      input: elements.requestDepartureDate,
+      display: elements.requestDepartureDisplay,
+      button: elements.modal.querySelector('[data-request-date-field="departure"]'),
+      mode: "departure",
+      placeholder: "Choisir le départ",
+    },
+  ];
+
+  fields.forEach(({ input, display, button, mode, placeholder }) => {
+    if (!input || !display || !button) return;
+    button.toggleAttribute("data-empty", !input.value);
+    button.classList.toggle("is-active", state.requestCalendar.isOpen && state.requestCalendar.selectionMode === mode);
+    button.setAttribute("aria-expanded", state.requestCalendar.isOpen && state.requestCalendar.selectionMode === mode ? "true" : "false");
+    display.textContent = input.value ? formatCompactDate(input.value) : placeholder;
   });
 }
 
@@ -639,6 +1051,7 @@ function getAmenityGroups(room) {
 }
 
 export function openAmenitiesModal(roomId) {
+  closeAvailabilityCalendar();
   const room = findRoom(roomId);
   if (!room) return;
   elements.amenitiesTitle.textContent = "Équipements";
@@ -663,6 +1076,7 @@ export function closeAmenitiesModal() {
 }
 
 export function openLightbox(photos, index) {
+  closeAvailabilityCalendar();
   state.lightboxPhotos = photos;
   state.lightboxIndex = index;
   updateLightboxImage();
@@ -733,6 +1147,10 @@ export async function submitBookingRequest(event) {
   };
   if (!payload.arrivalDate || !payload.departureDate) {
     showToast(elements, "Choisissez vos dates avant d'envoyer une demande.", true);
+    return;
+  }
+  if (isPastIsoDate(payload.arrivalDate)) {
+    showToast(elements, "La date d'arrivée ne peut pas être passée.", true);
     return;
   }
   try {
