@@ -43,21 +43,33 @@
 
     <section class="availability-strip" aria-label="Choisir les dates">
       <form id="availability-form" class="availability-card">
-        <label class="availability-cell" for="availability-arrival" data-empty="true" data-placeholder="Choisir l'arrivée">
+        <button class="availability-cell" type="button" data-empty="true" data-placeholder="Choisir l'arrivée" data-availability-date-field="arrival" aria-controls="availability-calendar" aria-expanded="false">
           <svg class="availability-cell-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
           <span class="availability-cell-value" id="availability-arrival-display">Choisir l'arrivée</span>
-          <input id="availability-arrival" type="date" class="availability-cell-input" required />
-        </label>
+        </button>
+        <input id="availability-arrival" type="hidden" class="availability-cell-input" />
         <div class="availability-divider" aria-hidden="true"></div>
-        <label class="availability-cell" for="availability-departure" data-empty="true" data-placeholder="Choisir le départ">
+        <button class="availability-cell" type="button" data-empty="true" data-placeholder="Choisir le départ" data-availability-date-field="departure" aria-controls="availability-calendar" aria-expanded="false">
           <svg class="availability-cell-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
           <span class="availability-cell-value" id="availability-departure-display">Choisir le départ</span>
-          <input id="availability-departure" type="date" class="availability-cell-input" required />
-        </label>
+        </button>
+        <input id="availability-departure" type="hidden" class="availability-cell-input" />
         <button class="availability-submit" type="submit" aria-label="Rechercher">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
         </button>
         <div class="availability-summary" id="availability-status" hidden></div>
+        <div class="availability-calendar is-collapsed" id="availability-calendar" aria-label="Calendrier de recherche" aria-hidden="true">
+          <div class="availability-calendar-header">
+            <button class="availability-calendar-nav" type="button" id="availability-calendar-prev" aria-label="Mois précédent">‹</button>
+            <div class="availability-calendar-month" id="availability-calendar-month"></div>
+            <button class="availability-calendar-nav" type="button" id="availability-calendar-next" aria-label="Mois suivant">›</button>
+          </div>
+          <div class="availability-calendar-weekdays" aria-hidden="true">
+            <span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span><span>Dim</span>
+          </div>
+          <div class="availability-calendar-grid" id="availability-calendar-grid"></div>
+          <p class="availability-calendar-status" id="availability-calendar-status"></p>
+        </div>
       </form>
     </section>
 
