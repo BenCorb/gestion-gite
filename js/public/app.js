@@ -15,6 +15,12 @@ function bindEvents() {
   elements.availabilityForm.addEventListener("submit", handleAvailabilitySubmit);
   elements.arrival.addEventListener("change", handleDateChange);
   elements.departure.addEventListener("change", handleDateChange);
+  elements.availabilityDateFields.forEach((button) => {
+    button.addEventListener("click", () => setAvailabilityCalendarSelectionMode(button.dataset.availabilityDateField));
+  });
+  elements.availabilityCalendarPrev.addEventListener("click", () => changeAvailabilityCalendarMonth(-1));
+  elements.availabilityCalendarNext.addEventListener("click", () => changeAvailabilityCalendarMonth(1));
+  elements.availabilityCalendarGrid.addEventListener("click", handleAvailabilityCalendarClick);
   elements.requestForm.addEventListener("submit", submitBookingRequest);
   elements.closeModal.addEventListener("click", closeModal);
   elements.modal.addEventListener("click", (event) => {
@@ -30,6 +36,7 @@ function bindEvents() {
   elements.amenitiesModal.addEventListener("click", (event) => {
     if (event.target === elements.amenitiesModal) closeAmenitiesModal();
   });
+  document.addEventListener("click", handleDocumentClick);
   // Topnav scroll listener kept to add subtle elevation shadow once scrolled
   if (elements.topnav) {
     const onScroll = () => {
@@ -41,6 +48,7 @@ function bindEvents() {
   elements.confirmationBack.addEventListener("click", hideConfirmation);
   bindStepper();
   setAvailabilityDateMinimums();
+  initializeAvailabilityCalendar();
   // Render footer year + initial date display
   if (elements.footerYear) elements.footerYear.textContent = String(new Date().getFullYear());
   syncAvailabilityDisplay();
@@ -57,6 +65,12 @@ function bindEvents() {
     if (elements.amenitiesModal.classList.contains("is-open")) return closeAmenitiesModal();
     if (elements.modal.classList.contains("is-open")) closeModal();
   });
+}
+
+function handleDocumentClick(event) {
+  if (!state.availabilityCalendar.isOpen) return;
+  if (event.target.closest("#availability-form")) return;
+  closeAvailabilityCalendar();
 }
 
 export function buildLightbox() {
@@ -459,6 +473,152 @@ function handleDateChange() {
   syncAvailabilityDisplay();
 }
 
+function initializeAvailabilityCalendar() {
+  const selectedArrival = elements.arrival.value;
+  const baseDate = selectedArrival ? parseIsoDate(selectedArrival) : new Date();
+  state.availabilityCalendar = {
+    monthDate: new Date(baseDate.getFullYear(), baseDate.getMonth(), 1),
+    isOpen: false,
+    selectionMode: selectedArrival && !elements.departure.value ? "departure" : "arrival",
+  };
+  syncAvailabilityDisplay();
+  renderAvailabilityCalendar();
+}
+
+function setAvailabilityCalendarSelectionMode(mode) {
+  const nextMode = mode === "departure" ? "departure" : "arrival";
+  const calendar = state.availabilityCalendar;
+  const shouldCollapse = calendar.isOpen && calendar.selectionMode === nextMode;
+  calendar.selectionMode = nextMode;
+  calendar.isOpen = !shouldCollapse;
+  if (!calendar.monthDate) {
+    const baseDate = elements.arrival.value ? parseIsoDate(elements.arrival.value) : new Date();
+    calendar.monthDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+  }
+  syncAvailabilityDisplay();
+  renderAvailabilityCalendar();
+}
+
+function changeAvailabilityCalendarMonth(direction) {
+  const calendar = state.availabilityCalendar;
+  const current = calendar.monthDate || new Date();
+  calendar.monthDate = new Date(current.getFullYear(), current.getMonth() + direction, 1);
+  renderAvailabilityCalendar();
+}
+
+function renderAvailabilityCalendar() {
+  const calendar = state.availabilityCalendar;
+  if (!calendar.monthDate || !elements.availabilityCalendarGrid) return;
+
+  elements.availabilityCalendar?.classList.toggle("is-collapsed", !calendar.isOpen);
+  elements.availabilityCalendar?.setAttribute("aria-hidden", calendar.isOpen ? "false" : "true");
+
+  const baseDate = calendar.monthDate;
+  const monthLabel = baseDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  elements.availabilityCalendarMonth.textContent = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+
+  const daysInMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0).getDate();
+  const startOffset = (baseDate.getDay() + 6) % 7;
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+  const arrival = elements.arrival.value;
+  const departure = elements.departure.value;
+  const todayIso = dateToIso(new Date());
+  const isDepartureMode = calendar.selectionMode === "departure" && arrival && !departure;
+
+  elements.availabilityCalendarGrid.innerHTML = Array.from({ length: totalCells }, (_, index) => {
+    const dayNumber = index - startOffset + 1;
+    if (dayNumber < 1 || dayNumber > daysInMonth) {
+      return `<span class="availability-calendar-day is-empty" aria-hidden="true"></span>`;
+    }
+
+    const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), dayNumber);
+    const iso = dateToIso(date);
+    const isPast = compareIsoDates(iso, todayIso) < 0;
+    const isArrival = iso === arrival;
+    const isDeparture = iso === departure;
+    const isInRange = arrival && departure && compareIsoDates(iso, arrival) > 0 && compareIsoDates(iso, departure) < 0;
+    const canBeDeparture = isDepartureMode && !isPast && compareIsoDates(iso, arrival) > 0;
+    const classes = ["availability-calendar-day"];
+    if (isPast) classes.push("is-unavailable");
+    if (!isPast) classes.push("is-available");
+    if (canBeDeparture) classes.push("is-checkout-option");
+    if (isArrival) classes.push("is-arrival");
+    if (isDeparture) classes.push("is-departure");
+    if (isInRange) classes.push("is-in-range");
+
+    return `
+      <button
+        class="${classes.join(" ")}"
+        type="button"
+        data-availability-calendar-date="${iso}"
+        data-available="${!isPast ? "true" : "false"}"
+        aria-pressed="${isArrival || isDeparture ? "true" : "false"}"
+        aria-label="${date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}"
+      >${dayNumber}</button>
+    `;
+  }).join("");
+
+  if (!arrival) {
+    elements.availabilityCalendarStatus.textContent = "Choisissez une arrivée.";
+  } else if (!departure) {
+    elements.availabilityCalendarStatus.textContent = "Choisissez un départ après l'arrivée.";
+  } else {
+    elements.availabilityCalendarStatus.textContent = "Dates sélectionnées.";
+  }
+}
+
+function handleAvailabilityCalendarClick(event) {
+  const button = event.target.closest("[data-availability-calendar-date]");
+  if (!button) return;
+
+  const iso = button.dataset.availabilityCalendarDate;
+  const arrival = elements.arrival.value;
+  const departure = elements.departure.value;
+  const isAvailable = button.dataset.available === "true";
+  const wantsDeparture = state.availabilityCalendar.selectionMode === "departure" && arrival && !departure;
+  const canSelectAsDeparture = wantsDeparture && compareIsoDates(iso, arrival) > 0;
+
+  if (!isAvailable) {
+    showToast(elements, "Cette date est déjà passée.", true);
+    return;
+  }
+
+  if (
+    state.availabilityCalendar.selectionMode === "arrival"
+    || !arrival
+    || departure
+    || compareIsoDates(iso, arrival) <= 0
+  ) {
+    selectAvailabilityArrival(iso);
+    return;
+  }
+
+  if (!canSelectAsDeparture) {
+    selectAvailabilityArrival(iso);
+    return;
+  }
+
+  elements.departure.value = iso;
+  state.availabilityCalendar.selectionMode = "arrival";
+  state.availabilityCalendar.isOpen = false;
+  handleDateChange();
+  renderAvailabilityCalendar();
+}
+
+function selectAvailabilityArrival(iso) {
+  elements.arrival.value = iso;
+  elements.departure.value = "";
+  state.availabilityCalendar.selectionMode = "departure";
+  handleDateChange();
+  renderAvailabilityCalendar();
+}
+
+function closeAvailabilityCalendar() {
+  state.availabilityCalendar.isOpen = false;
+  syncAvailabilityDisplay();
+  renderAvailabilityCalendar();
+}
+
 function syncAvailabilityDisplay() {
   const updateCell = (input, display) => {
     if (!display) return;
@@ -478,6 +638,11 @@ function syncAvailabilityDisplay() {
   };
   if (elements.arrival && elements.arrivalDisplay) updateCell(elements.arrival, elements.arrivalDisplay);
   if (elements.departure && elements.departureDisplay) updateCell(elements.departure, elements.departureDisplay);
+  elements.availabilityDateFields.forEach((button) => {
+    const mode = button.dataset.availabilityDateField === "departure" ? "departure" : "arrival";
+    button.classList.toggle("is-active", state.availabilityCalendar.selectionMode === mode);
+    button.setAttribute("aria-expanded", state.availabilityCalendar.isOpen && state.availabilityCalendar.selectionMode === mode ? "true" : "false");
+  });
 }
 
 function formatCompactDate(iso) {
@@ -491,6 +656,7 @@ function formatCompactDate(iso) {
 
 export async function handleAvailabilitySubmit(event) {
   event.preventDefault();
+  closeAvailabilityCalendar();
   await fetchAvailability();
 }
 
@@ -538,6 +704,7 @@ function hasOpenOverlay() {
 }
 
 export function openRequestModal(roomId) {
+  closeAvailabilityCalendar();
   const room = findRoom(roomId);
   if (!room || room.bookingRequestsEnabled === false) return;
   state.pendingRequest = { room };
@@ -886,6 +1053,7 @@ function getAmenityGroups(room) {
 }
 
 export function openAmenitiesModal(roomId) {
+  closeAvailabilityCalendar();
   const room = findRoom(roomId);
   if (!room) return;
   elements.amenitiesTitle.textContent = "Équipements";
@@ -910,6 +1078,7 @@ export function closeAmenitiesModal() {
 }
 
 export function openLightbox(photos, index) {
+  closeAvailabilityCalendar();
   state.lightboxPhotos = photos;
   state.lightboxIndex = index;
   updateLightboxImage();
