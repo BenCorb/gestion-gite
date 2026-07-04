@@ -218,17 +218,22 @@
 
 .reservations-toolbar-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 10px;
   align-items: end;
 }
 .reservations-search { width: 100%; }
-.reservations-filter-room { min-width: 0; }
-.reservations-filter-room .field-label {
+.reservations-filter-room,
+.reservations-sort {
+  min-width: 0;
+}
+.reservations-filter-room .field-label,
+.reservations-sort .field-label {
   font-size: 11px;
   margin-bottom: 4px;
 }
-.reservations-filter-room .field-select {
+.reservations-filter-room .field-select,
+.reservations-sort .field-select {
   padding: 9px 12px;
   font-size: 14px;
 }
@@ -446,7 +451,7 @@
    ════════════════════════════════════════════════════════════════════════ */
 
 .reservations-toolbar-row {
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px) minmax(190px, 250px);
   gap: 12px;
   align-items: end;
 }

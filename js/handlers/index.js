@@ -23,7 +23,6 @@ import {
   getRoomName,
   getStatusLabel,
   hasDuplicates,
-  matchesQuickFilter,
   parseIsoDate,
   readJsonFile,
   showToast,
@@ -76,7 +75,7 @@ export function createActions(ctx) {
 
     elements.quickFilters.forEach((button) => {
       button.addEventListener("click", () => {
-        state.quickFilter = button.dataset.filter;
+        state.quickFilters = getNextQuickFilters(state.quickFilters, button.dataset.filter);
         rerender();
       });
     });
@@ -98,6 +97,10 @@ export function createActions(ctx) {
     elements.resetFormButton.addEventListener("click", resetReservationForm);
     elements.reservationSearch.addEventListener("input", rerender);
     elements.reservationFilterRoom.addEventListener("change", rerender);
+    elements.reservationSort.addEventListener("change", () => {
+      state.reservationSort = elements.reservationSort.value || "created-desc";
+      rerender();
+    });
     elements.calendarPrev.addEventListener("click", () => changeCalendarMonth(-1));
     elements.calendarToday.addEventListener("click", goToCurrentMonth);
     elements.calendarNext.addEventListener("click", () => changeCalendarMonth(1));
@@ -124,6 +127,18 @@ export function createActions(ctx) {
     elements.changePasswordButton.addEventListener("click", handlePasswordChange);
     elements.logoutButton.addEventListener("click", handleLogout);
     startAutoRefresh();
+  }
+
+  function getNextQuickFilters(currentFilters, selectedFilter) {
+    if (selectedFilter === "all") {
+      return [];
+    }
+
+    const filters = Array.isArray(currentFilters) ? currentFilters : [];
+    if (filters.includes(selectedFilter)) {
+      return filters.filter((filter) => filter !== selectedFilter);
+    }
+    return [...filters, selectedFilter];
   }
 
   async function handleReservationSubmit(event) {

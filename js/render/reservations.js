@@ -16,7 +16,7 @@ import {
   getRoomStyle,
   getStatusLabel,
   isDateInStay,
-  matchesQuickFilter,
+  matchesQuickFilters,
   parseIsoDate,
   sumAmounts,
 } from "../utils.js";
@@ -76,16 +76,24 @@ export function renderReservationsList(ctx) {
   const { actions, elements, state } = ctx;
   const roomFilter = elements.reservationFilterRoom.value;
   const search = elements.reservationSearch.value.trim().toLowerCase();
+  const reservationSort = getReservationSortValue(state.reservationSort);
+  state.reservationSort = reservationSort;
+  elements.reservationSort.value = reservationSort;
+  const quickFilters = getQuickFilters(state.quickFilters);
+  state.quickFilters = quickFilters;
   const allReservationIds = new Set(state.reservations.map((reservation) => String(reservation.id)));
   state.expandedReservationIds = (state.expandedReservationIds || []).filter((id) => allReservationIds.has(String(id)));
 
   elements.quickFilters.forEach((button) => {
-    button.classList.toggle("active", button.dataset.filter === state.quickFilter);
+    const isActive = button.dataset.filter === "all" ? !quickFilters.length : quickFilters.includes(button.dataset.filter);
+    button.classList.toggle("active", isActive);
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
   });
 
   const filtered = [...state.reservations]
     .filter((reservation) => !roomFilter || reservation.roomId === roomFilter)
-    .filter((reservation) => matchesQuickFilter(state.quickFilter, reservation))
+    .filter((reservation) => matchesQuickFilters(quickFilters, reservation))
     .filter((reservation) => {
       if (!search) {
         return true;
@@ -101,11 +109,7 @@ export function renderReservationsList(ctx) {
         .toLowerCase();
       return haystack.includes(search);
     })
-    .sort((a, b) => {
-      const dateA = new Date(a.createdAt || a.updatedAt || a.arrivalDate);
-      const dateB = new Date(b.createdAt || b.updatedAt || b.arrivalDate);
-      return dateB - dateA;
-    });
+    .sort((a, b) => compareReservations(a, b, reservationSort));
 
   if (!filtered.length) {
     elements.reservationsList.innerHTML = document.getElementById("empty-state-template").innerHTML;
@@ -249,4 +253,43 @@ function getReservationCardTitle(reservation) {
     return reservation.bookingName || "Blocage";
   }
   return reservation.clientName || reservation.bookingName;
+}
+
+function getReservationSortValue(value) {
+  return ["arrival-asc", "arrival-desc", "created-asc", "created-desc"].includes(value) ? value : "created-desc";
+}
+
+function getQuickFilters(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((filter) => filter && filter !== "all");
+}
+
+function compareReservations(a, b, sortValue) {
+  const [sortKey, direction] = sortValue.split("-");
+  const primaryA = sortKey === "arrival" ? getArrivalTime(a) : getCreatedTime(a);
+  const primaryB = sortKey === "arrival" ? getArrivalTime(b) : getCreatedTime(b);
+  const primaryResult = primaryA - primaryB;
+
+  if (primaryResult !== 0) {
+    return direction === "asc" ? primaryResult : -primaryResult;
+  }
+
+  const arrivalResult = getArrivalTime(a) - getArrivalTime(b);
+  const labelResult = getReservationSortLabel(a).localeCompare(getReservationSortLabel(b), "fr");
+
+  return arrivalResult || labelResult || String(a.id || "").localeCompare(String(b.id || ""), "fr");
+}
+
+function getArrivalTime(reservation) {
+  return parseIsoDate(reservation.arrivalDate).getTime();
+}
+
+function getCreatedTime(reservation) {
+  return new Date(reservation.createdAt || reservation.updatedAt || reservation.arrivalDate).getTime();
+}
+
+function getReservationSortLabel(reservation) {
+  return getReservationCardTitle(reservation) || "";
 }
