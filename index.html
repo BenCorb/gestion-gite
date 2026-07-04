@@ -143,16 +143,25 @@
               <span class="field-label">Chambre</span>
               <select id="reservation-filter-room" class="field-select"></select>
             </label>
+            <label class="reservations-sort">
+              <span class="field-label">Tri</span>
+              <select id="reservation-sort" class="field-select">
+                <option value="created-desc" selected>Ajout décroissant</option>
+                <option value="created-asc">Ajout croissant</option>
+                <option value="arrival-asc">Arrivée croissante</option>
+                <option value="arrival-desc">Arrivée décroissante</option>
+              </select>
+            </label>
           </div>
           <div class="chips" id="quick-filters">
-            <button class="chip filter-chip is-active active" data-filter="all" type="button">Tout</button>
-            <button class="chip filter-chip" data-filter="today" type="button">Aujourd'hui</button>
-            <button class="chip filter-chip" data-filter="upcoming" type="button">À venir</button>
-            <button class="chip filter-chip" data-filter="month" type="button">Ce mois</button>
-            <button class="chip filter-chip" data-filter="pending" type="button">En attente</button>
-            <button class="chip filter-chip" data-filter="to-pay" type="button">À payer</button>
-            <button class="chip filter-chip" data-filter="paid" type="button">Payées</button>
-            <button class="chip filter-chip" data-filter="blocks" type="button">Blocages</button>
+            <button class="chip filter-chip" data-filter="all" type="button" aria-pressed="true">Tout</button>
+            <button class="chip filter-chip" data-filter="today" type="button" aria-pressed="false">Aujourd'hui</button>
+            <button class="chip filter-chip" data-filter="upcoming" type="button" aria-pressed="false">À venir</button>
+            <button class="chip filter-chip" data-filter="month" type="button" aria-pressed="false">Ce mois</button>
+            <button class="chip filter-chip" data-filter="pending" type="button" aria-pressed="false">En attente</button>
+            <button class="chip filter-chip" data-filter="to-pay" type="button" aria-pressed="false">À payer</button>
+            <button class="chip filter-chip" data-filter="paid" type="button" aria-pressed="false">Payées</button>
+            <button class="chip filter-chip" data-filter="blocks" type="button" aria-pressed="false">Blocages</button>
           </div>
           <div id="reservations-list" class="reservation-list empty-state-host"></div>
 
