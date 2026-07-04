@@ -184,6 +184,11 @@ export function matchesQuickFilter(filter, reservation, today = new Date()) {
   return true;
 }
 
+export function matchesQuickFilters(filters, reservation, today = new Date()) {
+  const activeFilters = Array.isArray(filters) ? filters.filter((filter) => filter && filter !== "all") : [];
+  return activeFilters.every((filter) => matchesQuickFilter(filter, reservation, today));
+}
+
 export function downloadTextFile(filename, content, mimeType = "text/plain;charset=utf-8") {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
