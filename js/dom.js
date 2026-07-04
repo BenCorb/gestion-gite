@@ -29,6 +29,7 @@ export function cacheElements(elements) {
   elements.reservationsList = document.getElementById("reservations-list");
   elements.alertsList = document.getElementById("alerts-list");
   elements.reservationFilterRoom = document.getElementById("reservation-filter-room");
+  elements.reservationSort = document.getElementById("reservation-sort");
   elements.reservationSearch = document.getElementById("reservation-search");
   elements.quickFilters = [...document.querySelectorAll(".filter-chip")];
   elements.calendarGrid = document.getElementById("calendar-grid");
