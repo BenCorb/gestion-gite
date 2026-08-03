@@ -18,7 +18,8 @@ import {
   isDateInStay,
   matchesQuickFilter,
   parseIsoDate,
-  sumAmounts,
+  sumCollectedRevenue,
+  sumRecognizedRevenue,
 } from "../utils.js";
 import { icon } from "../icons.js";
 import { getBookingRequestStatusLabel, getReservationsForDate, sameDay, getReservationsForMonth, getReservationsForYear, getActiveReservations, getTotalNights, buildPlatformBreakdown, attachPhotoDragHandlers, createComparisonCard, renderBreakdownCard, renderPlatformCard, renderEmptyBreakdown, renderSimpleMetricCard, buildTopRooms, formatAverageNights } from "./report-utils.js";
@@ -76,8 +77,8 @@ function renderMonthlyReport(state, elements) {
   const previousReservations = getReservationsForMonth(state, previousDate.getFullYear(), previousDate.getMonth());
   const previousActiveReservations = getActiveReservations(previousReservations);
 
-  const totalRevenue = sumAmounts(activeReservations);
-  const collectedRevenue = sumAmounts(activeReservations.filter((reservation) => reservation.status === "paid"));
+  const totalRevenue = sumRecognizedRevenue(reservations);
+  const collectedRevenue = sumCollectedRevenue(reservations);
   const totalNights = getTotalNights(activeReservations);
   const averageRevenuePerReservation = activeReservations.length ? totalRevenue / activeReservations.length : 0;
   const averageRevenuePerNight = totalNights ? totalRevenue / totalNights : 0;
@@ -109,16 +110,17 @@ function renderMonthlyReport(state, elements) {
     .join("");
 
   const breakdown = state.settings.rooms.map((room) => {
-    const roomReservations = activeReservations.filter((reservation) => reservation.roomId === room.id);
+    const roomReservations = reservations.filter((reservation) => reservation.roomId === room.id);
+    const activeRoomReservations = getActiveReservations(roomReservations);
     return {
       room,
-      count: roomReservations.length,
-      revenue: sumAmounts(roomReservations),
-      nights: getTotalNights(roomReservations),
+      count: activeRoomReservations.length,
+      revenue: sumRecognizedRevenue(roomReservations),
+      nights: getTotalNights(activeRoomReservations),
     };
   });
 
-  const platformBreakdown = buildPlatformBreakdown(state, activeReservations, totalRevenue);
+  const platformBreakdown = buildPlatformBreakdown(state, reservations, totalRevenue);
   const monthlyComparisons = [
     createComparisonCard(
       "Réservations",
@@ -135,7 +137,7 @@ function renderMonthlyReport(state, elements) {
     createComparisonCard(
       "CA prévu",
       totalRevenue,
-      sumAmounts(previousActiveReservations),
+      sumRecognizedRevenue(previousReservations),
       state.settings.currency,
       true,
       state,
@@ -165,13 +167,13 @@ function renderYearlyReport(state, elements) {
   const reservations = getReservationsForYear(state, year);
   const activeReservations = getActiveReservations(reservations);
   const paidReservations = activeReservations.filter((reservation) => reservation.status === "paid");
-  const totalRevenue = sumAmounts(activeReservations);
-  const collectedRevenue = sumAmounts(paidReservations);
+  const totalRevenue = sumRecognizedRevenue(reservations);
+  const collectedRevenue = sumCollectedRevenue(reservations);
   const totalNights = getTotalNights(activeReservations);
   const averageRevenuePerReservation = activeReservations.length ? totalRevenue / activeReservations.length : 0;
   const averageRevenuePerNight = totalNights ? totalRevenue / totalNights : 0;
   const averageStayLength = activeReservations.length ? totalNights / activeReservations.length : 0;
-  const topRooms = buildTopRooms(state, activeReservations);
+  const topRooms = buildTopRooms(state, reservations);
 
   const stats = [
     { label: "Réservations annuelles", value: activeReservations.length },
@@ -203,13 +205,14 @@ function renderYearlyReport(state, elements) {
 
   const rows = [];
   for (let month = 0; month < 12; month += 1) {
-    const monthlyReservations = activeReservations.filter((reservation) => parseIsoDate(reservation.arrivalDate).getMonth() === month);
+    const monthlyReservations = reservations.filter((reservation) => parseIsoDate(reservation.arrivalDate).getMonth() === month);
+    const monthlyActiveReservations = getActiveReservations(monthlyReservations);
     rows.push(`
       <tr>
         <td>${new Date(year, month, 1).toLocaleDateString("fr-FR", { month: "long" })}</td>
-        <td>${monthlyReservations.length}</td>
-        <td>${getTotalNights(monthlyReservations)}</td>
-        <td>${formatCurrency(state, sumAmounts(monthlyReservations))}</td>
+        <td>${monthlyActiveReservations.length}</td>
+        <td>${getTotalNights(monthlyActiveReservations)}</td>
+        <td>${formatCurrency(state, sumRecognizedRevenue(monthlyReservations))}</td>
       </tr>
     `);
   }

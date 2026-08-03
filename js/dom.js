@@ -24,6 +24,7 @@ export function cacheElements(elements) {
   elements.platform = document.getElementById("platform");
   elements.reservationStatus = document.getElementById("reservation-status");
   elements.amount = document.getElementById("amount");
+  elements.cancellationFee = document.getElementById("cancellation-fee");
   elements.comment = document.getElementById("comment");
   elements.resetFormButton = document.getElementById("reset-form-button");
   elements.reservationsList = document.getElementById("reservations-list");
@@ -91,5 +92,6 @@ export function cacheElements(elements) {
   elements.logoutButton = document.getElementById("logout-button");
   elements.reservationOnlyFields = [...document.querySelectorAll(".reservation-only-field")];
   elements.blockOnlyFields = [...document.querySelectorAll(".block-only-field")];
+  elements.cancelledOnlyFields = [...document.querySelectorAll(".cancelled-only-field")];
   elements.toast = document.getElementById("toast");
 }
