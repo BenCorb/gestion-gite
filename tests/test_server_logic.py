@@ -21,6 +21,7 @@ from server import (
     is_admin_root_path,
     is_room_available,
     initialize_meta,
+    migrate_database,
     normalize_amenity_groups,
     rebuild_reservations,
     sync_platforms_db,
@@ -49,6 +50,7 @@ def make_reservation(
     status="confirmed",
     booking_type="reservation",
     group_id=None,
+    cancellation_fee=0,
 ):
     reservation_id = uuid.uuid4().hex
     payload = {
@@ -63,6 +65,7 @@ def make_reservation(
         "clientContact": "" if booking_type == "block" else "client@example.com",
         "platform": "" if booking_type == "block" else "Airbnb",
         "amount": 120 if booking_type == "reservation" else 0,
+        "cancellationFee": cancellation_fee,
         "comment": "",
     }
     return validate_reservation(payload, make_settings(), [])
@@ -117,6 +120,21 @@ class AdminRoutingTests(unittest.TestCase):
 
 
 class ValidateReservationTests(unittest.TestCase):
+    def test_cancelled_reservation_accepts_cancellation_fee(self):
+        reservation = make_reservation(status="cancelled", cancellation_fee=35.5)
+
+        self.assertEqual(reservation["amount"], 120)
+        self.assertEqual(reservation["cancellationFee"], 35.5)
+
+    def test_rejects_negative_cancellation_fee(self):
+        with self.assertRaisesRegex(ValueError, "frais d'annulation"):
+            make_reservation(status="cancelled", cancellation_fee=-1)
+
+    def test_active_reservation_clears_cancellation_fee(self):
+        reservation = make_reservation(status="confirmed", cancellation_fee=35.5)
+
+        self.assertEqual(reservation["cancellationFee"], 0)
+
     def test_rejects_overlap_with_active_reservation(self):
         existing = [make_reservation(arrival="2026-05-10", departure="2026-05-14")]
         payload = {
@@ -156,6 +174,20 @@ class ValidateReservationTests(unittest.TestCase):
 
         self.assertEqual(reservation["status"], "confirmed")
         self.assertEqual(reservation["roomId"], "chambre-1")
+
+    def test_allows_cancelled_reservation_to_overlap_active_reservation(self):
+        existing = [make_reservation(arrival="2026-05-10", departure="2026-05-14")]
+        cancelled = make_reservation(
+            arrival="2026-05-12",
+            departure="2026-05-15",
+            status="cancelled",
+            cancellation_fee=25,
+        )
+
+        reservation = validate_reservation(cancelled, make_settings(), existing)
+
+        self.assertEqual(reservation["status"], "cancelled")
+        self.assertEqual(reservation["cancellationFee"], 25)
 
 
 class PublicBookingRequestTests(unittest.TestCase):
@@ -338,6 +370,7 @@ class RoomAvailabilityCalendarTests(unittest.TestCase):
                 client_contact TEXT NOT NULL,
                 platform TEXT NOT NULL,
                 amount REAL NOT NULL,
+                cancellation_fee REAL NOT NULL DEFAULT 0,
                 comment TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
@@ -443,6 +476,56 @@ class BuildReservationsTests(unittest.TestCase):
             ["2026-07-01", "2026-07-12"],
         )
 
+    def test_rebuild_legacy_cancelled_reservation_defaults_fee_to_zero(self):
+        reservation = make_reservation(status="cancelled", cancellation_fee=20)
+        reservation.pop("cancellationFee")
+
+        rebuilt = rebuild_reservations([reservation], make_settings())
+
+        self.assertEqual(rebuilt[0]["cancellationFee"], 0)
+
+
+class ReservationMigrationTests(unittest.TestCase):
+    def test_adds_cancellation_fee_to_existing_reservations_table(self):
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        conn.executescript(
+            """
+            CREATE TABLE rooms (id TEXT PRIMARY KEY);
+            CREATE TABLE room_photos (room_id TEXT NOT NULL);
+            CREATE TABLE booking_requests (room_id TEXT NOT NULL);
+            CREATE TABLE admin_sessions (
+                token_hash TEXT PRIMARY KEY,
+                session_revision TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+            CREATE TABLE reservations (
+                id TEXT PRIMARY KEY,
+                group_id TEXT,
+                booking_type TEXT NOT NULL,
+                status TEXT NOT NULL,
+                booking_name TEXT NOT NULL,
+                room_id TEXT NOT NULL,
+                arrival_date TEXT NOT NULL,
+                departure_date TEXT NOT NULL,
+                client_name TEXT NOT NULL,
+                client_contact TEXT NOT NULL,
+                platform TEXT NOT NULL,
+                amount REAL NOT NULL,
+                comment TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            """
+        )
+
+        migrate_database(conn)
+
+        columns = {row["name"]: row for row in conn.execute("PRAGMA table_info(reservations)")}
+        self.assertIn("cancellation_fee", columns)
+        self.assertEqual(columns["cancellation_fee"]["dflt_value"], "0")
+        conn.close()
+
 
 class ReservationPersistenceTests(unittest.TestCase):
     def setUp(self):
@@ -467,6 +550,7 @@ class ReservationPersistenceTests(unittest.TestCase):
                 client_contact TEXT NOT NULL,
                 platform TEXT NOT NULL,
                 amount REAL NOT NULL,
+                cancellation_fee REAL NOT NULL DEFAULT 0,
                 comment TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
@@ -492,6 +576,14 @@ class ReservationPersistenceTests(unittest.TestCase):
         self.assertEqual(len(stored), 1)
         self.assertEqual(stored[0]["status"], "paid")
         self.assertEqual(stored[0]["comment"], "Encaissement reçu")
+
+    def test_cancelled_reservation_fee_round_trips(self):
+        reservation = make_reservation(status="cancelled", cancellation_fee=42.75)
+
+        upsert_reservations_db(self.conn, [reservation])
+        stored = fetch_reservations(self.conn)
+
+        self.assertEqual(stored[0]["cancellationFee"], 42.75)
 
     def test_delete_group_removes_only_target_group(self):
         group_id = uuid.uuid4().hex

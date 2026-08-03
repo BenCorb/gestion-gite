@@ -18,7 +18,7 @@ import {
   isDateInStay,
   matchesQuickFilter,
   parseIsoDate,
-  sumAmounts,
+  sumRecognizedRevenue,
 } from "../utils.js";
 import { icon } from "../icons.js";
 
@@ -75,11 +75,12 @@ export function buildPlatformBreakdown(state, reservations, totalRevenue) {
   return state.settings.platforms
     .map((platform) => {
       const platformReservations = reservations.filter((reservation) => reservation.platform === platform);
-      const revenue = sumAmounts(platformReservations);
+      const activePlatformReservations = getActiveReservations(platformReservations);
+      const revenue = sumRecognizedRevenue(platformReservations);
       const share = totalRevenue ? (revenue / totalRevenue) * 100 : 0;
       return {
         platform,
-        reservations: platformReservations.length,
+        reservations: activePlatformReservations.length,
         revenue,
         share,
       };
@@ -181,11 +182,12 @@ export function renderSimpleMetricCard(label, title, detail) {
 export function buildTopRooms(state, reservations) {
   const roomMetrics = state.settings.rooms.map((room) => {
     const roomReservations = reservations.filter((reservation) => reservation.roomId === room.id);
+    const activeRoomReservations = getActiveReservations(roomReservations);
     return {
       room,
-      count: roomReservations.length,
-      nights: getTotalNights(roomReservations),
-      revenue: sumAmounts(roomReservations),
+      count: activeRoomReservations.length,
+      nights: getTotalNights(activeRoomReservations),
+      revenue: sumRecognizedRevenue(roomReservations),
     };
   });
 
