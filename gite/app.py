@@ -3,6 +3,7 @@ from __future__ import annotations
 import collections
 import json
 import logging
+import math
 import os
 import re
 import socket
@@ -176,6 +177,7 @@ def ensure_database() -> None:
                 client_contact TEXT NOT NULL,
                 platform TEXT NOT NULL,
                 amount REAL NOT NULL,
+                cancellation_fee REAL NOT NULL DEFAULT 0,
                 comment TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
@@ -259,6 +261,10 @@ def migrate_database(conn: sqlite3.Connection) -> None:
     for column, statement in migrations.items():
         if column not in columns:
             conn.execute(statement)
+
+    reservation_columns = {row["name"] for row in conn.execute("PRAGMA table_info(reservations)").fetchall()}
+    if "cancellation_fee" not in reservation_columns:
+        conn.execute("ALTER TABLE reservations ADD COLUMN cancellation_fee REAL NOT NULL DEFAULT 0")
 
     session_cols = {row["name"] for row in conn.execute("PRAGMA table_info(admin_sessions)").fetchall()}
     if "expires_at" not in session_cols:
@@ -535,11 +541,15 @@ def normalize_reservations(reservations: list[dict]) -> list[dict]:
             status = "blocked"
         elif status not in ALLOWED_RESERVATION_STATUSES:
             status = "confirmed"
+        cancellation_fee = reservation.get("cancellationFee", 0)
+        if booking_type != "reservation" or status != "cancelled":
+            cancellation_fee = 0
         normalized.append(
             {
                 **reservation,
                 "bookingType": booking_type,
                 "status": status,
+                "cancellationFee": cancellation_fee,
             }
         )
     return normalized
@@ -670,6 +680,7 @@ def fetch_reservations(conn: sqlite3.Connection) -> list[dict]:
             client_contact,
             platform,
             amount,
+            cancellation_fee,
             comment,
             created_at,
             updated_at
@@ -692,6 +703,7 @@ def fetch_reservations(conn: sqlite3.Connection) -> list[dict]:
                 "clientContact": row["client_contact"],
                 "platform": row["platform"],
                 "amount": row["amount"],
+                "cancellationFee": row["cancellation_fee"],
                 "comment": row["comment"],
                 "createdAt": row["created_at"],
                 "updatedAt": row["updated_at"],
@@ -1127,6 +1139,7 @@ def reservation_to_db_row(reservation: dict) -> tuple:
         reservation["clientContact"],
         reservation["platform"],
         float(reservation["amount"]),
+        float(reservation.get("cancellationFee", 0)),
         reservation["comment"],
         reservation["createdAt"],
         reservation["updatedAt"],
@@ -1151,11 +1164,12 @@ def upsert_reservations_db(conn: sqlite3.Connection, reservations: list[dict]) -
             client_contact,
             platform,
             amount,
+            cancellation_fee,
             comment,
             created_at,
             updated_at
         )
-        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             group_id = excluded.group_id,
             booking_type = excluded.booking_type,
@@ -1168,6 +1182,7 @@ def upsert_reservations_db(conn: sqlite3.Connection, reservations: list[dict]) -
             client_contact = excluded.client_contact,
             platform = excluded.platform,
             amount = excluded.amount,
+            cancellation_fee = excluded.cancellation_fee,
             comment = excluded.comment,
             created_at = excluded.created_at,
             updated_at = excluded.updated_at
@@ -1313,6 +1328,15 @@ def validate_reservation(payload: dict, settings: dict, reservations: list[dict]
     if booking_type == "block":
         amount = 0
 
+    try:
+        cancellation_fee = float(payload.get("cancellationFee", 0) or 0)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Les frais d'annulation sont invalides.") from exc
+    if not math.isfinite(cancellation_fee) or cancellation_fee < 0:
+        raise ValueError("Les frais d'annulation doivent être un montant positif ou nul.")
+    if booking_type != "reservation" or status != "cancelled":
+        cancellation_fee = 0
+
     existing_reservation = next(
         (reservation for reservation in reservations if reservation["id"] == reservation_id),
         None,
@@ -1323,17 +1347,18 @@ def validate_reservation(payload: dict, settings: dict, reservations: list[dict]
         or get_next_booking_name(reservations, booking_type)
     )
 
-    for reservation in reservations:
-        if reservation["roomId"] != room_id or reservation["id"] == reservation_id:
-            continue
-        if str(reservation.get("status", "")).strip() == "cancelled":
-            continue
-        existing_arrival = datetime.strptime(reservation["arrivalDate"], "%Y-%m-%d")
-        existing_departure = datetime.strptime(reservation["departureDate"], "%Y-%m-%d")
-        if periods_overlap(arrival, departure, existing_arrival, existing_departure):
-            raise ValueError(
-                f'Chevauchement avec la reservation "{reservation["bookingName"]}" pour cette chambre.'
-            )
+    if status != "cancelled":
+        for reservation in reservations:
+            if reservation["roomId"] != room_id or reservation["id"] == reservation_id:
+                continue
+            if str(reservation.get("status", "")).strip() == "cancelled":
+                continue
+            existing_arrival = datetime.strptime(reservation["arrivalDate"], "%Y-%m-%d")
+            existing_departure = datetime.strptime(reservation["departureDate"], "%Y-%m-%d")
+            if periods_overlap(arrival, departure, existing_arrival, existing_departure):
+                raise ValueError(
+                    f'Chevauchement avec la reservation "{reservation["bookingName"]}" pour cette chambre.'
+                )
 
     now = datetime.now().isoformat(timespec="seconds")
     created_at = (
@@ -1358,6 +1383,7 @@ def validate_reservation(payload: dict, settings: dict, reservations: list[dict]
         "clientContact": client_contact,
         "platform": platform,
         "amount": amount,
+        "cancellationFee": cancellation_fee,
         "comment": comment,
         "createdAt": created_at,
         "updatedAt": updated_at,
