@@ -177,6 +177,70 @@ class HttpIntegrationTests(unittest.TestCase):
         self.assertEqual(len(result["reservations"]), 1)
         self.assertEqual(result["reservations"][0]["roomId"], "chambre-1")
 
+    def test_cancelled_reservation_fee_is_exposed_and_cleared_on_reactivation(self):
+        cookie = self.login()
+        _, _, state = self.request("GET", "/api/state", cookie=cookie)
+        payload = {
+            "id": "cancelled-fee",
+            "bookingType": "reservation",
+            "status": "cancelled",
+            "roomId": "chambre-1",
+            "arrivalDate": "2026-11-10",
+            "departureDate": "2026-11-12",
+            "clientName": "Client Annulé",
+            "clientContact": "client@example.com",
+            "platform": state["settings"]["platforms"][0],
+            "amount": 240,
+            "cancellationFee": 48.5,
+            "comment": "Annulation tardive",
+            "_versions": state["versions"],
+        }
+
+        status, _, saved = self.request("POST", "/api/reservations", payload, cookie=cookie)
+
+        self.assertEqual(status, 200)
+        reservation = next(item for item in saved["reservations"] if item["id"] == "cancelled-fee")
+        self.assertEqual(reservation["cancellationFee"], 48.5)
+        _, _, backup = self.request("GET", "/api/backup", cookie=cookie)
+        backed_up = next(item for item in backup["reservations"] if item["id"] == "cancelled-fee")
+        self.assertEqual(backed_up["cancellationFee"], 48.5)
+
+        reservation["status"] = "confirmed"
+        reservation["cancellationFee"] = 48.5
+        reservation["_versions"] = saved["versions"]
+        status, _, reactivated = self.request("POST", "/api/reservations", reservation, cookie=cookie)
+
+        self.assertEqual(status, 200)
+        updated = next(item for item in reactivated["reservations"] if item["id"] == "cancelled-fee")
+        self.assertEqual(updated["cancellationFee"], 0)
+
+    def test_restore_legacy_reservation_defaults_cancellation_fee_to_zero(self):
+        cookie = self.login()
+        _, _, state = self.request("GET", "/api/state", cookie=cookie)
+        legacy_reservation = {
+            "id": "legacy-cancelled",
+            "bookingType": "reservation",
+            "status": "cancelled",
+            "roomId": "chambre-1",
+            "arrivalDate": "2026-12-01",
+            "departureDate": "2026-12-03",
+            "clientName": "Ancien client",
+            "clientContact": "ancien@example.com",
+            "platform": state["settings"]["platforms"][0],
+            "amount": 180,
+            "comment": "Ancienne sauvegarde",
+        }
+
+        status, _, restored = self.request(
+            "POST",
+            "/api/restore",
+            {"settings": state["settings"], "reservations": [legacy_reservation]},
+            cookie=cookie,
+        )
+
+        self.assertEqual(status, 200)
+        self.assertEqual(restored["reservations"][0]["cancellationFee"], 0)
+
     def test_upload_multipart_valid_and_invalid(self):
         cookie = self.login()
         body, headers = self._multipart(PNG_1X1, "image/png")

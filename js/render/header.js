@@ -18,7 +18,7 @@ import {
   isDateInStay,
   matchesQuickFilter,
   parseIsoDate,
-  sumAmounts,
+  sumRecognizedRevenue,
 } from "../utils.js";
 import { icon } from "../icons.js";
 import { getBookingRequestStatusLabel, getReservationsForDate, sameDay, getReservationsForMonth, getReservationsForYear, getActiveReservations, getTotalNights, buildPlatformBreakdown, attachPhotoDragHandlers, createComparisonCard, renderBreakdownCard, renderPlatformCard, renderEmptyBreakdown, renderSimpleMetricCard, buildTopRooms, formatAverageNights } from "./report-utils.js";
@@ -54,17 +54,19 @@ export function renderTabBadges(state) {
 
 export function renderTopStats(state, elements) {
   const today = new Date();
-  const reservationsOnly = getReservationsByType(state, "reservation").filter(
+  const reservationsOnly = getReservationsByType(state, "reservation");
+  const activeReservations = reservationsOnly.filter(
     (reservation) => reservation.status !== "cancelled",
   );
-  const arrivalsToday = reservationsOnly.filter((r) => sameDay(parseIsoDate(r.arrivalDate), today));
+  const arrivalsToday = activeReservations.filter((r) => sameDay(parseIsoDate(r.arrivalDate), today));
   const pendingRequests = (state.bookingRequests || []).filter((r) => r.status === "new").length;
   const currentMonthKey = `${today.getFullYear()}-${today.getMonth() + 1}`;
   const thisMonth = reservationsOnly.filter((reservation) => {
     const date = parseIsoDate(reservation.arrivalDate);
     return `${date.getFullYear()}-${date.getMonth() + 1}` === currentMonthKey;
   });
-  const monthRevenue = sumAmounts(thisMonth);
+  const activeThisMonth = thisMonth.filter((reservation) => reservation.status !== "cancelled");
+  const monthRevenue = sumRecognizedRevenue(thisMonth);
   const stats = [
     {
       label: "Arrivées aujourd'hui",
@@ -82,7 +84,7 @@ export function renderTopStats(state, elements) {
     {
       label: "CA du mois",
       value: formatCurrency(state, monthRevenue),
-      meta: `${thisMonth.length} réservation${thisMonth.length > 1 ? "s" : ""}`,
+      meta: `${activeThisMonth.length} réservation${activeThisMonth.length > 1 ? "s" : ""}`,
       tone: "positive",
     },
   ];

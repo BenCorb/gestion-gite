@@ -93,6 +93,7 @@ export function createActions(ctx) {
     });
     document.addEventListener("keydown", handleReservationModalKeydown);
     elements.bookingType.addEventListener("change", handleBookingTypeChange);
+    elements.reservationStatus.addEventListener("change", handleReservationStatusChange);
     elements.reservationForm.addEventListener("submit", handleReservationSubmit);
     elements.resetFormButton.addEventListener("click", resetReservationForm);
     elements.reservationSearch.addEventListener("input", rerender);
@@ -160,6 +161,10 @@ export function createActions(ctx) {
       clientContact: isBlock ? "" : elements.clientContact.value.trim(),
       platform: isBlock ? "" : elements.platform.value,
       amount: isBlock ? 0 : Number(elements.amount.value),
+      cancellationFee:
+        !isBlock && elements.reservationStatus.value === "cancelled"
+          ? Number(elements.cancellationFee.value || 0)
+          : 0,
       comment: elements.comment.value.trim(),
       _versions: state.versions,
     };
@@ -176,24 +181,27 @@ export function createActions(ctx) {
 
     const targetRoomIds = isBlock ? blockRoomIds : [payload.roomId];
     const ignoredGroupId = payload.groupId || "";
-    const conflictingReservation = state.reservations.find((reservation) => {
-      if (!targetRoomIds.includes(reservation.roomId)) {
-        return false;
-      }
-      if (getEntryType(reservation) === "reservation" && reservation.status === "cancelled") {
-        return false;
-      }
-      if (payload.id && reservation.id === payload.id) {
-        return false;
-      }
-      if (ignoredGroupId && reservation.groupId === ignoredGroupId) {
-        return false;
-      }
-      return (
-        parseIsoDate(payload.arrivalDate) < parseIsoDate(reservation.departureDate) &&
-        parseIsoDate(payload.departureDate) > parseIsoDate(reservation.arrivalDate)
-      );
-    });
+    const conflictingReservation =
+      !isBlock && payload.status === "cancelled"
+        ? null
+        : state.reservations.find((reservation) => {
+            if (!targetRoomIds.includes(reservation.roomId)) {
+              return false;
+            }
+            if (getEntryType(reservation) === "reservation" && reservation.status === "cancelled") {
+              return false;
+            }
+            if (payload.id && reservation.id === payload.id) {
+              return false;
+            }
+            if (ignoredGroupId && reservation.groupId === ignoredGroupId) {
+              return false;
+            }
+            return (
+              parseIsoDate(payload.arrivalDate) < parseIsoDate(reservation.departureDate) &&
+              parseIsoDate(payload.departureDate) > parseIsoDate(reservation.arrivalDate)
+            );
+          });
 
     if (conflictingReservation) {
       showToast(
@@ -227,6 +235,7 @@ export function createActions(ctx) {
     elements.formModeBadge.textContent = "Nouveau";
     elements.bookingType.value = "reservation";
     elements.reservationStatus.value = "pending";
+    elements.cancellationFee.value = "0";
     renderReservationFormOptions({ ...ctx, actions });
     applyBookingTypeFormState("reservation");
   }
@@ -335,6 +344,7 @@ export function createActions(ctx) {
     elements.platform.value = reservation.platform;
     elements.reservationStatus.value = reservation.status || "confirmed";
     elements.amount.value = reservation.amount;
+    elements.cancellationFee.value = reservation.cancellationFee || 0;
     elements.comment.value = reservation.comment || "";
     elements.formModeBadge.textContent = "Édition";
     applyBookingTypeFormState(elements.bookingType.value);
@@ -517,6 +527,7 @@ export function createActions(ctx) {
       "Contact",
       "Plateforme",
       "Montant",
+      "Frais d'annulation encaissés",
       "Commentaire",
     ];
     const rows = reservations.map((reservation) => [
@@ -529,6 +540,7 @@ export function createActions(ctx) {
       reservation.clientContact,
       reservation.platform,
       String(reservation.amount ?? 0),
+      String(reservation.cancellationFee ?? 0),
       reservation.comment || "",
     ]);
     const csv = [header, ...rows]
@@ -849,6 +861,10 @@ export function createActions(ctx) {
     applyBookingTypeFormState(elements.bookingType.value);
   }
 
+  function handleReservationStatusChange() {
+    applyCancellationFeeFormState({ clearWhenHidden: true });
+  }
+
   function applyBookingTypeFormState(type) {
     const isBlock = type === "block";
     elements.reservationOnlyFields.forEach((field) => {
@@ -872,6 +888,22 @@ export function createActions(ctx) {
       elements.platform.value = "";
     } else if (!elements.platform.value && state.settings?.platforms?.[0]) {
       elements.platform.value = state.settings.platforms[0];
+    }
+
+    applyCancellationFeeFormState({ clearWhenHidden: isBlock });
+  }
+
+  function applyCancellationFeeFormState({ clearWhenHidden = false } = {}) {
+    const isCancelled =
+      elements.bookingType.value === "reservation" && elements.reservationStatus.value === "cancelled";
+    elements.cancelledOnlyFields.forEach((field) => {
+      field.classList.toggle("is-hidden", !isCancelled);
+    });
+    elements.cancellationFee.disabled = !isCancelled;
+    if (!isCancelled && clearWhenHidden) {
+      elements.cancellationFee.value = "0";
+    } else if (isCancelled && elements.cancellationFee.value === "") {
+      elements.cancellationFee.value = "0";
     }
   }
 

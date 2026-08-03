@@ -11,6 +11,32 @@ export function sumAmounts(reservations) {
   return reservations.reduce((sum, reservation) => sum + Number(reservation.amount || 0), 0);
 }
 
+export function getRecognizedRevenue(reservation) {
+  if (getEntryType(reservation) !== "reservation") {
+    return 0;
+  }
+  if (reservation.status === "cancelled") {
+    return Number(reservation.cancellationFee || 0);
+  }
+  return Number(reservation.amount || 0);
+}
+
+export function sumRecognizedRevenue(reservations) {
+  return reservations.reduce((sum, reservation) => sum + getRecognizedRevenue(reservation), 0);
+}
+
+export function sumCollectedRevenue(reservations) {
+  return reservations.reduce((sum, reservation) => {
+    if (getEntryType(reservation) !== "reservation") {
+      return sum;
+    }
+    if (reservation.status === "cancelled") {
+      return sum + Number(reservation.cancellationFee || 0);
+    }
+    return reservation.status === "paid" ? sum + Number(reservation.amount || 0) : sum;
+  }, 0);
+}
+
 export function countBy(items, getKey) {
   return items.reduce((accumulator, item) => {
     const key = getKey(item);
