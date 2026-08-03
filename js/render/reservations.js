@@ -150,7 +150,9 @@ export function renderReservationsList(ctx) {
             <div class="reservation-summary-end">
               ${
                 getEntryType(reservation) === "reservation"
-                  ? `<strong class="reservation-summary-amount">${formatCurrency(state, Number(reservation.amount || 0))}</strong>`
+                  ? reservation.status === "cancelled"
+                    ? `<strong class="reservation-summary-amount">Frais encaissés : ${formatCurrency(state, Number(reservation.cancellationFee || 0))}</strong>`
+                    : `<strong class="reservation-summary-amount">${formatCurrency(state, Number(reservation.amount || 0))}</strong>`
                   : `<strong class="reservation-summary-amount">Blocage</strong>`
               }
               <span class="reservation-toggle-text">Détails</span>
@@ -168,9 +170,17 @@ export function renderReservationsList(ctx) {
                 <span>${escapeHtml(reservation.clientContact || "-")}</span>
               </div>
               <div>
-                <strong>Montant</strong>
+                <strong>Montant du séjour</strong>
                 <span>${formatCurrency(state, Number(reservation.amount || 0))}</span>
               </div>
+              ${
+                getEntryType(reservation) === "reservation" && reservation.status === "cancelled"
+                  ? `<div>
+                      <strong>Frais d'annulation encaissés</strong>
+                      <span>${formatCurrency(state, Number(reservation.cancellationFee || 0))}</span>
+                    </div>`
+                  : ""
+              }
               <div>
                 <strong>Nuits</strong>
                 <span>${calculateNights(reservation.arrivalDate, reservation.departureDate)}</span>
