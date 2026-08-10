@@ -7,6 +7,7 @@ from .app import (
     ALLOWED_IMAGE_TYPES,
     ALLOWED_RESERVATION_STATUSES,
     BASE_DIR,
+    BACKUP_DIR,
     DATA_DIR,
     DB_FILE,
     DEFAULT_RESERVATIONS,
@@ -22,4 +23,3 @@ from .app import (
     SESSION_DAYS,
     UPLOADS_DIR,
 )
-

@@ -6,6 +6,7 @@ data/*.sqlite3-shm
 data/*.sqlite3-wal
 data/*.db
 data/*.json
+data/backups/
 data/uploads/
 favicon.png
 
