@@ -5,10 +5,11 @@ import { renderPlanning } from "./planning.js";
 import { renderReports, initializeReportControls } from "./reports.js";
 import { renderBookingRequests } from "./requests.js";
 import { renderReservationFormOptions, renderReservationsList } from "./reservations.js";
-import { renderSettingsForm } from "./settings.js";
+import { renderSeoPanel, renderSettingsForm } from "./settings.js";
 
 export { initializeReportControls } from "./reports.js";
 export { renderReservationFormOptions } from "./reservations.js";
+export { renderSeoPanel } from "./settings.js";
 
 export function renderApp(ctx) {
   renderHeader(ctx.state, ctx.elements);

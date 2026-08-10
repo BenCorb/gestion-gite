@@ -23,6 +23,83 @@ import {
 import { icon } from "../icons.js";
 import { getBookingRequestStatusLabel, getReservationsForDate, sameDay, getReservationsForMonth, getReservationsForYear, getActiveReservations, getTotalNights, buildPlatformBreakdown, attachPhotoDragHandlers, createComparisonCard, renderBreakdownCard, renderPlatformCard, renderEmptyBreakdown, renderSimpleMetricCard, buildTopRooms, formatAverageNights } from "./report-utils.js";
 
+function collapseSeoText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function shortenSeoDescription(value, limit = 160) {
+  const text = collapseSeoText(value);
+  if (text.length <= limit) return text;
+  const words = text.slice(0, limit - 1).replace(/[ ,;:-]+$/, "").split(" ");
+  if (words.length > 1) words.pop();
+  return `${words.join(" ")}…`;
+}
+
+function getSeoPresentation(settings) {
+  const site = settings.site || {};
+  const seo = site.seo || {};
+  const address = site.addressDetails || {};
+  const locality = collapseSeoText(address.addressLocality);
+  const automaticTitle = `${locality ? `Chambres d’hôtes à ${locality}` : "Chambres d’hôtes"} | ${settings.propertyName || "Mon gîte"}`;
+  return {
+    title: collapseSeoText(seo.titleOverride) || automaticTitle,
+    description: shortenSeoDescription(
+      seo.descriptionOverride || site.intro || site.giteDescription || settings.description || "",
+    ),
+  };
+}
+
+function getSeoReadiness(settings) {
+  const site = settings.site || {};
+  const seo = site.seo || {};
+  const address = site.addressDetails || {};
+  const presentation = getSeoPresentation(settings);
+  const errors = [];
+  const warnings = [];
+  let validUrl = false;
+  try {
+    const url = new URL(seo.publicUrl || "");
+    const isLocal = ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+    validUrl = (url.protocol === "https:" || (isLocal && url.protocol === "http:"))
+      && url.pathname === "/" && !url.search && !url.hash;
+  } catch (_) {
+    validUrl = false;
+  }
+  if (!validUrl) errors.push("URL publique HTTPS à la racine du domaine");
+  if (["", "mon gîte", "mon gite"].includes(collapseSeoText(settings.propertyName).toLowerCase())) errors.push("nom du gîte personnalisé");
+  if (!address.streetAddress || !address.postalCode || !address.addressLocality || !address.addressCountry) errors.push("adresse structurée complète");
+  if (!presentation.description) errors.push("introduction ou présentation");
+  if (!(settings.rooms || []).some((room) => room.publicVisible !== false)) errors.push("au moins une chambre publique");
+  const publicRooms = (settings.rooms || []).filter((room) => room.publicVisible !== false);
+  if (!site.heroImageUrl && !(site.gitePhotos || []).length && !publicRooms.some((room) => (room.photos || []).length)) warnings.push("image sociale manquante");
+  if (!site.phone) warnings.push("téléphone public manquant");
+  if (!site.email) warnings.push("email public manquant");
+  if (publicRooms.some((room) => !room.description)) warnings.push("description détaillée manquante pour certaines chambres");
+  return { errors, warnings, presentation };
+}
+
+export function renderSeoPanel(elements, settings) {
+  const seo = settings.site?.seo || {};
+  const readiness = getSeoReadiness(settings);
+  elements.seoTitlePreview.textContent = readiness.presentation.title;
+  elements.seoUrlPreview.textContent = seo.publicUrl || "https://votre-domaine.fr/";
+  elements.seoDescriptionPreview.textContent = readiness.presentation.description || "La description apparaîtra ici.";
+  elements.seoPublishButton.textContent = seo.published ? "Dépublier des moteurs" : "Publier la vitrine";
+  elements.seoPublishButton.className = seo.published ? "danger-button" : "primary-button";
+  elements.seoReadiness.innerHTML = `
+    <strong>${seo.published ? "Vitrine indexable" : "Vitrine non publiée"}</strong>
+    ${readiness.errors.length ? `<p>${seo.published ? "Configuration historique à compléter" : "Avant publication"} : ${readiness.errors.map(escapeHtml).join(" · ")}</p>` : "<p>Les informations obligatoires sont prêtes.</p>"}
+    ${readiness.warnings.length ? `<p class="meta">Conseils : ${readiness.warnings.map(escapeHtml).join(" · ")}</p>` : ""}
+  `;
+  elements.seoReadiness.dataset.state = seo.published ? (readiness.errors.length ? "legacy" : "published") : "draft";
+  elements.seoChecklist.classList.toggle("is-hidden", !seo.published);
+  try {
+    elements.seoSitemapLink.href = new URL("sitemap.xml", seo.publicUrl).href;
+  } catch (_) {
+    elements.seoSitemapLink.href = "/sitemap.xml";
+  }
+}
+
 export function renderSettingsForm(ctx) {
   const { actions, elements, state } = ctx;
   elements.propertyNameInput.value = state.settings.propertyName;
@@ -32,7 +109,17 @@ export function renderSettingsForm(ctx) {
   elements.siteIntroInput.value = state.settings.site?.intro || "";
   elements.siteGiteTitleInput.value = state.settings.site?.giteTitle || "Le gîte";
   elements.siteGiteDescriptionInput.value = state.settings.site?.giteDescription || "";
-  elements.siteAddressInput.value = state.settings.site?.address || "";
+  const address = state.settings.site?.addressDetails || {};
+  const seo = state.settings.site?.seo || {};
+  elements.siteAddressStreetInput.value = address.streetAddress || "";
+  elements.siteAddressPostalCodeInput.value = address.postalCode || "";
+  elements.siteAddressLocalityInput.value = address.addressLocality || "";
+  elements.siteAddressRegionInput.value = address.addressRegion || "";
+  elements.siteAddressCountryInput.value = address.addressCountry || "FR";
+  elements.seoPublicUrlInput.value = seo.publicUrl || "";
+  elements.seoTitleOverrideInput.value = seo.titleOverride || "";
+  elements.seoDescriptionOverrideInput.value = seo.descriptionOverride || "";
+  elements.seoPublishedInput.value = seo.published ? "true" : "false";
   elements.sitePhoneInput.value = state.settings.site?.phone || "";
   elements.siteEmailInput.value = state.settings.site?.email || "";
   elements.notifyEmailInput.value  = state.settings.notifications?.notifyEmail  || "";
@@ -47,6 +134,7 @@ export function renderSettingsForm(ctx) {
   elements.siteHeadingFontSelect.value = state.settings.site?.headingFont || "playfair";
   elements.siteLogoUrl.value = state.settings.site?.logoUrl || "";
   elements.siteHeroUrl.value = state.settings.site?.heroImageUrl || "";
+  renderSeoPanel(elements, state.settings);
   elements.siteMediaPreview.innerHTML = [
     state.settings.site?.logoUrl ? `<img src="${escapeHtml(state.settings.site.logoUrl)}" alt="Logo" />` : "",
     state.settings.site?.heroImageUrl ? `<img src="${escapeHtml(state.settings.site.heroImageUrl)}" alt="Photo principale" />` : "",

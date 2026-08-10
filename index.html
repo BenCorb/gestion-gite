@@ -508,9 +508,25 @@
                       <span>Présentation du gîte</span>
                       <textarea id="site-gite-description-input" rows="4"></textarea>
                     </label>
+                    <label class="full-width">
+                      <span>Rue et numéro</span>
+                      <input id="site-address-street-input" type="text" autocomplete="street-address" />
+                    </label>
                     <label>
-                      <span>Adresse</span>
-                      <input id="site-address-input" type="text" />
+                      <span>Code postal</span>
+                      <input id="site-address-postal-code-input" type="text" autocomplete="postal-code" />
+                    </label>
+                    <label>
+                      <span>Commune</span>
+                      <input id="site-address-locality-input" type="text" autocomplete="address-level2" />
+                    </label>
+                    <label>
+                      <span>Région</span>
+                      <input id="site-address-region-input" type="text" autocomplete="address-level1" />
+                    </label>
+                    <label>
+                      <span>Pays (code ISO)</span>
+                      <input id="site-address-country-input" type="text" maxlength="2" value="FR" autocomplete="country" />
                     </label>
                     <label>
                       <span>Téléphone</span>
@@ -558,6 +574,49 @@
                     <input id="site-hero-url" type="hidden" />
                     <div class="full-width media-preview" id="site-media-preview"></div>
                     <div class="full-width media-preview" id="site-gite-photos-preview"></div>
+                  </div>
+                </div>
+
+                <div class="full-width settings-section seo-settings-section">
+                  <div class="section-header">
+                    <div>
+                      <h3>Référencement et publication</h3>
+                      <p class="meta">Prépare les informations visibles par les moteurs de recherche et les aperçus sociaux.</p>
+                    </div>
+                  </div>
+                  <div class="form-grid">
+                    <label class="full-width">
+                      <span>URL publique officielle</span>
+                      <input id="seo-public-url-input" type="url" placeholder="https://mon-gite.fr/" />
+                    </label>
+                    <label class="full-width">
+                      <span>Titre SEO personnalisé (facultatif)</span>
+                      <input id="seo-title-override-input" type="text" placeholder="Généré depuis le type, la commune et le nom" />
+                    </label>
+                    <label class="full-width">
+                      <span>Description SEO personnalisée (facultatif)</span>
+                      <textarea id="seo-description-override-input" rows="3" placeholder="Générée depuis l’introduction ou la présentation"></textarea>
+                    </label>
+                    <input id="seo-published-input" type="hidden" value="false" />
+                    <div class="full-width seo-preview" aria-live="polite">
+                      <span class="field-label">Aperçu du résultat</span>
+                      <strong id="seo-title-preview"></strong>
+                      <span id="seo-url-preview" class="meta"></span>
+                      <p id="seo-description-preview"></p>
+                    </div>
+                    <div id="seo-readiness" class="full-width seo-readiness"></div>
+                    <div class="form-actions full-width">
+                      <button class="primary-button" id="seo-publish-button" type="button">Publier la vitrine</button>
+                    </div>
+                    <div id="seo-checklist" class="full-width seo-checklist">
+                      <h4>Après publication</h4>
+                      <ol>
+                        <li><a id="seo-sitemap-link" href="/sitemap.xml" target="_blank" rel="noopener">Vérifier le sitemap</a> et sa présence dans <code>robots.txt</code>.</li>
+                        <li><a href="https://search.google.com/search-console" target="_blank" rel="noopener">Ajouter le domaine dans Search Console</a>, soumettre le sitemap et inspecter la page d’accueil.</li>
+                        <li><a href="https://search.google.com/test/rich-results" target="_blank" rel="noopener">Tester les données structurées</a>.</li>
+                        <li><a href="https://business.google.com/" target="_blank" rel="noopener">Aligner la fiche Google Business Profile</a> avec le nom, l’adresse et le site.</li>
+                      </ol>
+                    </div>
                   </div>
                 </div>
 
