@@ -25,9 +25,25 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from .images import detect_image_type, parse_multipart_file
+from .seo import (
+    DEFAULT_ADDRESS_DETAILS,
+    DEFAULT_SEO_SETTINGS,
+    build_robots_txt,
+    build_seo_description,
+    build_seo_title,
+    build_sitemap_xml,
+    build_structured_data,
+    format_address,
+    normalize_address_details,
+    normalize_seo_settings,
+    publication_errors,
+    render_public_page,
+    validate_public_url,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+PUBLIC_TEMPLATE_PATH = BASE_DIR / "public.html"
 DATA_DIR = BASE_DIR / "data"
 DB_FILE = Path(os.environ.get("GITE_DB", DATA_DIR / "reservations.sqlite3"))
 UPLOADS_DIR = Path(os.environ.get("GITE_UPLOADS", DATA_DIR / "uploads"))
@@ -70,6 +86,7 @@ DEFAULT_SETTINGS = {
         "subtitle": "Un séjour confortable, simple à réserver.",
         "intro": "Découvrez nos chambres et envoyez une demande selon les disponibilités.",
         "address": "",
+        "addressDetails": dict(DEFAULT_ADDRESS_DETAILS),
         "phone": "",
         "email": "",
         "giteTitle": "Le gîte",
@@ -77,6 +94,7 @@ DEFAULT_SETTINGS = {
         "gitePhotos": [],
         "bodyFont": "lato",
         "headingFont": "playfair",
+        "seo": dict(DEFAULT_SEO_SETTINGS),
     },
     "notifications": {
         "notifyEmail": "",
@@ -278,9 +296,15 @@ def migrate_database(conn: sqlite3.Connection) -> None:
 
 
 def initialize_site_settings(conn: sqlite3.Connection) -> None:
+    existing_keys = {row["key"] for row in conn.execute("SELECT key FROM site_settings").fetchall()}
+    defaults = dict(DEFAULT_SETTINGS["site"])
+    # Une installation antérieure à la V1 SEO reste indexable pendant sa mise à jour.
+    # Les nouvelles bases ont déjà écrit `seo.published = false` via import_initial_data().
+    if existing_keys and "seo" not in existing_keys:
+        defaults["seo"] = {**DEFAULT_SEO_SETTINGS, "published": True}
     conn.executemany(
         "INSERT OR IGNORE INTO site_settings(key, value) VALUES(?, ?)",
-        [(key, json.dumps(value, ensure_ascii=False)) for key, value in DEFAULT_SETTINGS["site"].items()],
+        [(key, json.dumps(value, ensure_ascii=False)) for key, value in defaults.items()],
     )
 
 
@@ -440,14 +464,21 @@ VALID_HEADING_FONTS = {"playfair", "cormorant", "montserrat", "baskerville", "sa
 
 
 def normalize_site_settings(site: dict) -> dict:
+    address_details = normalize_address_details(site.get("addressDetails"))
+    legacy_address = str(site.get("address", "")).strip()
+    structured_address = format_address(address_details)
+    has_complete_structured_address = all(
+        address_details[key] for key in ("streetAddress", "postalCode", "addressLocality")
+    )
     return {
-        "logoUrl": str(site.get("logoUrl", "")).strip(),
-        "heroImageUrl": str(site.get("heroImageUrl", "")).strip(),
+        "logoUrl": normalize_asset_url(site.get("logoUrl", "")),
+        "heroImageUrl": normalize_asset_url(site.get("heroImageUrl", "")),
         "headline": str(site.get("headline", DEFAULT_SETTINGS["site"]["headline"])).strip()
         or DEFAULT_SETTINGS["site"]["headline"],
         "subtitle": str(site.get("subtitle", DEFAULT_SETTINGS["site"]["subtitle"])).strip(),
         "intro": str(site.get("intro", DEFAULT_SETTINGS["site"]["intro"])).strip(),
-        "address": str(site.get("address", "")).strip(),
+        "address": structured_address if has_complete_structured_address else legacy_address or structured_address,
+        "addressDetails": address_details,
         "phone": str(site.get("phone", "")).strip(),
         "email": str(site.get("email", "")).strip(),
         "giteTitle": str(site.get("giteTitle", "Le gîte")).strip() or "Le gîte",
@@ -455,7 +486,18 @@ def normalize_site_settings(site: dict) -> dict:
         "gitePhotos": normalize_photos(site.get("gitePhotos", [])),
         "bodyFont": site.get("bodyFont", "lato") if site.get("bodyFont", "lato") in VALID_BODY_FONTS else "lato",
         "headingFont": site.get("headingFont", "playfair") if site.get("headingFont", "playfair") in VALID_HEADING_FONTS else "playfair",
+        "seo": normalize_seo_settings(site.get("seo")),
     }
+
+
+def normalize_asset_url(value) -> str:
+    url = str(value or "").strip()
+    if not url:
+        return ""
+    if url.startswith("/") and not url.startswith("//"):
+        return url
+    parsed = urlparse(url)
+    return url if parsed.scheme in {"http", "https"} and parsed.netloc else ""
 
 
 def normalize_string_list(values) -> list[str]:
@@ -508,8 +550,9 @@ def normalize_photos(values) -> list[dict]:
         else:
             url = str(photo.get("url", "")).strip()
             alt = str(photo.get("alt", "")).strip()
-        if url:
-            photos.append({"url": url, "alt": alt})
+        normalized_url = normalize_asset_url(url)
+        if normalized_url:
+            photos.append({"url": normalized_url, "alt": alt})
     return photos
 
 
@@ -525,7 +568,8 @@ def normalize_booking_links(values) -> list[dict]:
         else:
             label = str(item.get("label", "")).strip() or "Réserver"
             url = str(item.get("url", "")).strip()
-        if not url or url in seen:
+        parsed = urlparse(url)
+        if not url or parsed.scheme not in {"http", "https"} or not parsed.netloc or url in seen:
             continue
         seen.add(url)
         links.append({"label": label, "url": url})
@@ -929,13 +973,16 @@ def is_room_available_db(conn: sqlite3.Connection, room_id: str, arrival_date: s
 
 def build_public_site(conn: sqlite3.Connection) -> dict:
     settings = fetch_settings(conn)
-    return {
+    public_site = {
         "propertyName": settings["propertyName"],
         "description": settings["description"],
         "currency": settings["currency"],
         "site": settings["site"],
         "rooms": [room for room in settings["rooms"] if room.get("publicVisible", True)],
     }
+    public_site["seoTitle"] = build_seo_title(public_site)
+    public_site["seoDescription"] = build_seo_description(public_site)
+    return public_site
 
 
 def build_availability(conn: sqlite3.Connection, arrival_date: str, departure_date: str) -> dict:
@@ -1199,7 +1246,7 @@ def delete_reservations_by_group_db(conn: sqlite3.Connection, group_id: str) -> 
     conn.execute("DELETE FROM reservations WHERE group_id = ?", (group_id,))
 
 
-def validate_settings(payload: dict) -> dict:
+def validate_settings(payload: dict, previous_settings: dict | None = None) -> dict:
     property_name = str(payload.get("propertyName", "")).strip()
     currency = str(payload.get("currency", "EUR")).strip().upper() or "EUR"
     description = str(payload.get("description", "")).strip()
@@ -1271,7 +1318,7 @@ def validate_settings(payload: dict) -> dict:
     if DIRECT_BOOKING_PLATFORM.lower() not in {platform.lower() for platform in normalized_platforms}:
         normalized_platforms.append(DIRECT_BOOKING_PLATFORM)
 
-    return {
+    normalized = {
         "propertyName": property_name,
         "description": description,
         "currency": currency,
@@ -1280,6 +1327,15 @@ def validate_settings(payload: dict) -> dict:
         "site": normalize_site_settings(payload.get("site", {})),
         "notifications": normalize_notification_settings(payload.get("notifications", {})),
     }
+    seo = normalized["site"]["seo"]
+    if seo["publicUrl"]:
+        seo["publicUrl"] = validate_public_url(seo["publicUrl"])
+    was_published = bool(previous_settings and previous_settings.get("site", {}).get("seo", {}).get("published"))
+    if seo["published"] and not was_published:
+        errors = publication_errors(normalized)
+        if errors:
+            raise ValueError("Publication impossible : " + " ".join(errors))
+    return normalized
 
 
 def validate_reservation(payload: dict, settings: dict, reservations: list[dict]) -> dict:
@@ -1698,6 +1754,18 @@ class AppHandler(SimpleHTTPRequestHandler):
 
     def do_HEAD(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == "/public.html":
+            self.send_redirect("/", HTTPStatus.MOVED_PERMANENTLY)
+            return
+        if parsed.path == "/":
+            self.serve_public_page(head_only=True)
+            return
+        if parsed.path == "/robots.txt":
+            self.serve_robots(head_only=True)
+            return
+        if parsed.path == "/sitemap.xml":
+            self.serve_sitemap(head_only=True)
+            return
         if self.redirect_admin_route(parsed.path):
             return
         self.path = self.route_static_page(parsed.path)
@@ -1705,6 +1773,18 @@ class AppHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == "/public.html":
+            self.send_redirect("/", HTTPStatus.MOVED_PERMANENTLY)
+            return
+        if parsed.path == "/":
+            self.serve_public_page()
+            return
+        if parsed.path == "/robots.txt":
+            self.serve_robots()
+            return
+        if parsed.path == "/sitemap.xml":
+            self.serve_sitemap()
+            return
         if parsed.path == "/api/session":
             self.send_json({"authenticated": self.is_authenticated()})
             return
@@ -1925,7 +2005,7 @@ class AppHandler(SimpleHTTPRequestHandler):
                             "versions": get_versions(conn),
                         }
                         assert_expected_versions(payload, state["versions"])
-                        settings = validate_settings(payload)
+                        settings = validate_settings(payload, previous_settings=state["settings"])
                         used_room_ids = {reservation["roomId"] for reservation in state["reservations"]}
                         if not used_room_ids.issubset({room["id"] for room in settings["rooms"]}):
                             raise ValueError("Une ou plusieurs réservations pointent vers une chambre supprimée.")
@@ -1951,7 +2031,10 @@ class AppHandler(SimpleHTTPRequestHandler):
                 with DATA_LOCK:
                     ensure_database()
                     with get_connection() as conn:
-                        settings = validate_settings(payload.get("settings", {}))
+                        backup_settings = payload.get("settings", {})
+                        # Une sauvegarde peut provenir d'une installation historique restée
+                        # indexable pendant la migration SEO. Restaurer doit reproduire cet état.
+                        settings = validate_settings(backup_settings, previous_settings=backup_settings)
                         reservations = rebuild_reservations(
                             normalize_reservations(payload.get("reservations", [])),
                             settings,
@@ -2043,6 +2126,8 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
         self.send_header("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
         path = getattr(self, "path", "") or ""
+        if path.startswith("/api/") or path in {"/login.html", "/index.html"} or path.startswith("/gestion"):
+            self.send_header("X-Robots-Tag", "noindex, nofollow")
         if path.startswith("/api/"):
             self.send_header("Cache-Control", "no-store")
         elif path.startswith("/uploads/"):
@@ -2051,6 +2136,45 @@ class AppHandler(SimpleHTTPRequestHandler):
         else:
             self.send_header("Cache-Control", "no-cache")
         super().end_headers()
+
+    def load_public_site(self) -> dict:
+        ensure_database()
+        with get_connection() as conn:
+            return build_public_site(conn)
+
+    def serve_public_page(self, head_only: bool = False) -> None:
+        public_site = self.load_public_site()
+        template = PUBLIC_TEMPLATE_PATH.read_text(encoding="utf-8")
+        body = render_public_page(template, public_site).encode("utf-8")
+        headers = {}
+        if not public_site.get("site", {}).get("seo", {}).get("published"):
+            headers["X-Robots-Tag"] = "noindex, follow"
+        self.send_bytes(body, "text/html; charset=utf-8", head_only=head_only, headers=headers)
+
+    def serve_robots(self, head_only: bool = False) -> None:
+        body = build_robots_txt(self.load_public_site()).encode("utf-8")
+        self.send_bytes(body, "text/plain; charset=utf-8", head_only=head_only)
+
+    def serve_sitemap(self, head_only: bool = False) -> None:
+        body = build_sitemap_xml(self.load_public_site()).encode("utf-8")
+        self.send_bytes(body, "application/xml; charset=utf-8", head_only=head_only)
+
+    def send_bytes(
+        self,
+        body: bytes,
+        content_type: str,
+        status: HTTPStatus = HTTPStatus.OK,
+        head_only: bool = False,
+        headers: dict | None = None,
+    ) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        for key, value in (headers or {}).items():
+            self.send_header(key, value)
+        self.end_headers()
+        if not head_only:
+            self.wfile.write(body)
 
     def send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK, headers: dict | None = None) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")

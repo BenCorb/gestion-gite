@@ -86,7 +86,91 @@ class HttpIntegrationTests(unittest.TestCase):
         headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
         return body, headers
 
+    def configure_published_clos(self):
+        with srv.get_connection() as conn:
+            settings = srv.fetch_settings(conn)
+            settings["propertyName"] = "Le Clos des Vignes"
+            settings["site"].update(
+                {
+                    "headline": "Le Clos des Vignes",
+                    "subtitle": "Saint-Palais-du-Né, France",
+                    "intro": "Bienvenue dans notre longère charentaise à 18 minutes de Cognac.",
+                    "giteTitle": "Le Clos des Vignes",
+                    "giteDescription": "Notre vieille longère charentaise a une âme.",
+                    "addressDetails": {
+                        "streetAddress": "3 route des Vignes",
+                        "postalCode": "16300",
+                        "addressLocality": "Saint-Palais-du-Né",
+                        "addressRegion": "Nouvelle-Aquitaine",
+                        "addressCountry": "FR",
+                    },
+                    "seo": {
+                        "publicUrl": "https://closdesvignes.com/",
+                        "published": True,
+                        "titleOverride": "",
+                        "descriptionOverride": "",
+                    },
+                }
+            )
+            for room, name in zip(settings["rooms"], ["Lilas", "Magnolia", "Les Blés"]):
+                room["name"] = name
+                room["description"] = f"Présentation de la chambre {name}."
+            settings = srv.validate_settings(settings)
+            srv.write_settings_db(conn, settings)
+            srv.bump_version(conn, "settings_revision")
+            conn.commit()
+
     # ── tests ────────────────────────────────────────────────────────────
+    def test_unpublished_home_is_server_rendered_but_noindex(self):
+        status, headers, body = self.request("GET", "/")
+        html = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(headers.get("X-Robots-Tag"), "noindex, follow")
+        self.assertIn('<meta name="robots" content="noindex, follow"', html)
+        self.assertIn("Bienvenue dans notre gîte", html)
+        self.assertIn('id="public-site-data"', html)
+
+    def test_published_home_head_redirect_robots_and_sitemap(self):
+        self.configure_published_clos()
+
+        status, headers, body = self.request("GET", "/")
+        html = body.decode("utf-8")
+        self.assertEqual(status, 200)
+        self.assertNotIn("X-Robots-Tag", headers)
+        self.assertIn("Chambres d’hôtes à Saint-Palais-du-Né | Le Clos des Vignes", html)
+        for expected in ["Cognac", "Lilas", "Magnolia", "Les Blés", "vieille longère"]:
+            self.assertIn(expected, html)
+        self.assertIn('<link rel="canonical" href="https://closdesvignes.com/"', html)
+        self.assertIn('"@type":"BedAndBreakfast"', html)
+
+        head_status, head_headers, head_body = self.request("HEAD", "/")
+        self.assertEqual(head_status, 200)
+        self.assertEqual(head_body, b"")
+        self.assertEqual(head_headers["Content-Length"], headers["Content-Length"])
+
+        redirect_status, redirect_headers, _ = self.request("GET", "/public.html")
+        self.assertEqual(redirect_status, 301)
+        self.assertEqual(redirect_headers["Location"], "/")
+
+        robots_status, _, robots_body = self.request("GET", "/robots.txt")
+        self.assertEqual(robots_status, 200)
+        self.assertIn(b"Disallow: /api/", robots_body)
+        self.assertIn(b"Sitemap: https://closdesvignes.com/sitemap.xml", robots_body)
+
+        sitemap_status, _, sitemap_body = self.request("GET", "/sitemap.xml")
+        self.assertEqual(sitemap_status, 200)
+        self.assertIn(b"<loc>https://closdesvignes.com/</loc>", sitemap_body)
+
+    def test_non_public_routes_send_noindex_header(self):
+        status, headers, _ = self.request("GET", "/api/public-site")
+        self.assertEqual(status, 200)
+        self.assertEqual(headers.get("X-Robots-Tag"), "noindex, nofollow")
+
+        status, headers, _ = self.request("GET", "/gestion/")
+        self.assertEqual(status, 200)
+        self.assertEqual(headers.get("X-Robots-Tag"), "noindex, nofollow")
+
     def test_login_rate_limit_after_10_attempts(self):
         for _ in range(srv.LOGIN_MAX_ATTEMPTS):
             status, _, _ = self.request("POST", "/api/login", {"password": "wrong"})
