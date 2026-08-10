@@ -188,6 +188,17 @@ python3 -m pytest tests/
 
 ---
 
+## Licence
+
+Ce projet est distribué sous licence MIT. Vous pouvez l'utiliser, le modifier,
+le redistribuer et l'intégrer à une offre commerciale, sous réserve de conserver
+la notice de copyright et le texte de la licence. Consultez [LICENSE](LICENSE).
+
+Les données d'exploitation placées dans `data/`, les fichiers `.env` et les
+images téléversées ne font pas partie du code distribué.
+
+---
+
 ## Notes
 
 - Aucune dépendance externe Python — stdlib uniquement
