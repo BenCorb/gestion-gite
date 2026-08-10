@@ -11,7 +11,7 @@ import {
   updateBookingRequest,
   uploadImage,
 } from "../api.js";
-import { initializeReportControls, renderApp, renderReservationFormOptions } from "../render.js";
+import { initializeReportControls, renderApp, renderReservationFormOptions, renderSeoPanel } from "../render.js";
 import {
   downloadTextFile,
   dateToIso,
@@ -38,6 +38,34 @@ export function createActions(ctx) {
   function rerender() {
     initializeReportControls(state, elements);
     renderApp({ ...ctx, actions });
+  }
+
+  function refreshSeoPreviewFromForm() {
+    if (!state.settings) return;
+    renderSeoPanel(elements, {
+      ...state.settings,
+      propertyName: elements.propertyNameInput.value.trim(),
+      site: {
+        ...state.settings.site,
+        intro: elements.siteIntroInput.value.trim(),
+        giteDescription: elements.siteGiteDescriptionInput.value.trim(),
+        phone: elements.sitePhoneInput.value.trim(),
+        email: elements.siteEmailInput.value.trim(),
+        addressDetails: {
+          streetAddress: elements.siteAddressStreetInput.value.trim(),
+          postalCode: elements.siteAddressPostalCodeInput.value.trim(),
+          addressLocality: elements.siteAddressLocalityInput.value.trim(),
+          addressRegion: elements.siteAddressRegionInput.value.trim(),
+          addressCountry: elements.siteAddressCountryInput.value.trim().toUpperCase() || "FR",
+        },
+        seo: {
+          publicUrl: elements.seoPublicUrlInput.value.trim(),
+          published: elements.seoPublishedInput.value === "true",
+          titleOverride: elements.seoTitleOverrideInput.value.trim(),
+          descriptionOverride: elements.seoDescriptionOverrideInput.value.trim(),
+        },
+      },
+    });
   }
 
   async function loadState(syncFeedbackMode = "silent") {
@@ -114,9 +142,15 @@ export function createActions(ctx) {
     elements.settingsForm.addEventListener("submit", handleSettingsSubmit);
     elements.settingsForm.addEventListener("input", () => {
       settingsDirty = true;
+      refreshSeoPreviewFromForm();
     });
     elements.settingsForm.addEventListener("change", () => {
       settingsDirty = true;
+    });
+    elements.seoPublishButton.addEventListener("click", () => {
+      const isPublished = elements.seoPublishedInput.value === "true";
+      elements.seoPublishedInput.value = isPublished ? "false" : "true";
+      elements.settingsForm.requestSubmit();
     });
     elements.siteLogoUpload.addEventListener("change", (event) => handleMediaUpload(event, elements.siteLogoUrl));
     elements.siteHeroUpload.addEventListener("change", (event) => handleMediaUpload(event, elements.siteHeroUrl));
@@ -441,11 +475,24 @@ export function createActions(ctx) {
         giteTitle: elements.siteGiteTitleInput.value.trim(),
         giteDescription: elements.siteGiteDescriptionInput.value.trim(),
         gitePhotos: state.settings.site.gitePhotos || [],
-        address: elements.siteAddressInput.value.trim(),
+        address: state.settings.site.address || "",
+        addressDetails: {
+          streetAddress: elements.siteAddressStreetInput.value.trim(),
+          postalCode: elements.siteAddressPostalCodeInput.value.trim(),
+          addressLocality: elements.siteAddressLocalityInput.value.trim(),
+          addressRegion: elements.siteAddressRegionInput.value.trim(),
+          addressCountry: elements.siteAddressCountryInput.value.trim().toUpperCase() || "FR",
+        },
         phone: elements.sitePhoneInput.value.trim(),
         email: elements.siteEmailInput.value.trim(),
         bodyFont: elements.siteBodyFontSelect.value || "lato",
         headingFont: elements.siteHeadingFontSelect.value || "playfair",
+        seo: {
+          publicUrl: elements.seoPublicUrlInput.value.trim(),
+          published: elements.seoPublishedInput.value === "true",
+          titleOverride: elements.seoTitleOverrideInput.value.trim(),
+          descriptionOverride: elements.seoDescriptionOverrideInput.value.trim(),
+        },
       },
       rooms,
       platforms,
@@ -469,6 +516,7 @@ export function createActions(ctx) {
       resetReservationForm();
       showToast(elements, "Paramètres sauvegardés.");
     } catch (error) {
+      elements.seoPublishedInput.value = state.settings.site?.seo?.published ? "true" : "false";
       if (await handleConflict(error)) {
         return;
       }
