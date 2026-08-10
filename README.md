@@ -1,184 +1,98 @@
 # Gestion Gîte
 
-Application web de gestion d'un gîte : réservations, planning, bilans financiers et vitrine publique. Zéro dépendance externe — Python 3.11+ stdlib uniquement, SQLite embarqué.
+Gestion Gîte est une application open source pour administrer un gîte ou des
+chambres d'hôtes et publier leur site vitrine depuis une seule interface.
 
----
+- Réservations, blocages et planning par chambre
+- Demandes de séjour depuis la vitrine publique
+- Bilans financiers et export CSV
+- Site personnalisable, responsive et optimisé pour le SEO
+- Données locales dans SQLite
+- Python standard, JavaScript vanilla, aucune dépendance serveur externe
 
-## Fonctionnalités
+## Exemple en production
 
-**Espace admin (`/gestion`)**
+[Le Clos des Vignes](https://closdesvignes.com/) est un exemple d'intégration
+réelle de Gestion Gîte pour une maison d'hôtes.
 
-- Réservations et blocages (multi-chambre, séjours fractionnés)
-- Calendrier mensuel et planning par chambre
-- Bilans mensuels et annuels avec comparaison et ventilation par plateforme / chambre
-- Export CSV
-- Demandes de réservation publiques : acceptation, refus, conversion en réservation
-- Notifications email à chaque nouvelle demande (SMTP configurable)
-- Paramètres : nom du gîte, chambres, plateformes, devise, personnalisation visuelle du site vitrine
-- Sauvegarde / restauration JSON
-- Changement de mot de passe admin
+Le nom, les textes, les chambres, les photos et les coordonnées visibles sur ce
+site proviennent de sa propre base SQLite. Ils ne sont pas inclus dans ce dépôt.
 
-**Vitrine publique (`/`)**
+## Installation rapide avec Docker
 
-- Présentation du gîte, des chambres avec galerie photos et carousel
-- HTML personnalisé généré côté serveur pour le référencement et la lecture sans JavaScript
-- Métadonnées SEO/sociales, données structurées `BedAndBreakfast`, `robots.txt` et sitemap
-- Lightbox plein écran au clic sur une image
-- Formulaire de demande de réservation avec vérification de disponibilité en temps réel
-- Polices Google Fonts indépendantes pour les titres et le corps du texte
-- Responsive mobile
-
----
-
-## Lancer le projet
+Prérequis : Docker et Docker Compose.
 
 ```bash
-python3 server.py
-```
-
-Le serveur affiche les URL dans le terminal sans ouvrir le navigateur automatiquement. Accès :
-
-| URL | Description |
-|---|---|
-| `http://127.0.0.1:8080` | Vitrine publique |
-| `http://127.0.0.1:8080/gestion` | Interface admin |
-
-Tapez `exit` puis Entrée dans la console du serveur pour l'arrêter proprement.
-
-Les variables d'environnement `HOST` (défaut `0.0.0.0`) et `PORT` (défaut `8080`) permettent de changer l'adresse d'écoute. Définir `GITE_OPEN_BROWSER=1` permet de réactiver l'ouverture automatique du navigateur au lancement.
-
-## Lancer avec Docker
-
-Copier le fichier d'exemple si vous voulez ajuster la configuration :
-
-```bash
+git clone https://github.com/BenCorb/gestion-gite.git
+cd gestion-gite
 cp .env.example .env
-```
-
-Démarrer l'application :
-
-```bash
 docker compose up -d --build
 ```
 
-Accès :
+Ouvrir ensuite :
 
-| URL | Description |
-|---|---|
-| `http://127.0.0.1:8080` | Vitrine publique |
-| `http://127.0.0.1:8080/gestion` | Interface admin |
+- Vitrine publique : <http://127.0.0.1:8080>
+- Administration : <http://127.0.0.1:8080/gestion>
 
-Consulter les logs :
-
-```bash
-docker compose logs -f
-```
-
-Arrêter le conteneur :
-
-```bash
-docker compose down
-```
-
-Les données SQLite et les images uploadées sont conservées dans `./data` grâce au volume `./data:/app/data`.
-
-Au premier démarrage Docker, le mot de passe admin initial apparaît dans les logs :
+Le mot de passe administrateur initial est généré automatiquement. Pour le
+retrouver :
 
 ```bash
 docker compose logs gestion-gite
 ```
 
-En production derrière HTTPS, définir `GITE_COOKIE_SECURE=1` dans `.env`.
+Les données et les images sont conservées dans `./data` grâce au montage
+`./data:/app/data`.
 
-### Premier lancement
+## Installation sans Docker
 
-Au premier démarrage, un mot de passe admin est généré aléatoirement et affiché dans le terminal :
+Prérequis : Python 3.11 ou supérieur.
 
-```
-WARNING  Mot de passe admin initial généré automatiquement : xxxxxxxxxxxxxxxx
-```
-
-Ce mot de passe peut être changé dans l'espace admin → Paramètres → Changer le mot de passe.
-
----
-
-## Structure
-
-```
-├── server.py          Serveur HTTP + API REST (stdlib Python)
-├── index.html         Interface admin
-├── public.html        Vitrine publique
-├── login.html         Page de connexion
-├── css/               Styles par page (chargés directement, sans agrégateur)
-├── app.js             Point d'entrée JS admin
-├── public.js          JS vitrine publique
-├── js/
-│   ├── api.js         Appels API
-│   ├── dom.js         Cache des éléments DOM
-│   ├── handlers.js    Gestionnaires d'événements
-│   ├── render.js      Fonctions de rendu
-│   ├── state.js       État applicatif
-│   └── utils.js       Utilitaires
-├── data/              Base SQLite générée au premier lancement (non versionnée)
-└── tests/
-    └── test_server_logic.py  Tests unitaires
+```bash
+git clone https://github.com/BenCorb/gestion-gite.git
+cd gestion-gite
+python3 server.py
 ```
 
----
+Le serveur écoute par défaut sur <http://127.0.0.1:8080>. Taper `exit`, puis
+Entrée dans sa console pour l'arrêter proprement.
 
-## API
+## Configuration
 
-| Méthode | Route | Auth | Description |
-|---|---|---|---|
-| GET | `/api/public-site` | — | Données publiques du gîte |
-| GET | `/robots.txt` | — | Directives d’exploration et URL du sitemap |
-| GET | `/sitemap.xml` | — | Sitemap de la vitrine publiée |
-| GET | `/api/availability` | — | Disponibilité d'une chambre (`?arrivalDate=&departureDate=`) |
-| POST | `/api/booking-requests` | — | Soumettre une demande de réservation |
-| GET | `/api/session` | — | État de la session admin |
-| POST | `/api/login` | — | Connexion admin |
-| POST | `/api/logout` | admin | Déconnexion |
-| GET | `/api/state` | admin | État complet (paramètres, réservations, demandes) |
-| GET | `/api/backup` | admin | Export JSON complet |
-| PUT | `/api/settings` | admin | Sauvegarder les paramètres |
-| POST | `/api/restore` | admin | Restaurer depuis un backup |
-| POST | `/api/reservations` | admin | Créer / modifier une réservation |
-| DELETE | `/api/reservations/:id` | admin | Supprimer une réservation |
-| POST | `/api/booking-requests/:id` | admin | Accepter ou refuser une demande |
-| POST | `/api/admin/password` | admin | Changer le mot de passe |
-| POST | `/api/upload` | admin | Upload d'image |
+Toute la configuration métier se fait depuis `/gestion` :
 
----
+- identité et coordonnées de l'établissement ;
+- chambres, capacités, tarifs, équipements et photos ;
+- plateformes de réservation ;
+- apparence de la vitrine ;
+- notifications SMTP ;
+- titre, description, URL canonique et publication SEO.
 
-## Notifications email
+Une nouvelle vitrine reste en `noindex` jusqu'à sa publication depuis la section
+**Référencement et publication**.
 
-Chaque nouvelle demande de réservation peut déclencher un email. Configuration dans l'espace admin → Paramètres → **Notifications par email**.
+Variables d'environnement principales :
 
-| Champ | Description |
-|---|---|
-| Email destinataire | Laisser vide pour désactiver les notifications |
-| Serveur SMTP | Ex : `smtp.gmail.com` |
-| Port SMTP | `587` (STARTTLS) ou `465` (SSL) |
-| Identifiant | Adresse email du compte SMTP |
-| Mot de passe | Mot de passe SMTP |
+| Variable | Défaut | Description |
+|---|---:|---|
+| `HOST` | `0.0.0.0` | Adresse d'écoute du serveur |
+| `PORT` | `8080` | Port HTTP |
+| `GITE_COOKIE_SECURE` | `0` | Utiliser `1` derrière HTTPS |
+| `GITE_SESSION_DAYS` | `7` | Durée des sessions administrateur |
 
-> **Gmail** : utiliser un [mot de passe d'application](https://myaccount.google.com/apppasswords) (la validation en deux étapes doit être activée).
+## Mise en production
 
-Les credentials SMTP sont stockés dans une table SQLite séparée (`notification_settings`) et ne sont jamais exposés via l'API publique.
+Pour une installation publique :
 
-## Référencement et publication
+1. placer l'application derrière un reverse proxy HTTPS ;
+2. définir `GITE_COOKIE_SECURE=1` dans `.env` ;
+3. sauvegarder régulièrement `data/` et `.env` ;
+4. renseigner l'URL officielle et l'adresse structurée dans l'administration ;
+5. publier la vitrine, puis vérifier `/robots.txt` et `/sitemap.xml`.
 
-La rubrique **Paramètres → Référencement et publication** permet de renseigner l’adresse structurée et l’URL officielle, de prévisualiser le titre et la description générés, puis de publier la vitrine pour les moteurs de recherche.
-
-- Une nouvelle installation reste en `noindex` jusqu’au clic sur **Publier la vitrine**.
-- Une installation créée avant cette fonctionnalité reste indexable pendant sa migration, mais l’admin signale les informations à compléter.
-- Le titre par défaut suit la forme `Chambres d’hôtes à {commune} | {nom}`.
-- Les surcharges de titre et de description sont facultatives.
-- `/public.html` redirige définitivement vers `/` pour éviter une URL dupliquée.
-
-Après publication, vérifier `/robots.txt` et `/sitemap.xml`, puis soumettre le sitemap dans Google Search Console. Si le domaine passe par Cloudflare, contrôler que sa couche `robots.txt` gérée conserve bien la ligne `Sitemap:` fournie par l’application.
-
----
+Ne jamais versionner ni publier `data/`, `.env` ou les images téléversées : ils
+peuvent contenir des réservations, des coordonnées clients et des identifiants
+SMTP.
 
 ## Tests
 
@@ -186,22 +100,19 @@ Après publication, vérifier `/robots.txt` et `/sitemap.xml`, puis soumettre le
 python3 -m pytest tests/
 ```
 
----
+## Architecture
+
+```text
+server.py          Point d'entrée du serveur
+gite/              Serveur HTTP, logique métier, SQLite et rendu SEO
+index.html         Interface d'administration
+public.html        Modèle de la vitrine publique
+js/                Modules JavaScript vanilla
+css/               Styles admin et vitrine
+data/              Données propres à l'installation, non versionnées
+tests/             Tests unitaires et HTTP
+```
 
 ## Licence
 
-Ce projet est distribué sous licence MIT. Vous pouvez l'utiliser, le modifier,
-le redistribuer et l'intégrer à une offre commerciale, sous réserve de conserver
-la notice de copyright et le texte de la licence. Consultez [LICENSE](LICENSE).
-
-Les données d'exploitation placées dans `data/`, les fichiers `.env` et les
-images téléversées ne font pas partie du code distribué.
-
----
-
-## Notes
-
-- Aucune dépendance externe Python — stdlib uniquement
-- Données stockées localement dans `data/` (SQLite), non versionnées
-- Conçu pour une utilisation mono-utilisateur en auto-hébergement (réseau local ou VPS)
-- Les mots de passe sont hachés avec PBKDF2-HMAC-SHA256 (120 000 itérations)
+Gestion Gîte est distribué sous [licence MIT](LICENSE).
