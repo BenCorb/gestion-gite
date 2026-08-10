@@ -1,8 +1,11 @@
+import copy
+import json
 import sqlite3
 import unittest
 import uuid
 from datetime import datetime, timedelta
 from http import HTTPStatus
+from pathlib import Path
 
 from server import (
     ADMIN_APP_PATH,
@@ -11,6 +14,9 @@ from server import (
     DEFAULT_SETTINGS,
     DIRECT_BOOKING_PLATFORM,
     build_room_availability,
+    build_seo_description,
+    build_seo_title,
+    build_structured_data,
     build_reservation_payload_from_request,
     build_reservations,
     delete_reservation_db,
@@ -21,8 +27,14 @@ from server import (
     is_admin_root_path,
     is_room_available,
     initialize_meta,
+    initialize_site_settings,
     migrate_database,
     normalize_amenity_groups,
+    normalize_booking_links,
+    normalize_photos,
+    normalize_site_settings,
+    publication_errors,
+    render_public_page,
     rebuild_reservations,
     sync_platforms_db,
     sync_rooms_db,
@@ -32,11 +44,120 @@ from server import (
     upsert_reservations_db,
     validate_reservation,
     validate_settings,
+    validate_public_url,
 )
 
 
 def make_settings():
     return validate_settings(DEFAULT_SETTINGS)
+
+
+def make_published_settings():
+    payload = copy.deepcopy(DEFAULT_SETTINGS)
+    payload["propertyName"] = "Maison des Érables"
+    payload["site"]["intro"] = (
+        "Bienvenue dans notre longère charentaise pleine de charme, entourée de vignes, "
+        "d’oiseaux et de lumière douce, à proximité de Cognac."
+    )
+    payload["site"]["addressDetails"] = {
+        "streetAddress": "12 chemin des Érables",
+        "postalCode": "12345",
+        "addressLocality": "Belle-Rive",
+        "addressRegion": "Pays de la Loire",
+        "addressCountry": "FR",
+    }
+    payload["site"]["seo"] = {
+        "publicUrl": "https://maison-des-erables.example/",
+        "published": True,
+        "titleOverride": "",
+        "descriptionOverride": "",
+    }
+    payload["rooms"][0]["name"] = "Églantine"
+    payload["rooms"][1]["name"] = "Horizon"
+    payload["rooms"][2]["name"] = "Verger"
+    return validate_settings(payload)
+
+
+class SeoSettingsTests(unittest.TestCase):
+    def test_legacy_address_is_preserved_until_structured_address_is_complete(self):
+        site = normalize_site_settings(
+            {
+                "address": "12 chemin des Érables, 12345 Belle-Rive",
+                "addressDetails": {"addressLocality": "Belle-Rive"},
+            }
+        )
+
+        self.assertEqual(site["address"], "12 chemin des Érables, 12345 Belle-Rive")
+        self.assertEqual(site["addressDetails"]["addressCountry"], "FR")
+
+    def test_public_url_requires_https_and_domain_root(self):
+        self.assertEqual(validate_public_url("https://example.fr"), "https://example.fr/")
+        self.assertEqual(validate_public_url("http://localhost:8080/"), "http://localhost:8080/")
+        with self.assertRaisesRegex(ValueError, "HTTPS"):
+            validate_public_url("http://example.fr/")
+        with self.assertRaisesRegex(ValueError, "racine"):
+            validate_public_url("https://example.fr/gite")
+
+    def test_public_media_and_booking_urls_reject_unsafe_schemes(self):
+        site = normalize_site_settings(
+            {"logoUrl": "javascript:alert(1)", "heroImageUrl": "/uploads/hero.webp"}
+        )
+
+        self.assertEqual(site["logoUrl"], "")
+        self.assertEqual(site["heroImageUrl"], "/uploads/hero.webp")
+        self.assertEqual(normalize_photos([{"url": "data:text/html,bad"}]), [])
+        self.assertEqual(normalize_booking_links([{"label": "Piège", "url": "javascript:alert(1)"}]), [])
+
+    def test_publication_validation_and_generated_metadata(self):
+        settings = make_published_settings()
+
+        self.assertEqual(publication_errors(settings), [])
+        self.assertEqual(
+            build_seo_title(settings),
+            "Chambres d’hôtes à Belle-Rive | Maison des Érables",
+        )
+        self.assertIn("longère charentaise", build_seo_description(settings))
+        self.assertLessEqual(len(build_seo_description(settings)), 160)
+
+    def test_publishing_incomplete_new_site_is_rejected(self):
+        payload = copy.deepcopy(DEFAULT_SETTINGS)
+        payload["site"]["seo"]["published"] = True
+
+        with self.assertRaisesRegex(ValueError, "Publication impossible"):
+            validate_settings(payload)
+
+    def test_historical_published_state_can_be_restored_before_seo_completion(self):
+        payload = copy.deepcopy(DEFAULT_SETTINGS)
+        payload["site"]["seo"]["published"] = True
+
+        restored = validate_settings(payload, previous_settings=payload)
+
+        self.assertTrue(restored["site"]["seo"]["published"])
+
+    def test_structured_data_contains_only_real_lodging_data(self):
+        settings = make_published_settings()
+        settings["site"]["heroImageUrl"] = "/uploads/hero.webp"
+        data = build_structured_data(settings)
+
+        self.assertEqual(data["@graph"][1]["@type"], "BedAndBreakfast")
+        self.assertEqual(data["@graph"][1]["address"]["addressLocality"], "Belle-Rive")
+        self.assertEqual(data["@graph"][1]["image"], ["https://maison-des-erables.example/uploads/hero.webp"])
+        self.assertNotIn("aggregateRating", json.dumps(data))
+        self.assertNotIn("availability", json.dumps(data))
+
+    def test_rendered_page_contains_example_fixture_and_escapes_bootstrap(self):
+        settings = make_published_settings()
+        settings["site"]["giteDescription"] = "Notre vieille longère charentaise a une âme."
+        settings["site"]["intro"] += " </script><script>alert(1)</script>"
+        template = (Path(__file__).resolve().parent.parent / "public.html").read_text(encoding="utf-8")
+
+        rendered = render_public_page(template, settings)
+
+        for expected in ["Belle-Rive", "Cognac", "Églantine", "Horizon", "Verger", "vieille longère"]:
+            self.assertIn(expected, rendered)
+        self.assertNotIn("</script><script>alert(1)</script>", rendered)
+        self.assertIn("\\u003c/script\\u003e", rendered)
+        self.assertNotRegex(rendered, r"\{\{[A-Z_]+\}\}")
 
 
 def relative_iso(days):
@@ -691,6 +812,17 @@ class SettingsPersistenceTests(unittest.TestCase):
         self.assertEqual(len(stored), 1)
         self.assertEqual(stored[0]["property_name"], "Maison Test")
         self.assertEqual(stored[0]["currency"], "USD")
+
+    def test_existing_site_settings_remain_published_during_seo_migration(self):
+        self.conn.execute(
+            "INSERT INTO site_settings(key, value) VALUES('headline', ?)",
+            (json.dumps("Bienvenue"),),
+        )
+
+        initialize_site_settings(self.conn)
+
+        row = self.conn.execute("SELECT value FROM site_settings WHERE key = 'seo'").fetchone()
+        self.assertTrue(json.loads(row["value"])["published"])
 
     def test_sync_rooms_replaces_removed_rows_and_updates_order(self):
         settings = make_settings()

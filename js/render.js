@@ -1,1 +1,1 @@
-export { initializeReportControls, renderApp, renderReservationFormOptions } from "./render/index.js";
+export { initializeReportControls, renderApp, renderReservationFormOptions, renderSeoPanel } from "./render/index.js";
