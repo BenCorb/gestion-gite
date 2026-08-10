@@ -94,9 +94,9 @@ class HttpIntegrationTests(unittest.TestCase):
                 {
                     "headline": "Maison des Érables",
                     "subtitle": "Belle-Rive, France",
-                    "intro": "Bienvenue dans notre longère charentaise à 18 minutes de Cognac.",
+                    "intro": "Bienvenue dans notre maison de campagne à proximité de Nantes.",
                     "giteTitle": "Maison des Érables",
-                    "giteDescription": "Notre vieille longère charentaise a une âme.",
+                    "giteDescription": "Notre ancienne maison en pierre a une âme.",
                     "addressDetails": {
                         "streetAddress": "12 chemin des Érables",
                         "postalCode": "12345",
@@ -139,7 +139,7 @@ class HttpIntegrationTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertNotIn("X-Robots-Tag", headers)
         self.assertIn("Chambres d’hôtes à Belle-Rive | Maison des Érables", html)
-        for expected in ["Cognac", "Églantine", "Horizon", "Verger", "vieille longère"]:
+        for expected in ["Nantes", "Églantine", "Horizon", "Verger", "ancienne maison"]:
             self.assertIn(expected, html)
         self.assertIn('<link rel="canonical" href="https://maison-des-erables.example/"', html)
         self.assertIn('"@type":"BedAndBreakfast"', html)

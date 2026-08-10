@@ -56,8 +56,8 @@ def make_published_settings():
     payload = copy.deepcopy(DEFAULT_SETTINGS)
     payload["propertyName"] = "Maison des Érables"
     payload["site"]["intro"] = (
-        "Bienvenue dans notre longère charentaise pleine de charme, entourée de vignes, "
-        "d’oiseaux et de lumière douce, à proximité de Cognac."
+        "Bienvenue dans notre maison de campagne pleine de charme, entourée d’arbres, "
+        "d’oiseaux et de lumière douce, à proximité de Nantes."
     )
     payload["site"]["addressDetails"] = {
         "streetAddress": "12 chemin des Érables",
@@ -116,7 +116,7 @@ class SeoSettingsTests(unittest.TestCase):
             build_seo_title(settings),
             "Chambres d’hôtes à Belle-Rive | Maison des Érables",
         )
-        self.assertIn("longère charentaise", build_seo_description(settings))
+        self.assertIn("maison de campagne", build_seo_description(settings))
         self.assertLessEqual(len(build_seo_description(settings)), 160)
 
     def test_publishing_incomplete_new_site_is_rejected(self):
@@ -147,13 +147,13 @@ class SeoSettingsTests(unittest.TestCase):
 
     def test_rendered_page_contains_example_fixture_and_escapes_bootstrap(self):
         settings = make_published_settings()
-        settings["site"]["giteDescription"] = "Notre vieille longère charentaise a une âme."
+        settings["site"]["giteDescription"] = "Notre ancienne maison en pierre a une âme."
         settings["site"]["intro"] += " </script><script>alert(1)</script>"
         template = (Path(__file__).resolve().parent.parent / "public.html").read_text(encoding="utf-8")
 
         rendered = render_public_page(template, settings)
 
-        for expected in ["Belle-Rive", "Cognac", "Églantine", "Horizon", "Verger", "vieille longère"]:
+        for expected in ["Belle-Rive", "Nantes", "Églantine", "Horizon", "Verger", "ancienne maison"]:
             self.assertIn(expected, rendered)
         self.assertNotIn("</script><script>alert(1)</script>", rendered)
         self.assertIn("\\u003c/script\\u003e", rendered)
