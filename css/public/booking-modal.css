@@ -737,12 +737,16 @@ body.modal-open .public-topnav {
   color: var(--ink);
   text-decoration: none;
   line-height: 1.35;
-  overflow: hidden;
+  overflow: visible;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .public-topnav-brand span {
   min-width: 0;
+  padding-inline-start: 6px;
+  margin-inline-start: -6px;
+  padding-bottom: 2px;
+  margin-bottom: -2px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
