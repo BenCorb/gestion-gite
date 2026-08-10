@@ -54,27 +54,27 @@ def make_settings():
 
 def make_published_settings():
     payload = copy.deepcopy(DEFAULT_SETTINGS)
-    payload["propertyName"] = "Le Clos des Vignes"
+    payload["propertyName"] = "Maison des Érables"
     payload["site"]["intro"] = (
-        "Bienvenue dans notre longère charentaise pleine de charme, entourée de vignes, "
-        "d’oiseaux et de lumière douce, à proximité de Cognac."
+        "Bienvenue dans notre maison de campagne pleine de charme, entourée d’arbres, "
+        "d’oiseaux et de lumière douce, à proximité de Nantes."
     )
     payload["site"]["addressDetails"] = {
-        "streetAddress": "3 route des Vignes",
-        "postalCode": "16300",
-        "addressLocality": "Saint-Palais-du-Né",
-        "addressRegion": "Nouvelle-Aquitaine",
+        "streetAddress": "12 chemin des Érables",
+        "postalCode": "12345",
+        "addressLocality": "Belle-Rive",
+        "addressRegion": "Pays de la Loire",
         "addressCountry": "FR",
     }
     payload["site"]["seo"] = {
-        "publicUrl": "https://closdesvignes.com/",
+        "publicUrl": "https://maison-des-erables.example/",
         "published": True,
         "titleOverride": "",
         "descriptionOverride": "",
     }
-    payload["rooms"][0]["name"] = "Lilas"
-    payload["rooms"][1]["name"] = "Magnolia"
-    payload["rooms"][2]["name"] = "Les Blés"
+    payload["rooms"][0]["name"] = "Églantine"
+    payload["rooms"][1]["name"] = "Horizon"
+    payload["rooms"][2]["name"] = "Verger"
     return validate_settings(payload)
 
 
@@ -82,12 +82,12 @@ class SeoSettingsTests(unittest.TestCase):
     def test_legacy_address_is_preserved_until_structured_address_is_complete(self):
         site = normalize_site_settings(
             {
-                "address": "3 Rte des Vignes, 16300 Saint-Palais-du-Né",
-                "addressDetails": {"addressLocality": "Saint-Palais-du-Né"},
+                "address": "12 chemin des Érables, 12345 Belle-Rive",
+                "addressDetails": {"addressLocality": "Belle-Rive"},
             }
         )
 
-        self.assertEqual(site["address"], "3 Rte des Vignes, 16300 Saint-Palais-du-Né")
+        self.assertEqual(site["address"], "12 chemin des Érables, 12345 Belle-Rive")
         self.assertEqual(site["addressDetails"]["addressCountry"], "FR")
 
     def test_public_url_requires_https_and_domain_root(self):
@@ -114,9 +114,9 @@ class SeoSettingsTests(unittest.TestCase):
         self.assertEqual(publication_errors(settings), [])
         self.assertEqual(
             build_seo_title(settings),
-            "Chambres d’hôtes à Saint-Palais-du-Né | Le Clos des Vignes",
+            "Chambres d’hôtes à Belle-Rive | Maison des Érables",
         )
-        self.assertIn("longère charentaise", build_seo_description(settings))
+        self.assertIn("maison de campagne", build_seo_description(settings))
         self.assertLessEqual(len(build_seo_description(settings)), 160)
 
     def test_publishing_incomplete_new_site_is_rejected(self):
@@ -140,20 +140,20 @@ class SeoSettingsTests(unittest.TestCase):
         data = build_structured_data(settings)
 
         self.assertEqual(data["@graph"][1]["@type"], "BedAndBreakfast")
-        self.assertEqual(data["@graph"][1]["address"]["addressLocality"], "Saint-Palais-du-Né")
-        self.assertEqual(data["@graph"][1]["image"], ["https://closdesvignes.com/uploads/hero.webp"])
+        self.assertEqual(data["@graph"][1]["address"]["addressLocality"], "Belle-Rive")
+        self.assertEqual(data["@graph"][1]["image"], ["https://maison-des-erables.example/uploads/hero.webp"])
         self.assertNotIn("aggregateRating", json.dumps(data))
         self.assertNotIn("availability", json.dumps(data))
 
-    def test_rendered_page_contains_clos_fixture_and_escapes_bootstrap(self):
+    def test_rendered_page_contains_example_fixture_and_escapes_bootstrap(self):
         settings = make_published_settings()
-        settings["site"]["giteDescription"] = "Notre vieille longère charentaise a une âme."
+        settings["site"]["giteDescription"] = "Notre ancienne maison en pierre a une âme."
         settings["site"]["intro"] += " </script><script>alert(1)</script>"
         template = (Path(__file__).resolve().parent.parent / "public.html").read_text(encoding="utf-8")
 
         rendered = render_public_page(template, settings)
 
-        for expected in ["Saint-Palais-du-Né", "Cognac", "Lilas", "Magnolia", "Les Blés", "vieille longère"]:
+        for expected in ["Belle-Rive", "Nantes", "Églantine", "Horizon", "Verger", "ancienne maison"]:
             self.assertIn(expected, rendered)
         self.assertNotIn("</script><script>alert(1)</script>", rendered)
         self.assertIn("\\u003c/script\\u003e", rendered)
@@ -803,14 +803,14 @@ class SettingsPersistenceTests(unittest.TestCase):
         upsert_settings_db(self.conn, settings)
 
         updated = dict(settings)
-        updated["propertyName"] = "Le Clos Test"
+        updated["propertyName"] = "Maison Test"
         updated["currency"] = "USD"
         upsert_settings_db(self.conn, updated)
 
         stored = self.conn.execute("SELECT property_name, currency FROM settings").fetchall()
 
         self.assertEqual(len(stored), 1)
-        self.assertEqual(stored[0]["property_name"], "Le Clos Test")
+        self.assertEqual(stored[0]["property_name"], "Maison Test")
         self.assertEqual(stored[0]["currency"], "USD")
 
     def test_existing_site_settings_remain_published_during_seo_migration(self):

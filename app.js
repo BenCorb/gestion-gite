@@ -11,7 +11,7 @@ function bindPaletteSwatches() {
     sw.addEventListener("click", () => {
       const value = sw.dataset.paletteValue;
       document.documentElement.setAttribute("data-palette", value);
-      try { localStorage.setItem("lcdv.palette", value); } catch {}
+      try { localStorage.setItem("gestion-gite.palette", value); } catch {}
       swatches.forEach((s) =>
         s.setAttribute("aria-checked", String(s.dataset.paletteValue === value)),
       );

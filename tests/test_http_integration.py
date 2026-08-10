@@ -86,33 +86,33 @@ class HttpIntegrationTests(unittest.TestCase):
         headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
         return body, headers
 
-    def configure_published_clos(self):
+    def configure_published_example(self):
         with srv.get_connection() as conn:
             settings = srv.fetch_settings(conn)
-            settings["propertyName"] = "Le Clos des Vignes"
+            settings["propertyName"] = "Maison des Érables"
             settings["site"].update(
                 {
-                    "headline": "Le Clos des Vignes",
-                    "subtitle": "Saint-Palais-du-Né, France",
-                    "intro": "Bienvenue dans notre longère charentaise à 18 minutes de Cognac.",
-                    "giteTitle": "Le Clos des Vignes",
-                    "giteDescription": "Notre vieille longère charentaise a une âme.",
+                    "headline": "Maison des Érables",
+                    "subtitle": "Belle-Rive, France",
+                    "intro": "Bienvenue dans notre maison de campagne à proximité de Nantes.",
+                    "giteTitle": "Maison des Érables",
+                    "giteDescription": "Notre ancienne maison en pierre a une âme.",
                     "addressDetails": {
-                        "streetAddress": "3 route des Vignes",
-                        "postalCode": "16300",
-                        "addressLocality": "Saint-Palais-du-Né",
-                        "addressRegion": "Nouvelle-Aquitaine",
+                        "streetAddress": "12 chemin des Érables",
+                        "postalCode": "12345",
+                        "addressLocality": "Belle-Rive",
+                        "addressRegion": "Pays de la Loire",
                         "addressCountry": "FR",
                     },
                     "seo": {
-                        "publicUrl": "https://closdesvignes.com/",
+                        "publicUrl": "https://maison-des-erables.example/",
                         "published": True,
                         "titleOverride": "",
                         "descriptionOverride": "",
                     },
                 }
             )
-            for room, name in zip(settings["rooms"], ["Lilas", "Magnolia", "Les Blés"]):
+            for room, name in zip(settings["rooms"], ["Églantine", "Horizon", "Verger"]):
                 room["name"] = name
                 room["description"] = f"Présentation de la chambre {name}."
             settings = srv.validate_settings(settings)
@@ -132,16 +132,16 @@ class HttpIntegrationTests(unittest.TestCase):
         self.assertIn('id="public-site-data"', html)
 
     def test_published_home_head_redirect_robots_and_sitemap(self):
-        self.configure_published_clos()
+        self.configure_published_example()
 
         status, headers, body = self.request("GET", "/")
         html = body.decode("utf-8")
         self.assertEqual(status, 200)
         self.assertNotIn("X-Robots-Tag", headers)
-        self.assertIn("Chambres d’hôtes à Saint-Palais-du-Né | Le Clos des Vignes", html)
-        for expected in ["Cognac", "Lilas", "Magnolia", "Les Blés", "vieille longère"]:
+        self.assertIn("Chambres d’hôtes à Belle-Rive | Maison des Érables", html)
+        for expected in ["Nantes", "Églantine", "Horizon", "Verger", "ancienne maison"]:
             self.assertIn(expected, html)
-        self.assertIn('<link rel="canonical" href="https://closdesvignes.com/"', html)
+        self.assertIn('<link rel="canonical" href="https://maison-des-erables.example/"', html)
         self.assertIn('"@type":"BedAndBreakfast"', html)
 
         head_status, head_headers, head_body = self.request("HEAD", "/")
@@ -156,11 +156,11 @@ class HttpIntegrationTests(unittest.TestCase):
         robots_status, _, robots_body = self.request("GET", "/robots.txt")
         self.assertEqual(robots_status, 200)
         self.assertIn(b"Disallow: /api/", robots_body)
-        self.assertIn(b"Sitemap: https://closdesvignes.com/sitemap.xml", robots_body)
+        self.assertIn(b"Sitemap: https://maison-des-erables.example/sitemap.xml", robots_body)
 
         sitemap_status, _, sitemap_body = self.request("GET", "/sitemap.xml")
         self.assertEqual(sitemap_status, 200)
-        self.assertIn(b"<loc>https://closdesvignes.com/</loc>", sitemap_body)
+        self.assertIn(b"<loc>https://maison-des-erables.example/</loc>", sitemap_body)
 
     def test_non_public_routes_send_noindex_header(self):
         status, headers, _ = self.request("GET", "/api/public-site")
