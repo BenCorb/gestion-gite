@@ -224,8 +224,6 @@ html { scroll-behavior: smooth; }
 }
 .availability-cell-value {
   display: block;
-  position: relative;
-  top: var(--availability-text-nudge, 4px);
   font-size: 14px;
   font-weight: 600;
   line-height: 1;
