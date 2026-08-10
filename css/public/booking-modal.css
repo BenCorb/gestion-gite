@@ -871,10 +871,6 @@ body.modal-open .public-topnav {
 }
 
 @media (max-width: 480px) {
-  .availability-card {
-    --availability-text-nudge: 4px;
-  }
-
   .public-topnav {
     gap: 8px;
     padding-left: 10px;
