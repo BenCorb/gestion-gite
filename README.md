@@ -21,6 +21,8 @@ Application web de gestion d'un gîte : réservations, planning, bilans financie
 **Vitrine publique (`/`)**
 
 - Présentation du gîte, des chambres avec galerie photos et carousel
+- HTML personnalisé généré côté serveur pour le référencement et la lecture sans JavaScript
+- Métadonnées SEO/sociales, données structurées `BedAndBreakfast`, `robots.txt` et sitemap
 - Lightbox plein écran au clic sur une image
 - Formulaire de demande de réservation avec vérification de disponibilité en temps réel
 - Polices Google Fonts indépendantes pour les titres et le corps du texte
@@ -129,6 +131,8 @@ Ce mot de passe peut être changé dans l'espace admin → Paramètres → Chang
 | Méthode | Route | Auth | Description |
 |---|---|---|---|
 | GET | `/api/public-site` | — | Données publiques du gîte |
+| GET | `/robots.txt` | — | Directives d’exploration et URL du sitemap |
+| GET | `/sitemap.xml` | — | Sitemap de la vitrine publiée |
 | GET | `/api/availability` | — | Disponibilité d'une chambre (`?arrivalDate=&departureDate=`) |
 | POST | `/api/booking-requests` | — | Soumettre une demande de réservation |
 | GET | `/api/session` | — | État de la session admin |
@@ -161,6 +165,18 @@ Chaque nouvelle demande de réservation peut déclencher un email. Configuration
 > **Gmail** : utiliser un [mot de passe d'application](https://myaccount.google.com/apppasswords) (la validation en deux étapes doit être activée).
 
 Les credentials SMTP sont stockés dans une table SQLite séparée (`notification_settings`) et ne sont jamais exposés via l'API publique.
+
+## Référencement et publication
+
+La rubrique **Paramètres → Référencement et publication** permet de renseigner l’adresse structurée et l’URL officielle, de prévisualiser le titre et la description générés, puis de publier la vitrine pour les moteurs de recherche.
+
+- Une nouvelle installation reste en `noindex` jusqu’au clic sur **Publier la vitrine**.
+- Une installation créée avant cette fonctionnalité reste indexable pendant sa migration, mais l’admin signale les informations à compléter.
+- Le titre par défaut suit la forme `Chambres d’hôtes à {commune} | {nom}`.
+- Les surcharges de titre et de description sont facultatives.
+- `/public.html` redirige définitivement vers `/` pour éviter une URL dupliquée.
+
+Après publication, vérifier `/robots.txt` et `/sitemap.xml`, puis soumettre le sitemap dans Google Search Console. Si le domaine passe par Cloudflare, contrôler que sa couche `robots.txt` gérée conserve bien la ligne `Sitemap:` fournie par l’application.
 
 ---
 

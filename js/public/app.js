@@ -108,7 +108,18 @@ export function buildLightbox() {
 
 async function loadPublicSite() {
   try {
-    const data = await fetchJson("/api/public-site", {}, "Impossible de charger la vitrine.");
+    let data = null;
+    const bootstrap = document.getElementById("public-site-data");
+    if (bootstrap?.textContent) {
+      try {
+        data = JSON.parse(bootstrap.textContent);
+      } catch (error) {
+        console.warn("Données publiques intégrées invalides, rechargement via l’API.", error);
+      }
+    }
+    if (!data) {
+      data = await fetchJson("/api/public-site", {}, "Impossible de charger la vitrine.");
+    }
     state.site = data;
     state.rooms = data.rooms || [];
     renderPublicSite();
@@ -119,7 +130,7 @@ async function loadPublicSite() {
 
 export function renderPublicSite() {
   const site = state.site.site || {};
-  document.title = state.site.propertyName;
+  document.title = state.site.seoTitle || document.title || state.site.propertyName;
   if (elements.topnavBrandText) elements.topnavBrandText.textContent = state.site.propertyName;
   if (elements.footerBrandText) elements.footerBrandText.textContent = state.site.propertyName;
   elements.headline.textContent = site.headline || state.site.propertyName;
