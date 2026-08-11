@@ -79,6 +79,20 @@ Variables d'environnement principales :
 | `PORT` | `8080` | Port HTTP |
 | `GITE_COOKIE_SECURE` | `0` | Utiliser `1` derrière HTTPS |
 | `GITE_SESSION_DAYS` | `7` | Durée des sessions administrateur |
+| `GITE_BACKUP_DIR` | Dossier `backups` à côté de la base | Destination des sauvegardes SQLite automatiques |
+
+## Sauvegardes automatiques
+
+Le serveur crée une sauvegarde SQLite cohérente dès son démarrage, puis toutes
+les heures. La rétention conserve au maximum un fichier par heure sur les 24
+dernières heures, un par jour sur les 7 derniers jours et un par mois sur les 6
+derniers mois. Les mêmes fichiers sont mutualisés entre ces trois horizons.
+
+Par défaut, les fichiers sont écrits dans `data/backups/` et persistent dans le
+volume Docker `./data`. Pour se protéger contre la perte du disque principal,
+définir `GITE_BACKUP_DIR` vers un volume monté sur un autre support. Ces archives
+contiennent uniquement la base SQLite : les uploads et `.env` doivent être
+sauvegardés séparément.
 
 ## Mise en production
 
@@ -86,7 +100,7 @@ Pour une installation publique :
 
 1. placer l'application derrière un reverse proxy HTTPS ;
 2. définir `GITE_COOKIE_SECURE=1` dans `.env` ;
-3. sauvegarder régulièrement `data/` et `.env` ;
+3. placer idéalement `GITE_BACKUP_DIR` sur un autre support et sauvegarder aussi les uploads et `.env` ;
 4. renseigner l'URL officielle et l'adresse structurée dans l'administration ;
 5. publier la vitrine, puis vérifier `/robots.txt` et `/sitemap.xml`.
 

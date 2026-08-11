@@ -24,6 +24,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from .backups import BackupScheduler
 from .images import detect_image_type, parse_multipart_file
 from .seo import (
     DEFAULT_ADDRESS_DETAILS,
@@ -46,6 +47,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 PUBLIC_TEMPLATE_PATH = BASE_DIR / "public.html"
 DATA_DIR = BASE_DIR / "data"
 DB_FILE = Path(os.environ.get("GITE_DB", DATA_DIR / "reservations.sqlite3"))
+BACKUP_DIR = Path(os.environ.get("GITE_BACKUP_DIR", DB_FILE.parent / "backups"))
 UPLOADS_DIR = Path(os.environ.get("GITE_UPLOADS", DATA_DIR / "uploads"))
 HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "8080"))
@@ -2263,6 +2265,8 @@ class AppHandler(SimpleHTTPRequestHandler):
 def main() -> None:
     ensure_database()
     server = ThreadingHTTPServer((HOST, PORT), AppHandler)
+    backup_scheduler = BackupScheduler(DB_FILE, BACKUP_DIR)
+    backup_scheduler.start()
     local_url = f"http://127.0.0.1:{PORT}"
     lan_url = get_lan_url(PORT)
     print(f"Serveur actif en local sur {local_url}")
@@ -2276,7 +2280,11 @@ def main() -> None:
         except Exception:
             pass
     if not sys.stdin.isatty():
-        server.serve_forever()
+        try:
+            server.serve_forever()
+        finally:
+            server.server_close()
+            backup_scheduler.stop()
         return
 
     print("Tapez 'exit' puis Entrée pour arrêter le serveur.")
@@ -2297,6 +2305,7 @@ def main() -> None:
         server.shutdown()
         server.server_close()
         server_thread.join()
+        backup_scheduler.stop()
 
 
 def get_lan_url(port: int) -> str | None:

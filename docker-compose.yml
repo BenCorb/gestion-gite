@@ -11,5 +11,6 @@ services:
       GITE_OPEN_BROWSER: 0
       GITE_SESSION_DAYS: ${GITE_SESSION_DAYS:-7}
       GITE_COOKIE_SECURE: ${GITE_COOKIE_SECURE:-0}
+      GITE_BACKUP_DIR: ${GITE_BACKUP_DIR:-/app/data/backups}
     volumes:
       - ./data:/app/data
