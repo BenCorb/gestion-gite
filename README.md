@@ -104,6 +104,12 @@ Pour une installation publique :
 4. renseigner l'URL officielle et l'adresse structurée dans l'administration ;
 5. publier la vitrine, puis vérifier `/robots.txt` et `/sitemap.xml`.
 
+Le profil Docker lie par défaut le port HTTP à `127.0.0.1` afin que
+l'application ne soit pas exposée directement sur le réseau. Le reverse proxy
+ou Cloudflare Tunnel doit donc fonctionner sur le même hôte. Le conteneur
+redémarre automatiquement, publie un contrôle de santé HTTP et limite ses
+journaux à deux fichiers de 2 Mio.
+
 Ne jamais versionner ni publier `data/`, `.env` ou les images téléversées : ils
 peuvent contenir des réservations, des coordonnées clients et des identifiants
 SMTP.

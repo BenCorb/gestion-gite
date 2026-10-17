@@ -1,10 +1,17 @@
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "2m"
+    max-file: "2"
+
 services:
   gestion-gite:
     build: .
     container_name: gestion-gite
+    init: true
     restart: unless-stopped
     ports:
-      - "${PORT:-8080}:8080"
+      - "127.0.0.1:${PORT:-8080}:8080"
     environment:
       HOST: 0.0.0.0
       PORT: 8080
@@ -14,3 +21,18 @@ services:
       GITE_BACKUP_DIR: ${GITE_BACKUP_DIR:-/app/data/backups}
     volumes:
       - ./data:/app/data
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen("http://127.0.0.1:8080/", timeout=5).read(1)
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging: *logging

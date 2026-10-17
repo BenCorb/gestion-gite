@@ -17,6 +17,7 @@ import shutil
 import tempfile
 import threading
 import unittest
+from datetime import datetime, timedelta
 from http.server import ThreadingHTTPServer
 
 from gite import app as srv
@@ -245,8 +246,10 @@ class HttpIntegrationTests(unittest.TestCase):
         self.assertTrue(by_date["2026-08-12"])
 
     def test_booking_request_then_accept_creates_reservation(self):
+        arrival = (datetime.now().date() + timedelta(days=30)).isoformat()
+        departure = (datetime.now().date() + timedelta(days=32)).isoformat()
         payload = {
-            "roomId": "chambre-1", "arrivalDate": "2026-09-01", "departureDate": "2026-09-03",
+            "roomId": "chambre-1", "arrivalDate": arrival, "departureDate": departure,
             "guestName": "Client Web", "guestContact": "web@example.com", "guestCount": 2,
             "message": "Bonjour",
         }
