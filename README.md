@@ -107,8 +107,10 @@ Pour une installation publique :
 Le profil Docker lie par défaut le port HTTP à `127.0.0.1` afin que
 l'application ne soit pas exposée directement sur le réseau. Le reverse proxy
 ou Cloudflare Tunnel doit donc fonctionner sur le même hôte. Le conteneur
-redémarre automatiquement, publie un contrôle de santé HTTP et limite ses
-journaux à deux fichiers de 2 Mio.
+redémarre automatiquement, s'exécute sans privilèges avec l'UID/GID `1000`,
+publie un contrôle de santé HTTP et limite ses journaux à deux fichiers de
+2 Mio. `APP_UID` et `APP_GID` permettent d'adapter le propriétaire du dossier
+`data/` si l'hôte utilise d'autres identifiants.
 
 Ne jamais versionner ni publier `data/`, `.env` ou les images téléversées : ils
 peuvent contenir des réservations, des coordonnées clients et des identifiants

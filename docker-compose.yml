@@ -9,6 +9,7 @@ services:
     build: .
     container_name: gestion-gite
     init: true
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
     restart: unless-stopped
     ports:
       - "127.0.0.1:${PORT:-8080}:8080"
